@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
 func TestInitialize(t *testing.T) {
-	dir := t.TempDir()
-
 	testcase := map[string]struct {
 		kvType string
 	}{
@@ -18,15 +18,14 @@ func TestInitialize(t *testing.T) {
 
 	for name, tc := range testcase {
 		t.Run(name, func(t *testing.T) {
-			err := Initialize(dir+tc.kvType, tc.kvType)
+			err := Initialize(tc.kvType)
 			require.Nil(t, err)
 		})
 	}
 }
 
 func TestInitializeWrongType(t *testing.T) {
-	dir := t.TempDir()
-	err := Initialize(dir, "unsupport")
+	err := Initialize("unsupport")
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "unknow kv type unsupport")
 }
@@ -43,10 +42,10 @@ func TestGet(t *testing.T) {
 
 	for name, tc := range testcase {
 		t.Run(name, func(t *testing.T) {
-			err := Initialize(dir+tc.kvType, tc.kvType)
+			err := Initialize(tc.kvType)
 			require.Nil(t, err)
 
-			s, err := Open(BlockChain)
+			s, err := Open(repo.GetStoragePath(dir+tc.kvType, BlockChain))
 			require.Nil(t, err)
 			require.NotNil(t, s)
 		})

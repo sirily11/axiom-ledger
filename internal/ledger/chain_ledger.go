@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path"
 	"strconv"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/storage/blockfile"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
@@ -26,20 +29,42 @@ type ChainLedgerImpl struct {
 	logger          logrus.FieldLogger
 }
 
-func NewChainLedgerImpl(blockchainStore storage.Storage, bf *blockfile.BlockFile, repo *repo.Repo, logger logrus.FieldLogger) (*ChainLedgerImpl, error) {
+func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.BlockFile) (*ChainLedgerImpl, error) {
 	c := &ChainLedgerImpl{
-		blockchainStore: blockchainStore,
+		blockchainStore: bcStorage,
 		bf:              bf,
-		repo:            repo,
-		logger:          logger,
+		repo:            rep,
+		logger:          loggers.Logger(loggers.Storage),
 	}
 
-	chainMeta, err := c.LoadChainMeta()
+	var err error
+	c.chainMeta, err = c.LoadChainMeta()
 	if err != nil {
 		return nil, fmt.Errorf("load chain meta: %w", err)
 	}
-	c.chainMeta = chainMeta
 	return c, nil
+}
+
+func NewChainLedger(rep *repo.Repo, storageDir string) (*ChainLedgerImpl, error) {
+	bcStoragePath := repo.GetStoragePath(rep.RepoRoot, storagemgr.BlockChain)
+	if storageDir != "" {
+		bcStoragePath = path.Join(storageDir, storagemgr.BlockChain)
+	}
+	bcStorage, err := storagemgr.Open(bcStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("create blockchain storage: %w", err)
+	}
+
+	bfStoragePath := repo.GetStoragePath(rep.RepoRoot, storagemgr.Blockfile)
+	if storageDir != "" {
+		bfStoragePath = path.Join(storageDir, storagemgr.Blockfile)
+	}
+	bf, err := blockfile.NewBlockFile(bfStoragePath, loggers.Logger(loggers.Storage))
+	if err != nil {
+		return nil, fmt.Errorf("blockfile initialize: %w", err)
+	}
+
+	return newChainLedger(rep, bcStorage, bf)
 }
 
 // GetBlock get block with height
@@ -417,6 +442,10 @@ func (l *ChainLedgerImpl) RollbackBlockChain(height uint64) error {
 }
 
 func (l *ChainLedgerImpl) Close() {
-	l.blockchainStore.Close()
-	l.bf.Close()
+	_ = l.blockchainStore.Close()
+	_ = l.bf.Close()
+}
+
+func (l *ChainLedgerImpl) CloseBlockfile() {
+	_ = l.bf.Close()
 }

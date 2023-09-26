@@ -52,13 +52,13 @@ func TestAccountCache_clear(t *testing.T) {
 func TestAccount_GetState(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -71,12 +71,10 @@ func TestAccount_GetState(t *testing.T) {
 
 	for name, tc := range testcase {
 		t.Run(name, func(t *testing.T) {
-			accountCache, err := NewAccountCache()
-			assert.Nil(t, err)
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			ledger, err := New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, accountCache, log.NewWithModule("ChainLedgerImpl"))
+			ledger, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile)
 			assert.Nil(t, err)
 
 			addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -107,13 +105,13 @@ func TestAccount_GetState(t *testing.T) {
 func TestAccount_AccountBalance(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -126,12 +124,10 @@ func TestAccount_AccountBalance(t *testing.T) {
 
 	for name, tc := range testcase {
 		t.Run(name, func(t *testing.T) {
-			accountCache, err := NewAccountCache()
-			assert.Nil(t, err)
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			ledger, err := New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, accountCache, log.NewWithModule("ChainLedgerImpl"))
+			ledger, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile)
 			assert.Nil(t, err)
 
 			addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")

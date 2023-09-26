@@ -16,6 +16,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/network"
 	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	p2p "github.com/axiomesh/axiom-p2p"
 )
 
@@ -56,7 +57,7 @@ type Ready struct {
 }
 
 func NewRBFTAdaptor(config *common.Config, blockC chan *common.CommitEvent, cancel context.CancelFunc) (*RBFTAdaptor, error) {
-	store, err := storagemgr.Open(storagemgr.Consensus)
+	store, err := storagemgr.Open(repo.GetStoragePath(config.RepoRoot, storagemgr.Consensus))
 	if err != nil {
 		return nil, err
 	}

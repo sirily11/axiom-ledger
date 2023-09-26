@@ -15,6 +15,7 @@ import (
 )
 
 type Config struct {
+	RepoRoot                                    string
 	Config                                      *repo.ConsensusConfig
 	Logger                                      logrus.FieldLogger
 	ConsensusType                               string
@@ -35,8 +36,9 @@ type Config struct {
 
 type Option func(*Config)
 
-func WithConfig(cfg *repo.ConsensusConfig) Option {
+func WithConfig(repoRoot string, cfg *repo.ConsensusConfig) Option {
 	return func(config *Config) {
+		config.RepoRoot = repoRoot
 		config.Config = cfg
 	}
 }
@@ -162,11 +164,11 @@ func (lg *Logger) Trace(name string, stage string, content any) {
 }
 
 func (lg *Logger) Critical(v ...any) {
-	lg.Error(v...)
+	lg.Fatal(v...)
 }
 
 func (lg *Logger) Criticalf(format string, v ...any) {
-	lg.Errorf(format, v...)
+	lg.Fatalf(format, v...)
 }
 
 func (lg *Logger) Notice(v ...any) {

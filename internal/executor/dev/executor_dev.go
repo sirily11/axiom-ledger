@@ -80,7 +80,11 @@ func (exec *ExecutorDev) Stop() error {
 	return nil
 }
 
-func (exec *ExecutorDev) ExecuteBlock(commitEvent *common.CommitEvent) {
+func (exec *ExecutorDev) ExecuteBlock(block *common.CommitEvent) {
+	exec.processExecuteEvent(block)
+}
+
+func (exec *ExecutorDev) AsyncExecuteBlock(commitEvent *common.CommitEvent) {
 	exec.blockC <- commitEvent
 }
 

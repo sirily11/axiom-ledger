@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/storage/blockfile"
 	"github.com/axiomesh/axiom-kit/types"
@@ -24,30 +22,42 @@ type BlockData struct {
 	TxHashList []*types.Hash
 }
 
-func New(repo *repo.Repo, blockchainStore storage.Storage, ldb storage.Storage, bf *blockfile.BlockFile, accountCache *AccountCache, logger logrus.FieldLogger) (*Ledger, error) {
-	chainLedger, err := NewChainLedgerImpl(blockchainStore, bf, repo, logger)
-	if err != nil {
-		return nil, fmt.Errorf("init chain ledger failed: %w", err)
+func NewLedgerWithStores(repo *repo.Repo, blockchainStore storage.Storage, ldb storage.Storage, bf *blockfile.BlockFile) (*Ledger, error) {
+	var err error
+	ledger := &Ledger{}
+	if blockchainStore != nil || bf != nil {
+		ledger.ChainLedger, err = newChainLedger(repo, blockchainStore, bf)
+		if err != nil {
+			return nil, fmt.Errorf("init chain ledger failed: %w", err)
+		}
+	} else {
+		ledger.ChainLedger, err = NewChainLedger(repo, "")
+		if err != nil {
+			return nil, fmt.Errorf("init chain ledger failed: %w", err)
+		}
+	}
+	if ldb != nil {
+		ledger.StateLedger, err = newStateLedger(repo, ldb)
+		if err != nil {
+			return nil, fmt.Errorf("init state ledger failed: %w", err)
+		}
+	} else {
+		ledger.StateLedger, err = NewStateLedger(repo, "")
+		if err != nil {
+			return nil, fmt.Errorf("init state ledger failed: %w", err)
+		}
 	}
 
-	meta := chainLedger.GetChainMeta()
-
-	var stateLedger StateLedger
-
-	stateLedger, err = NewSimpleLedger(repo, ldb, accountCache, logger)
-	if err != nil {
-		return nil, fmt.Errorf("init state ledger failed: %w", err)
-	}
-	ledger := &Ledger{
-		ChainLedger: chainLedger,
-		StateLedger: stateLedger,
-	}
-
+	meta := ledger.ChainLedger.GetChainMeta()
 	if err := ledger.Rollback(meta.Height); err != nil {
 		return nil, fmt.Errorf("rollback ledger to height %d failed: %w", meta.Height, err)
 	}
 
 	return ledger, nil
+}
+
+func NewLedger(rep *repo.Repo) (*Ledger, error) {
+	return NewLedgerWithStores(rep, nil, nil, nil)
 }
 
 // PersistBlockData persists block data

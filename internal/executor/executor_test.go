@@ -14,11 +14,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/axiomesh/axiom-kit/hexutil"
-	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/storage"
-	"github.com/axiomesh/axiom-kit/storage/blockfile"
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
-	"github.com/axiomesh/axiom-kit/storage/pebble"
 	"github.com/axiomesh/axiom-kit/types"
 	consensuscommon "github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
@@ -26,6 +23,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/governance"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
+	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
 	"github.com/axiomesh/axiom-ledger/pkg/events"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	ethvm "github.com/axiomesh/eth-kit/evm"
@@ -57,13 +55,11 @@ func TestNew(t *testing.T) {
 	}
 	chainLedger.EXPECT().GetChainMeta().Return(chainMeta).AnyTimes()
 
-	logger := log.NewWithModule("executor")
-	executor, err := New(mockLedger, logger, r)
+	executor, err := New(r, mockLedger)
 	assert.Nil(t, err)
 	assert.NotNil(t, executor)
 
 	assert.Equal(t, mockLedger, executor.ledger)
-	assert.Equal(t, logger, executor.logger)
 	assert.NotNil(t, executor.blockC)
 	assert.Equal(t, chainMeta.Height, executor.currentHeight)
 }
@@ -91,8 +87,7 @@ func TestGetEvm(t *testing.T) {
 	stateLedger.EXPECT().NewView().Return(stateLedger).AnyTimes()
 	chainLedger.EXPECT().GetBlockHash(gomock.Any()).Return(&types.Hash{}).AnyTimes()
 
-	logger := log.NewWithModule("executor")
-	executor, err := New(mockLedger, logger, r)
+	executor, err := New(r, mockLedger)
 	assert.Nil(t, err)
 	assert.NotNil(t, executor)
 
@@ -215,16 +210,14 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	err = base.InitEpochInfo(stateLedger, r.Config.Genesis.EpochInfo)
 	assert.Nil(t, err)
 
-	logger := log.NewWithModule("executor")
-
-	exec, err := New(mockLedger, logger, r)
+	exec, err := New(r, mockLedger)
 	assert.Nil(t, err)
 
 	var txs []*types.Transaction
@@ -250,8 +243,8 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 	commitEvent1 := mockCommitEvent(uint64(2), nil)
 
 	commitEvent2 := mockCommitEvent(uint64(3), txs)
-	exec.ExecuteBlock(commitEvent1)
-	exec.ExecuteBlock(commitEvent2)
+	exec.AsyncExecuteBlock(commitEvent1)
+	exec.AsyncExecuteBlock(commitEvent2)
 
 	blockRes1 := <-ch
 	assert.EqualValues(t, 2, blockRes1.Block.BlockHeader.Number)
@@ -283,7 +276,7 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 		oldBlock := blockRes1.Block
 		// send rollback block to executor
 		rollbackCommitEvent := mockCommitEvent(uint64(2), txs)
-		exec.ExecuteBlock(rollbackCommitEvent)
+		exec.AsyncExecuteBlock(rollbackCommitEvent)
 
 		blockRes := <-ch
 		assert.EqualValues(t, 2, blockRes.Block.BlockHeader.Number)
@@ -357,7 +350,7 @@ func TestBlockExecutor_ApplyReadonlyTransactions(t *testing.T) {
 
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -426,9 +419,7 @@ func TestBlockExecutor_ApplyReadonlyTransactions(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	logger := log.NewWithModule("executor")
-
-	exec, err := New(mockLedger, logger, r)
+	exec, err := New(r, mockLedger)
 	assert.Nil(t, err)
 
 	rawTx := "0xf86c8085147d35700082520894f927bb571eaab8c9a361ab405c9e4891c5024380880de0b6b3a76400008025a00b8e3b66c1e7ae870802e3ef75f1ec741f19501774bd5083920ce181c2140b99a0040c122b7ebfb3d33813927246cbbad1c6bf210474f5d28053990abff0fd4f53"
@@ -514,33 +505,20 @@ func mockTx(t *testing.T) *types.Transaction {
 func TestBlockExecutor_ExecuteBlock_Transfer(t *testing.T) {
 	r, err := repo.Default(t.TempDir())
 	assert.Nil(t, err)
-	repoRoot := r.RepoRoot
-
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
-	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
-	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
-	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
-	assert.Nil(t, err)
 
 	testcase := map[string]struct {
 		blockStorage storage.Storage
 		stateStorage storage.Storage
 	}{
-		"leveldb": {blockStorage: lBlockStorage, stateStorage: lStateStorage},
-		"pebble":  {blockStorage: pBlockStorage, stateStorage: pStateStorage},
+		"leveldb": {},
+		"pebble":  {},
 	}
 
-	for name, tc := range testcase {
-		t.Run(name, func(t *testing.T) {
-			accountCache, err := ledger.NewAccountCache()
-			assert.Nil(t, err)
-			logger := log.NewWithModule("executor_test")
-			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
-			assert.Nil(t, err)
-			ldg, err := ledger.New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, accountCache, log.NewWithModule("ledger"))
+	for kvType := range testcase {
+		t.Run(kvType, func(t *testing.T) {
+			err = storagemgr.Initialize(kvType)
+			require.Nil(t, err)
+			ldg, err := ledger.NewLedger(createMockRepo(t))
 			require.Nil(t, err)
 
 			signer, err := types.GenerateSigner()
@@ -562,7 +540,7 @@ func TestBlockExecutor_ExecuteBlock_Transfer(t *testing.T) {
 			}
 			ldg.ChainLedger.UpdateChainMeta(chainMeta)
 
-			executor, err := New(ldg, log.NewWithModule("executor"), r)
+			executor, err := New(r, ldg)
 			require.Nil(t, err)
 			err = executor.Start()
 			require.Nil(t, err)
@@ -575,7 +553,7 @@ func TestBlockExecutor_ExecuteBlock_Transfer(t *testing.T) {
 			tx2 := mockTransferTx(t, signer, to, 1, 1)
 			tx3 := mockTransferTx(t, signer, to, 2, 1)
 			commitEvent := mockCommitEvent(2, []*types.Transaction{tx1, tx2, tx3})
-			executor.ExecuteBlock(commitEvent)
+			executor.AsyncExecuteBlock(commitEvent)
 
 			block := <-ch
 			require.EqualValues(t, 2, block.Block.Height())
@@ -616,7 +594,6 @@ func executor_start(t *testing.T) *BlockExecutor {
 	}
 	chainLedger.EXPECT().GetChainMeta().Return(chainMeta).AnyTimes()
 
-	logger := log.NewWithModule("executor")
-	executor, _ := New(mockLedger, logger, r)
+	executor, _ := New(r, mockLedger)
 	return executor
 }

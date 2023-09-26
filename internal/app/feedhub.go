@@ -17,7 +17,7 @@ func (axm *AxiomLedger) start() {
 					"height": commitEvent.Block.BlockHeader.Number,
 					"count":  len(commitEvent.Block.Transactions),
 				}).Info("Generated block")
-				axm.BlockExecutor.ExecuteBlock(commitEvent)
+				axm.BlockExecutor.AsyncExecuteBlock(commitEvent)
 			case <-axm.Ctx.Done():
 				return
 			}

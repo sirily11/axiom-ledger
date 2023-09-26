@@ -21,19 +21,20 @@ import (
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/storage/pebble"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
 func TestNew001(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -49,7 +50,7 @@ func TestNew001(t *testing.T) {
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			l, err := New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, nil, log.NewWithModule("executor"))
+			l, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile)
 			require.Nil(t, err)
 			require.NotNil(t, l)
 
@@ -72,13 +73,13 @@ func TestNew001(t *testing.T) {
 func TestNew002(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -92,12 +93,11 @@ func TestNew002(t *testing.T) {
 	for name, tc := range testcase {
 		t.Run(name, func(t *testing.T) {
 			tc.blockStorage.Put([]byte(chainMetaKey), []byte{1})
-			accountCache, err := NewAccountCache()
 			assert.Nil(t, err)
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			l, err := New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, accountCache, log.NewWithModule("executor"))
+			l, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile)
 			require.NotNil(t, err)
 			require.Nil(t, l)
 		})
@@ -107,13 +107,13 @@ func TestNew002(t *testing.T) {
 func TestNew003(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -130,7 +130,7 @@ func TestNew003(t *testing.T) {
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			l, err := New(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile, nil, log.NewWithModule("executor"))
+			l, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, tc.stateStorage, blockFile)
 			require.NotNil(t, err)
 			require.Nil(t, l)
 		})
@@ -140,13 +140,13 @@ func TestNew003(t *testing.T) {
 func TestNew004(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -171,7 +171,7 @@ func TestNew004(t *testing.T) {
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			l, err := New(createMockRepo(t), tc.blockStorage, kvdb, blockFile, nil, log.NewWithModule("executor"))
+			l, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, kvdb, blockFile)
 			require.Nil(t, err)
 			require.NotNil(t, l)
 		})
@@ -181,13 +181,13 @@ func TestNew004(t *testing.T) {
 func TestNew005(t *testing.T) {
 	repoRoot := t.TempDir()
 
-	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"))
+	lBlockStorage, err := leveldb.New(filepath.Join(repoRoot, "lStorage"), nil)
 	assert.Nil(t, err)
-	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"))
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"))
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"))
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -213,7 +213,7 @@ func TestNew005(t *testing.T) {
 			logger := log.NewWithModule("account_test")
 			blockFile, err := blockfile.NewBlockFile(filepath.Join(repoRoot, name), logger)
 			assert.Nil(t, err)
-			l, err := New(createMockRepo(t), tc.blockStorage, kvdb, blockFile, nil, log.NewWithModule("executor"))
+			l, err := NewLedgerWithStores(createMockRepo(t), tc.blockStorage, kvdb, blockFile)
 			require.NotNil(t, err)
 			require.Nil(t, l)
 		})
@@ -369,7 +369,7 @@ func testChainLedger_Commit(t *testing.T, kv string) {
 	lg.StateLedger.(*StateLedgerImpl).RevertToSnapshot(revid)
 	lg.StateLedger.(*StateLedgerImpl).ClearChangerAndRefund()
 
-	lg.Close()
+	lg.ChainLedger.CloseBlockfile()
 
 	// load ChainLedgerImpl from db, rollback to height 0 since no chain meta stored
 	ldg, _ := initLedger(t, repoRoot, kv)
@@ -560,7 +560,7 @@ func testChainLedger_Rollback(t *testing.T, kvType string) {
 	assert.Nil(t, account1)
 
 	ledger.ChainLedger.GetChainMeta()
-	ledger.Close()
+	ledger.ChainLedger.CloseBlockfile()
 
 	ledger, _ = initLedger(t, repoRoot, kvType)
 	assert.Equal(t, uint64(1), stateLedger.minJnlHeight)
@@ -942,34 +942,17 @@ func createMockRepo(t *testing.T) *repo.Repo {
 }
 
 func initLedger(t *testing.T, repoRoot string, kv string) (*Ledger, string) {
-	if repoRoot == "" {
-		repoRoot = t.TempDir()
+	rep := createMockRepo(t)
+	if repoRoot != "" {
+		rep.RepoRoot = repoRoot
 	}
 
-	var blockStorage storage.Storage
-	var stateStorage storage.Storage
-	var err error
-	if kv == "leveldb" {
-		blockStorage, err = leveldb.New(filepath.Join(repoRoot, "storage"))
-		assert.Nil(t, err)
-		stateStorage, err = leveldb.New(filepath.Join(repoRoot, "ledger"))
-		assert.Nil(t, err)
-	} else if kv == "pebble" {
-		blockStorage, err = pebble.New(filepath.Join(repoRoot, "storage"))
-		assert.Nil(t, err)
-		stateStorage, err = pebble.New(filepath.Join(repoRoot, "ledger"))
-		assert.Nil(t, err)
-	}
-
-	accountCache, err := NewAccountCache()
-	assert.Nil(t, err)
-	logger := log.NewWithModule("account_test")
-	blockFile, err := blockfile.NewBlockFile(repoRoot, logger)
-	assert.Nil(t, err)
-	l, err := New(createMockRepo(t), blockStorage, stateStorage, blockFile, accountCache, log.NewWithModule("executor"))
+	err := storagemgr.Initialize(kv)
+	require.Nil(t, err)
+	l, err := NewLedger(rep)
 	require.Nil(t, err)
 
-	return l, repoRoot
+	return l, rep.RepoRoot
 }
 
 // LeftPadBytes zero-pads slice to the left up to length l.

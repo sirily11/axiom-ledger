@@ -3,11 +3,14 @@ package ledger
 import (
 	"errors"
 	"fmt"
+	"path"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
@@ -77,31 +80,26 @@ func (l *StateLedgerImpl) Finalise() {
 	l.ClearChangerAndRefund()
 }
 
-// NewSimpleLedger create a new ledger instance
-func NewSimpleLedger(repo *repo.Repo, ldb storage.Storage, accountCache *AccountCache, logger logrus.FieldLogger) (StateLedger, error) {
-	var err error
-	minJnlHeight, maxJnlHeight := getJournalRange(ldb)
-
+func newStateLedger(rep *repo.Repo, stateStorage storage.Storage) (StateLedger, error) {
+	minJnlHeight, maxJnlHeight := getJournalRange(stateStorage)
 	prevJnlHash := &types.Hash{}
 	if maxJnlHeight != 0 {
-		blockJournal := getBlockJournal(maxJnlHeight, ldb)
+		blockJournal := getBlockJournal(maxJnlHeight, stateStorage)
 		if blockJournal == nil {
 			return nil, fmt.Errorf("get empty block journal for block: %d", maxJnlHeight)
 		}
 		prevJnlHash = blockJournal.ChangedHash
 	}
 
-	if accountCache == nil {
-		accountCache, err = NewAccountCache()
-		if err != nil {
-			return nil, fmt.Errorf("init account cache failed: %w", err)
-		}
+	accountCache, err := NewAccountCache()
+	if err != nil {
+		return nil, fmt.Errorf("init account cache failed: %w", err)
 	}
 
 	ledger := &StateLedgerImpl{
-		repo:          repo,
-		logger:        logger,
-		ldb:           ldb,
+		repo:          rep,
+		logger:        loggers.Logger(loggers.Storage),
+		ldb:           stateStorage,
 		minJnlHeight:  minJnlHeight,
 		maxJnlHeight:  maxJnlHeight,
 		accounts:      make(map[string]IAccount),
@@ -113,8 +111,21 @@ func NewSimpleLedger(repo *repo.Repo, ldb storage.Storage, accountCache *Account
 		logs:          NewEvmLogs(),
 		blockJournals: make(map[string]*BlockJournal),
 	}
-
 	return ledger, nil
+}
+
+// NewStateLedger create a new ledger instance
+func NewStateLedger(rep *repo.Repo, storageDir string) (StateLedger, error) {
+	stateStoragePath := repo.GetStoragePath(rep.RepoRoot, storagemgr.Ledger)
+	if storageDir != "" {
+		stateStoragePath = path.Join(storageDir, storagemgr.Ledger)
+	}
+	stateStorage, err := storagemgr.Open(stateStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("create stateDB: %w", err)
+	}
+
+	return newStateLedger(rep, stateStorage)
 }
 
 func (l *StateLedgerImpl) AccountCache() *AccountCache {

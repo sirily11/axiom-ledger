@@ -121,6 +121,7 @@ func MockConsensusConfig(logger logrus.FieldLogger, ctrl *gomock.Controller, t *
 
 	genesisEpochInfo := repo.GenesisEpochInfo(false)
 	conf := &common.Config{
+		RepoRoot:           t.TempDir(),
 		Config:             repo.DefaultConsensusConfig(),
 		Logger:             logger,
 		ConsensusType:      "",

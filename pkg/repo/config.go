@@ -165,12 +165,10 @@ type LogModule struct {
 	Consensus  string `mapstructure:"consensus" toml:"consensus"`
 	Executor   string `mapstructure:"executor" toml:"executor"`
 	Governance string `mapstructure:"governance" toml:"governance"`
-	Router     string `mapstructure:"router" toml:"router"`
 	API        string `mapstructure:"api" toml:"api"`
 	CoreAPI    string `mapstructure:"coreapi" toml:"coreapi"`
 	Storage    string `mapstructure:"storage" toml:"storage"`
 	Profile    string `mapstructure:"profile" toml:"profile"`
-	TSS        string `mapstructure:"tss" toml:"tss"`
 	Finance    string `mapstructure:"finance" toml:"finance"`
 }
 
@@ -388,12 +386,10 @@ func DefaultConfig(epochEnable bool) *Config {
 				Consensus:  "info",
 				Executor:   "info",
 				Governance: "info",
-				Router:     "info",
 				API:        "info",
 				CoreAPI:    "info",
 				Storage:    "info",
 				Profile:    "info",
-				TSS:        "info",
 				Finance:    "info",
 			},
 		},

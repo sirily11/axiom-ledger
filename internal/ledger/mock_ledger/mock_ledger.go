@@ -79,6 +79,42 @@ func (c *ChainLedgerCloseCall) DoAndReturn(f func()) *ChainLedgerCloseCall {
 	return c
 }
 
+// CloseBlockfile mocks base method.
+func (m *MockChainLedger) CloseBlockfile() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CloseBlockfile")
+}
+
+// CloseBlockfile indicates an expected call of CloseBlockfile.
+func (mr *MockChainLedgerMockRecorder) CloseBlockfile() *ChainLedgerCloseBlockfileCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseBlockfile", reflect.TypeOf((*MockChainLedger)(nil).CloseBlockfile))
+	return &ChainLedgerCloseBlockfileCall{Call: call}
+}
+
+// ChainLedgerCloseBlockfileCall wrap *gomock.Call
+type ChainLedgerCloseBlockfileCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *ChainLedgerCloseBlockfileCall) Return() *ChainLedgerCloseBlockfileCall {
+	c.Call = c.Call.Return()
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *ChainLedgerCloseBlockfileCall) Do(f func()) *ChainLedgerCloseBlockfileCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *ChainLedgerCloseBlockfileCall) DoAndReturn(f func()) *ChainLedgerCloseBlockfileCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // GetBlock mocks base method.
 func (m *MockChainLedger) GetBlock(height uint64) (*types.Block, error) {
 	m.ctrl.T.Helper()

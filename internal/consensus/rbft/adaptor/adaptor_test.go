@@ -20,7 +20,7 @@ import (
 )
 
 func mockAdaptor(ctrl *gomock.Controller, t *testing.T) *RBFTAdaptor {
-	err := storagemgr.Initialize(t.TempDir(), repo.KVStorageTypeLeveldb)
+	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb)
 	assert.Nil(t, err)
 	logger := log.NewWithModule("consensus")
 	blockC := make(chan *common.CommitEvent, 1024)

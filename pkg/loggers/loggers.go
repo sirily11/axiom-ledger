@@ -17,7 +17,6 @@ const (
 	Consensus  = "consensus"
 	Executor   = "executor"
 	Governance = "governance"
-	Router     = "router"
 	App        = "app"
 	API        = "api"
 	CoreAPI    = "coreapi"
@@ -32,7 +31,6 @@ var w = &LoggerWrapper{
 		Consensus:  log.NewWithModule(Consensus),
 		Executor:   log.NewWithModule(Executor),
 		Governance: log.NewWithModule(Governance),
-		Router:     log.NewWithModule(Router),
 		App:        log.NewWithModule(App),
 		API:        log.NewWithModule(API),
 		CoreAPI:    log.NewWithModule(CoreAPI),
@@ -101,8 +99,6 @@ func Initialize(ctx context.Context, rep *repo.Repo) error {
 	m[Executor].Logger.SetLevel(log.ParseLevel(config.Log.Module.Executor))
 	m[Governance] = log.NewWithModule(Governance)
 	m[Governance].Logger.SetLevel(log.ParseLevel(config.Log.Module.Governance))
-	m[Router] = log.NewWithModule(Router)
-	m[Router].Logger.SetLevel(log.ParseLevel(config.Log.Module.Router))
 	m[App] = log.NewWithModule(App)
 	m[App].Logger.SetLevel(log.ParseLevel(config.Log.Level))
 	m[API] = log.NewWithModule(API)
