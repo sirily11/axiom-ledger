@@ -30,7 +30,7 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -192,7 +192,7 @@ func TestNodeManager_RunForNodeUpgradePropose(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -274,7 +274,7 @@ func TestNodeManager_GetNodeMembers(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -327,7 +327,7 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -449,7 +449,7 @@ func TestNodeManager_RunForRemoveVote(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -562,7 +562,7 @@ func TestNodeManager_RunForUpgradeVote(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 

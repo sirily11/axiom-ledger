@@ -30,6 +30,7 @@ func main() {
 
 	app.Commands = []*cli.Command{
 		configCMD,
+		ledgerCMD,
 		{
 			Name:   "start",
 			Usage:  "Start a long-running daemon process",

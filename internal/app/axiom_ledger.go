@@ -14,13 +14,12 @@ import (
 
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/log"
-	"github.com/axiomesh/axiom-kit/storage/blockfile"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc"
 	"github.com/axiomesh/axiom-ledger/internal/consensus"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/executor"
-	"github.com/axiomesh/axiom-ledger/internal/executor/dev"
+	devexecutor "github.com/axiomesh/axiom-ledger/internal/executor/dev"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/genesis"
@@ -47,18 +46,15 @@ type AxiomLedger struct {
 }
 
 func NewAxiomLedger(rep *repo.Repo, ctx context.Context, cancel context.CancelFunc) (*AxiomLedger, error) {
-	axm, err := GenerateAxiomLedgerWithoutConsensus(rep)
+	axm, err := NewAxiomLedgerWithoutConsensus(rep, ctx, cancel)
 	if err != nil {
 		return nil, fmt.Errorf("generate axiom-ledger without consensus failed: %w", err)
 	}
-	axm.Ctx = ctx
-	axm.Cancel = cancel
 
 	chainMeta := axm.ViewLedger.ChainLedger.GetChainMeta()
-
 	axm.Consensus, err = consensus.New(
 		rep.Config.Consensus.Type,
-		common.WithConfig(rep.ConsensusConfig),
+		common.WithConfig(rep.RepoRoot, rep.ConsensusConfig),
 		common.WithSelfAccountAddress(rep.AccountAddress),
 		common.WithGenesisEpochInfo(rep.Config.Genesis.EpochInfo.Clone()),
 		common.WithConsensusType(rep.Config.Consensus.Type),
@@ -87,38 +83,30 @@ func NewAxiomLedger(rep *repo.Repo, ctx context.Context, cancel context.CancelFu
 		return nil, fmt.Errorf("initialize consensus failed: %w", err)
 	}
 
-	if err := axm.raiseUlimit(rep.Config.Ulimit); err != nil {
-		return nil, fmt.Errorf("raise ulimit: %w", err)
-	}
-
 	return axm, nil
 }
 
-func GenerateAxiomLedgerWithoutConsensus(rep *repo.Repo) (*AxiomLedger, error) {
-	repoRoot := rep.RepoRoot
+func PrepareAxiomLedger(rep *repo.Repo) error {
+	types.InitEIP155Signer(big.NewInt(int64(rep.Config.Genesis.ChainID)))
+
+	if err := storagemgr.Initialize(rep.Config.Storage.KvType); err != nil {
+		return fmt.Errorf("storagemgr initialize: %w", err)
+	}
+	if err := raiseUlimit(rep.Config.Ulimit); err != nil {
+		return fmt.Errorf("raise ulimit: %w", err)
+	}
+	return nil
+}
+
+func NewAxiomLedgerWithoutConsensus(rep *repo.Repo, ctx context.Context, cancel context.CancelFunc) (*AxiomLedger, error) {
+	if err := PrepareAxiomLedger(rep); err != nil {
+		return nil, err
+	}
+
 	logger := loggers.Logger(loggers.App)
 
-	if err := storagemgr.Initialize(repoRoot, rep.Config.Storage.KvType); err != nil {
-		return nil, fmt.Errorf("storagemgr initialize: %w", err)
-	}
-
-	bcStorage, err := storagemgr.Open(storagemgr.BlockChain)
-	if err != nil {
-		return nil, fmt.Errorf("create blockchain storage: %w", err)
-	}
-
-	stateStorage, err := storagemgr.Open(storagemgr.Ledger)
-	if err != nil {
-		return nil, fmt.Errorf("create stateDB: %w", err)
-	}
-
-	bf, err := blockfile.NewBlockFile(repoRoot, loggers.Logger(loggers.Storage))
-	if err != nil {
-		return nil, fmt.Errorf("blockfile initialize: %w", err)
-	}
-
 	// 0. load ledger
-	rwLdg, err := ledger.New(rep, bcStorage, stateStorage, bf, nil, loggers.Logger(loggers.Executor))
+	rwLdg, err := ledger.NewLedger(rep)
 	if err != nil {
 		return nil, fmt.Errorf("create RW ledger: %w", err)
 	}
@@ -134,9 +122,9 @@ func GenerateAxiomLedgerWithoutConsensus(rep *repo.Repo) (*AxiomLedger, error) {
 
 	var txExec executor.Executor
 	if rep.Config.Executor.Type == repo.ExecTypeDev {
-		txExec, err = dev.New(loggers.Logger(loggers.Executor))
+		txExec, err = devexecutor.New(loggers.Logger(loggers.Executor))
 	} else {
-		txExec, err = executor.New(rwLdg, loggers.Logger(loggers.Executor), rep)
+		txExec, err = executor.New(rep, rwLdg)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("create BlockExecutor: %w", err)
@@ -147,23 +135,24 @@ func GenerateAxiomLedgerWithoutConsensus(rep *repo.Repo) (*AxiomLedger, error) {
 		return nil, fmt.Errorf("create peer manager: %w", err)
 	}
 
-	return &AxiomLedger{
+	axm := &AxiomLedger{
+		Ctx:           ctx,
+		Cancel:        cancel,
 		repo:          rep,
 		logger:        logger,
 		ViewLedger:    rwLdg.NewView(),
 		BlockExecutor: txExec,
 		Network:       net,
-	}, nil
-}
-
-func (axm *AxiomLedger) Start() error {
-	var err error
+	}
 	// read current epoch info from ledger
 	axm.repo.EpochInfo, err = base.GetCurrentEpochInfo(axm.ViewLedger.StateLedger)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	return axm, nil
+}
 
+func (axm *AxiomLedger) Start() error {
 	if repo.SupportMultiNode[axm.repo.Config.Consensus.Type] {
 		if err := axm.Network.Start(); err != nil {
 			return fmt.Errorf("peer manager start: %w", err)
@@ -224,7 +213,7 @@ func (axm *AxiomLedger) printLogo() {
 	}
 }
 
-func (axm *AxiomLedger) raiseUlimit(limitNew uint64) error {
+func raiseUlimit(limitNew uint64) error {
 	_, err := fdlimit.Raise(limitNew)
 	if err != nil {
 		return fmt.Errorf("set limit failed: %w", err)
@@ -238,10 +227,6 @@ func (axm *AxiomLedger) raiseUlimit(limitNew uint64) error {
 	if limit.Cur != limitNew && limit.Cur != limit.Max {
 		return errors.New("failed to raise ulimit")
 	}
-
-	axm.logger.WithFields(logrus.Fields{
-		"ulimit": limit.Cur,
-	}).Infof("Ulimit raised")
 
 	return nil
 }

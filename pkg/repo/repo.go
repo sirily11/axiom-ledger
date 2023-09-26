@@ -40,9 +40,7 @@ type Repo struct {
 func (r *Repo) PrintNodeInfo() {
 	fmt.Printf("%s-repo: %s\n", AppName, r.RepoRoot)
 	fmt.Println("account-addr:", r.AccountAddress)
-	fmt.Println("account-key:", KeyString(r.AccountKey))
 	fmt.Println("p2p-id:", r.P2PID)
-	fmt.Println("p2p-key:", KeyString(r.P2PKey))
 	fmt.Printf("p2p-addr: /ip4/0.0.0.0/tcp/%d/p2p/%s\n", r.Config.Port.P2P, r.P2PID)
 }
 

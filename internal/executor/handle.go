@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cbergoon/merkletree"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
@@ -290,7 +291,17 @@ func (exec *BlockExecutor) applyTransaction(i int, tx *types.Transaction) *types
 		return receipt
 	}
 	if result.Failed() {
-		exec.logger.Warnf("execute tx failed: %s", result.Err.Error())
+		if len(result.Revert()) > 0 {
+			reason, errUnpack := abi.UnpackRevert(result.Revert())
+			if errUnpack == nil {
+				exec.logger.Warnf("execute tx failed: %s: %s", result.Err.Error(), reason)
+			} else {
+				exec.logger.Warnf("execute tx failed: %s", result.Err.Error())
+			}
+		} else {
+			exec.logger.Warnf("execute tx failed: %s", result.Err.Error())
+		}
+
 		receipt.Status = types.ReceiptFAILED
 		receipt.Ret = []byte(result.Err.Error())
 		if strings.HasPrefix(result.Err.Error(), ethvm.ErrExecutionReverted.Error()) {

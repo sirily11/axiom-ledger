@@ -66,7 +66,7 @@ func NewSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "network"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "network"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()

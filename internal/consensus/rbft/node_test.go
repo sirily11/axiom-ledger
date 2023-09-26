@@ -29,7 +29,7 @@ import (
 var validTxsCh = make(chan *precheck.ValidTxs, 1024)
 
 func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
-	err := storagemgr.Initialize(t.TempDir(), repo.KVStorageTypeLeveldb)
+	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb)
 	assert.Nil(t, err)
 	mockRbft := rbft.NewMockMinimalNode[types.Transaction, *types.Transaction](ctrl)
 	mockRbft.EXPECT().Status().Return(rbft.NodeStatus{
@@ -207,10 +207,8 @@ func TestReadConfig(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	logger := log.NewWithModule("consensus")
 	rbftConf, txpoolConfig := generateRbftConfig(testutil.MockConsensusConfig(logger, ctrl, t))
-	rbftConf.Logger.Critical()
-	rbftConf.Logger.Criticalf("test critical")
 	rbftConf.Logger.Notice()
-	rbftConf.Logger.Noticef("test critical")
+	rbftConf.Logger.Noticef("test notice")
 	ast.Equal(50, rbftConf.SetSize)
 	ast.Equal(uint64(500), txpoolConfig.BatchSize)
 	ast.Equal(uint64(50000), txpoolConfig.PoolSize)

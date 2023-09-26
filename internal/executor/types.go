@@ -16,7 +16,9 @@ type Executor interface {
 	// Stop
 	Stop() error
 
-	// ExecutorBlock
+	// AsyncExecutorBlock
+	AsyncExecuteBlock(commitEvent *common.CommitEvent)
+
 	ExecuteBlock(commitEvent *common.CommitEvent)
 
 	// ApplyReadonlyTransactions execute readonly tx

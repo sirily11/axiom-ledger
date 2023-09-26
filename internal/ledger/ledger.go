@@ -49,6 +49,8 @@ type ChainLedger interface {
 	GetBlockHash(height uint64) *types.Hash
 
 	Close()
+
+	CloseBlockfile()
 }
 
 type StateLedger interface {

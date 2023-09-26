@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/big"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -14,7 +13,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/axiomesh/axiom-kit/fileutil"
-	types2 "github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc"
 	"github.com/axiomesh/axiom-ledger/internal/app"
 	"github.com/axiomesh/axiom-ledger/internal/coreapi"
@@ -44,8 +42,6 @@ func start(ctx *cli.Context) error {
 		cancel()
 		return err
 	}
-
-	types2.InitEIP155Signer(big.NewInt(int64(r.Config.Genesis.ChainID)))
 
 	printVersion()
 	r.PrintNodeInfo()

@@ -49,12 +49,12 @@ type BlockExecutor struct {
 }
 
 // New creates executor instance
-func New(ledger *ledger.Ledger, logger logrus.FieldLogger, rep *repo.Repo) (*BlockExecutor, error) {
+func New(rep *repo.Repo, ledger *ledger.Ledger) (*BlockExecutor, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	blockExecutor := &BlockExecutor{
 		ledger:           ledger,
-		logger:           logger,
+		logger:           loggers.Logger(loggers.Executor),
 		ctx:              ctx,
 		cancel:           cancel,
 		blockC:           make(chan *common.CommitEvent, blockChanNumber),
@@ -98,6 +98,10 @@ func (exec *BlockExecutor) Stop() error {
 
 // ExecuteBlock executes block from consensus
 func (exec *BlockExecutor) ExecuteBlock(block *common.CommitEvent) {
+	exec.processExecuteEvent(block)
+}
+
+func (exec *BlockExecutor) AsyncExecuteBlock(block *common.CommitEvent) {
 	exec.blockC <- block
 }
 

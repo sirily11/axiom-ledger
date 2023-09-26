@@ -25,7 +25,7 @@ function start() {
   rm -rf "${BUILD_PATH}" && mkdir ${BUILD_PATH}
   cp -rf ${CURRENT_PATH}/package/* ${BUILD_PATH}/
   cp -f ${PROJECT_PATH}/bin/axiom-ledger ${BUILD_PATH}/tools/bin/
-  ${BUILD_PATH}/axiom-ledger config generate --solo
+  ${BUILD_PATH}/axiom-ledger config generate --solo --default-node-index 1
   ${BUILD_PATH}/axiom-ledger start
 }
 

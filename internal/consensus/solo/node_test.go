@@ -26,7 +26,7 @@ func TestNode_Start(t *testing.T) {
 	mockNetwork := mock_network.NewMockNetwork(mockCtl)
 
 	config, err := common.GenerateConfig(
-		common.WithConfig(r.ConsensusConfig),
+		common.WithConfig(r.RepoRoot, r.ConsensusConfig),
 		common.WithGenesisEpochInfo(r.Config.Genesis.EpochInfo),
 		common.WithLogger(log.NewWithModule("consensus")),
 		common.WithApplied(1),

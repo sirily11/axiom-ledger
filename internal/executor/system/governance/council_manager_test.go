@@ -48,7 +48,7 @@ func TestRunForPropose(t *testing.T) {
 	accountCache, err := ledger.NewAccountCache()
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
@@ -271,7 +271,7 @@ func TestRunForVote(t *testing.T) {
 	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	assert.Nil(t, err)
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"))
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
