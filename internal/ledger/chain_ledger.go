@@ -9,14 +9,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/storage/blockfile"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
 	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
+	"github.com/sirupsen/logrus"
 )
 
 var _ ChainLedger = (*ChainLedgerImpl)(nil)
@@ -42,6 +41,12 @@ func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.Blo
 	if err != nil {
 		return nil, fmt.Errorf("load chain meta: %w", err)
 	}
+
+	err = c.checkChainMeta()
+	if err != nil {
+		return nil, fmt.Errorf("check chain meta: %w", err)
+	}
+
 	return c, nil
 }
 
@@ -437,6 +442,62 @@ func (l *ChainLedgerImpl) RollbackBlockChain(height uint64) error {
 	batch.Commit()
 
 	l.UpdateChainMeta(meta)
+
+	return nil
+}
+
+func (l *ChainLedgerImpl) checkChainMeta() error {
+	bfHeight, err := l.bf.Blocks()
+	if err != nil {
+		return fmt.Errorf("get blockfile height: %w", err)
+	}
+	if l.chainMeta.Height < bfHeight {
+		l.chainMeta.Height = bfHeight
+		batcher := l.blockchainStore.NewBatch()
+
+		// Get block body
+		data, err := l.bf.Get(blockfile.BlockFileBodiesTable, bfHeight)
+		if err != nil {
+			return fmt.Errorf("get bodies with height %d from blockfile failed: %w", bfHeight, err)
+		}
+		currentBlock := &types.Block{}
+		if err := currentBlock.Unmarshal(data); err != nil {
+			return fmt.Errorf("unmarshal block error: %w", err)
+		}
+		if err != nil {
+			return fmt.Errorf("get blockfile block: %w", err)
+		}
+
+		// Get txs
+		txsBytes, err := l.bf.Get(blockfile.BlockFileTXsTable, bfHeight)
+		if err != nil {
+			return fmt.Errorf("get transactions with height %d from blockfile failed: %w", bfHeight, err)
+		}
+		txs, err := types.UnmarshalTransactions(txsBytes)
+		if err != nil {
+			return fmt.Errorf("unmarshal txs bytes error: %w", err)
+		}
+		currentBlock.Transactions = txs
+		_, err = l.prepareTransactions(batcher, currentBlock)
+		if err != nil {
+			return err
+		}
+		_, err = l.prepareBlock(batcher, currentBlock)
+		if err != nil {
+			return err
+		}
+
+		l.chainMeta.GasPrice = big.NewInt(currentBlock.BlockHeader.GasPrice)
+		l.chainMeta.BlockHash = currentBlock.BlockHash
+		if err := l.persistChainMeta(batcher, l.chainMeta); err != nil {
+			return fmt.Errorf("update chain meta: %w", err)
+		}
+
+		batcher.Commit()
+	}
+	if l.chainMeta.Height > bfHeight {
+		panic("illegal chain meta!")
+	}
 
 	return nil
 }
