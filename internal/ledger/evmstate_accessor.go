@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	etherTypes "github.com/ethereum/go-ethereum/core/types"
+	ethertypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/axiomesh/axiom-kit/types"
@@ -113,7 +113,7 @@ func (l *StateLedgerImpl) EmptyEVM(addr common.Address) bool {
 	return l.Empty(types.NewAddress(addr.Bytes()))
 }
 
-func (l *StateLedgerImpl) PrepareEVMAccessList(sender common.Address, dest *common.Address, preEVMcompiles []common.Address, txEVMAccesses etherTypes.AccessList) {
+func (l *StateLedgerImpl) PrepareEVMAccessList(sender common.Address, dest *common.Address, preEVMcompiles []common.Address, txEVMAccesses ethertypes.AccessList) {
 	var precompiles []types.Address
 	for _, compile := range preEVMcompiles {
 		precompiles = append(precompiles, *types.NewAddress(compile.Bytes()))
@@ -149,7 +149,7 @@ func (l *StateLedgerImpl) AddEVMPreimage(hash common.Hash, data []byte) {
 	l.AddPreimage(*types.NewHash(hash.Bytes()), data)
 }
 
-func (l *StateLedgerImpl) PrepareEVM(rules params.Rules, sender, coinbase common.Address, dst *common.Address, precompiles []common.Address, list etherTypes.AccessList) {
+func (l *StateLedgerImpl) PrepareEVM(rules params.Rules, sender, coinbase common.Address, dst *common.Address, precompiles []common.Address, list ethertypes.AccessList) {
 	// l.logs.thash = types.NewHash(hash.Bytes())
 	// l.logs.txIndex = index
 	l.accessList = NewAccessList()
@@ -184,7 +184,7 @@ func (l *StateLedgerImpl) StateDB() vm.StateDB {
 	return l
 }
 
-func (l *StateLedgerImpl) AddEVMLog(log *etherTypes.Log) {
+func (l *StateLedgerImpl) AddEVMLog(log *ethertypes.Log) {
 	var topics []*types.Hash
 	for _, topic := range log.Topics {
 		topics = append(topics, types.NewHash(topic.Bytes()))

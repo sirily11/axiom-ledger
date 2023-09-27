@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/axiomesh/axiom-kit/types"
@@ -129,6 +130,8 @@ type StateAccessor interface {
 }
 
 type IAccount interface {
+	fmt.Stringer
+
 	GetAddress() *types.Address
 
 	GetState(key []byte) (bool, []byte)

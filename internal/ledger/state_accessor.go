@@ -24,6 +24,9 @@ func (l *StateLedgerImpl) GetOrCreateAccount(addr *types.Address) IAccount {
 		account = NewAccount(l.ldb, l.accountCache, addr, l.changer)
 		l.changer.append(createObjectChange{account: addr})
 		l.accounts[addr.String()] = account
+		l.logger.Debugf("[GetOrCreateAccount] create account, addr: %v", addr)
+	} else {
+		l.logger.Debugf("[GetOrCreateAccount] get account, addr: %v", addr)
 	}
 
 	return account
@@ -35,6 +38,7 @@ func (l *StateLedgerImpl) GetAccount(address *types.Address) IAccount {
 
 	value, ok := l.accounts[addr]
 	if ok {
+		l.logger.Debugf("[GetAccount] cache hit from accounts，addr: %v, account: %v", addr, value)
 		return value
 	}
 
@@ -51,6 +55,7 @@ func (l *StateLedgerImpl) GetAccount(address *types.Address) IAccount {
 			account.dirtyCode = code
 		}
 		l.accounts[addr] = account
+		l.logger.Debugf("[GetAccount] cache hit from accountCache，addr: %v, account: %v", addr, account)
 		return account
 	}
 
@@ -65,14 +70,17 @@ func (l *StateLedgerImpl) GetAccount(address *types.Address) IAccount {
 			account.dirtyCode = code
 		}
 		l.accounts[addr] = account
+		l.logger.Debugf("[GetAccount] cache hit from db，addr: %v, account: %v", addr, account)
 		return account
 	}
+	l.logger.Debugf("[GetAccount] account not found，addr: %v", addr)
 	return nil
 }
 
 // nolint
 func (l *StateLedgerImpl) setAccount(account IAccount) {
 	l.accounts[account.GetAddress().String()] = account
+	l.logger.Debugf("[Revert setAccount] addr: %v, account: %v", account.GetAddress(), account)
 }
 
 // GetBalance get account balance using account Address
@@ -376,6 +384,7 @@ func (l *StateLedgerImpl) Suicide(addr *types.Address) bool {
 		prev:        account.Suicided(),
 		prevbalance: new(big.Int).Set(account.GetBalance()),
 	})
+	l.logger.Debugf("[Suicide] addr: %v, before balance: %v", addr, account.GetBalance())
 	account.SetSuicided(true)
 	account.SetBalance(new(big.Int))
 
@@ -385,20 +394,27 @@ func (l *StateLedgerImpl) Suicide(addr *types.Address) bool {
 func (l *StateLedgerImpl) HasSuicide(addr *types.Address) bool {
 	account := l.GetOrCreateAccount(addr)
 	if account.IsEmpty() {
+		l.logger.Debugf("[HasSuicide] addr: %v, is empty, suicide: false", addr)
 		return false
 	}
+	l.logger.Debugf("[HasSuicide] addr: %v, suicide: %v", addr, account.Suicided())
 	return account.Suicided()
 }
 
 func (l *StateLedgerImpl) Exist(addr *types.Address) bool {
-	return !l.GetOrCreateAccount(addr).IsEmpty()
+	exist := !l.GetOrCreateAccount(addr).IsEmpty()
+	l.logger.Debugf("[Exist] addr: %v, exist: %v", addr, exist)
+	return exist
 }
 
 func (l *StateLedgerImpl) Empty(addr *types.Address) bool {
-	return l.GetOrCreateAccount(addr).IsEmpty()
+	empty := l.GetOrCreateAccount(addr).IsEmpty()
+	l.logger.Debugf("[Empty] addr: %v, empty: %v", addr, empty)
+	return empty
 }
 
 func (l *StateLedgerImpl) Snapshot() int {
+	l.logger.Debugf("-------------------------- [Snapshot] --------------------------")
 	id := l.nextRevisionId
 	l.nextRevisionId++
 	l.validRevisions = append(l.validRevisions, revision{id: id, changerIndex: l.changer.length()})
@@ -485,6 +501,7 @@ func (l *StateLedgerImpl) PrepareBlock(hash *types.Hash, height uint64) {
 	l.logs = NewEvmLogs()
 	l.logs.bhash = hash
 	l.blockHeight = height
+	l.logger.Debugf("[PrepareBlock] height: %v, hash: %v", height, hash)
 }
 
 func (l *StateLedgerImpl) AddLog(log *types.EvmLog) {
