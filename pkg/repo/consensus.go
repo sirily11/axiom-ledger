@@ -15,9 +15,14 @@ type ReceiveMsgLimiter struct {
 	Burst  int64 `mapstructure:"burst" toml:"burst"`
 }
 
+type ConsensusSync struct {
+	FetchConcurrencyLimit int `mapstructure:"fetch_concurrency_limit" toml:"fetch_concurrency_limit"`
+}
+
 type ConsensusConfig struct {
 	TimedGenBlock TimedGenBlock     `mapstructure:"timed_gen_block" toml:"timed_gen_block"`
 	Limit         ReceiveMsgLimiter `mapstructure:"limit" toml:"limit"`
+	Sync          ConsensusSync     `mapstructure:"sync" toml:"sync"`
 	TxPool        TxPool            `mapstructure:"tx_pool" toml:"tx_pool"`
 	TxCache       TxCache           `mapstructure:"tx_cache" toml:"tx_cache"`
 	Rbft          RBFT              `mapstructure:"rbft" toml:"rbft"`
@@ -79,6 +84,9 @@ func DefaultConsensusConfig() *ConsensusConfig {
 			Enable: false,
 			Limit:  10000,
 			Burst:  10000,
+		},
+		Sync: ConsensusSync{
+			FetchConcurrencyLimit: 50,
 		},
 		TxPool: TxPool{
 			PoolSize:            50000,
