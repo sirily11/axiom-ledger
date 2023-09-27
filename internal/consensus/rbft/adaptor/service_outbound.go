@@ -3,11 +3,11 @@ package adaptor
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
+	"github.com/gammazero/workerpool"
 	"github.com/sirupsen/logrus"
 
 	"github.com/axiomesh/axiom-bft/common/consensus"
@@ -130,11 +130,10 @@ func (a *RBFTAdaptor) get(peers []string, i int) (block *types.Block, err error)
 
 func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, seqNo uint64) []*types.Block {
 	blockCache := make([]*types.Block, size)
-	wg := &sync.WaitGroup{}
-	wg.Add(size)
+	wp := workerpool.New(a.config.Config.Sync.FetchConcurrencyLimit)
 	for i := 0; i < size; i++ {
-		go func(i int) {
-			defer wg.Done()
+		i := i
+		wp.Submit(func() {
 			if err := retry.Retry(func(attempt uint) (err error) {
 				curHeight := int(seqNo) - i
 				block, err := a.get(peers, curHeight)
@@ -149,9 +148,9 @@ func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, seqNo uint64)
 			}, strategy.Wait(200*time.Millisecond)); err != nil {
 				a.logger.Error(err)
 			}
-		}(i)
+		})
 	}
-	wg.Wait()
+	wp.StopWait()
 	return blockCache
 }
 
