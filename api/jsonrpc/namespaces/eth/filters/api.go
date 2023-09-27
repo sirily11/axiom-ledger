@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -38,6 +37,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth"
 	rpctypes "github.com/axiomesh/axiom-ledger/api/jsonrpc/types"
 	"github.com/axiomesh/axiom-ledger/internal/coreapi/api"
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
 // filter is a helper struct that holds meta information over the filter type

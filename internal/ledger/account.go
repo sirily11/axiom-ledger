@@ -3,19 +3,32 @@ package ledger
 import (
 	"bytes"
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sirupsen/logrus"
 
+	"github.com/axiomesh/axiom-kit/hexutil"
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 )
 
 var _ IAccount = (*SimpleAccount)(nil)
 
+type bytesLazyLogger struct {
+	bytes []byte
+}
+
+func (l *bytesLazyLogger) String() string {
+	return hexutil.Encode(l.bytes)
+}
+
 type SimpleAccount struct {
+	logger        logrus.FieldLogger
 	Addr          *types.Address
 	originAccount *InnerAccount
 	dirtyAccount  *InnerAccount
@@ -42,6 +55,7 @@ type SimpleAccount struct {
 
 func NewAccount(ldb storage.Storage, cache *AccountCache, addr *types.Address, changer *stateChanger) *SimpleAccount {
 	return &SimpleAccount{
+		logger:       loggers.Logger(loggers.Storage),
 		Addr:         addr,
 		originState:  make(map[string][]byte),
 		pendingState: make(map[string][]byte),
@@ -53,6 +67,10 @@ func NewAccount(ldb storage.Storage, cache *AccountCache, addr *types.Address, c
 	}
 }
 
+func (o *SimpleAccount) String() string {
+	return fmt.Sprintf("{origin: %v, dirty: %v}", o.originAccount, o.dirtyAccount)
+}
+
 func (o *SimpleAccount) GetAddress() *types.Address {
 	return o.Addr
 }
@@ -60,20 +78,26 @@ func (o *SimpleAccount) GetAddress() *types.Address {
 // GetState Get state from local cache, if not found, then get it from DB
 func (o *SimpleAccount) GetState(key []byte) (bool, []byte) {
 	if value, exist := o.dirtyState[string(key)]; exist {
+		o.logger.Debugf("[GetState] get from dirty, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 		return value != nil, value
 	}
 
 	if value, exist := o.pendingState[string(key)]; exist {
+		o.logger.Debugf("[GetState] get from pending, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 		return value != nil, value
 	}
 
 	if value, exist := o.originState[string(key)]; exist {
+		o.logger.Debugf("[GetState] get from origin, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 		return value != nil, value
 	}
 
 	val, ok := o.cache.getState(o.Addr, string(key))
 	if !ok {
 		val = o.ldb.Get(composeStateKey(o.Addr, key))
+		o.logger.Debugf("[GetState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
+	} else {
+		o.logger.Debugf("[GetState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
 	}
 
 	o.originState[string(key)] = val
@@ -84,21 +108,28 @@ func (o *SimpleAccount) GetState(key []byte) (bool, []byte) {
 func (o *SimpleAccount) GetCommittedState(key []byte) []byte {
 	if value, exist := o.pendingState[string(key)]; exist {
 		if value == nil {
+			o.logger.Debugf("[GetCommittedState] get from pending, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 			return (&types.Hash{}).Bytes()
 		}
+		o.logger.Debugf("[GetCommittedState] get from pending, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 		return value
 	}
 
 	if value, exist := o.originState[string(key)]; exist {
 		if value == nil {
+			o.logger.Debugf("[GetCommittedState] get from origin, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 			return (&types.Hash{}).Bytes()
 		}
+		o.logger.Debugf("[GetCommittedState] get from origin, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: value})
 		return value
 	}
 
 	val, ok := o.cache.getState(o.Addr, string(key))
 	if !ok {
 		val = o.ldb.Get(composeStateKey(o.Addr, key))
+		o.logger.Debugf("[GetCommittedState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
+	} else {
+		o.logger.Debugf("[GetCommittedState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
 	}
 
 	o.originState[string(key)] = val
@@ -117,6 +148,7 @@ func (o *SimpleAccount) SetState(key []byte, value []byte) {
 		key:      key,
 		prevalue: prev,
 	})
+	o.logger.Debugf("[SetState] addr: %v, key: %v, before state: %v, after state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: prev}, &bytesLazyLogger{bytes: value})
 	o.setState(key, value)
 }
 
@@ -134,6 +166,7 @@ func (o *SimpleAccount) SetCodeAndHash(code []byte) {
 	if o.dirtyAccount == nil {
 		o.dirtyAccount = CopyOrNewIfEmpty(o.originAccount)
 	}
+	o.logger.Debugf("[SetCodeAndHash] addr: %v, before code hash: %v, after code hash: %v", o.Addr, &bytesLazyLogger{bytes: o.CodeHash()}, &bytesLazyLogger{bytes: ret.Bytes()})
 	o.dirtyAccount.CodeHash = ret.Bytes()
 	o.dirtyCode = code
 }
@@ -174,11 +207,14 @@ func (o *SimpleAccount) Code() []byte {
 
 func (o *SimpleAccount) CodeHash() []byte {
 	if o.dirtyAccount != nil {
+		o.logger.Debugf("[CodeHash] get from dirty, addr: %v, code hash: %v", o.Addr, &bytesLazyLogger{bytes: o.dirtyAccount.CodeHash})
 		return o.dirtyAccount.CodeHash
 	}
 	if o.originAccount != nil {
+		o.logger.Debugf("[CodeHash] get from origin, addr: %v, code hash: %v", o.Addr, &bytesLazyLogger{bytes: o.originAccount.CodeHash})
 		return o.originAccount.CodeHash
 	}
+	o.logger.Debugf("[CodeHash] not found, addr: %v", o.Addr)
 	return nil
 }
 
@@ -190,6 +226,11 @@ func (o *SimpleAccount) SetNonce(nonce uint64) {
 	})
 	if o.dirtyAccount == nil {
 		o.dirtyAccount = CopyOrNewIfEmpty(o.originAccount)
+	}
+	if o.originAccount == nil {
+		o.logger.Debugf("[SetNonce] addr: %v, before origin nonce: %v, before dirty nonce: %v, after dirty nonce: %v", o.Addr, 0, o.dirtyAccount.Nonce, nonce)
+	} else {
+		o.logger.Debugf("[SetNonce] addr: %v, before origin nonce: %v, before dirty nonce: %v, after dirty nonce: %v", o.Addr, o.originAccount.Nonce, o.dirtyAccount.Nonce, nonce)
 	}
 	o.dirtyAccount.Nonce = nonce
 }
@@ -204,22 +245,28 @@ func (o *SimpleAccount) setNonce(nonce uint64) {
 // GetNonce Get the nonce from user account
 func (o *SimpleAccount) GetNonce() uint64 {
 	if o.dirtyAccount != nil {
+		o.logger.Debugf("[GetNonce] get from dirty, addr: %v, nonce: %v", o.Addr, o.dirtyAccount.Nonce)
 		return o.dirtyAccount.Nonce
 	}
 	if o.originAccount != nil {
+		o.logger.Debugf("[GetNonce] get from origin, addr: %v, nonce: %v", o.Addr, o.originAccount.Nonce)
 		return o.originAccount.Nonce
 	}
+	o.logger.Debugf("[GetNonce] not found, addr: %v, nonce: 0", o.Addr)
 	return 0
 }
 
 // GetBalance Get the balance from the account
 func (o *SimpleAccount) GetBalance() *big.Int {
 	if o.dirtyAccount != nil {
+		o.logger.Debugf("[GetBalance] get from dirty, addr: %v, balance: %v", o.Addr, o.dirtyAccount.Balance)
 		return o.dirtyAccount.Balance
 	}
 	if o.originAccount != nil {
+		o.logger.Debugf("[GetBalance] get from origin, addr: %v, balance: %v", o.Addr, o.originAccount.Balance)
 		return o.originAccount.Balance
 	}
+	o.logger.Debugf("[GetBalance] not found, addr: %v, balance: 0", o.Addr)
 	return new(big.Int).SetInt64(0)
 }
 
@@ -231,6 +278,11 @@ func (o *SimpleAccount) SetBalance(balance *big.Int) {
 	})
 	if o.dirtyAccount == nil {
 		o.dirtyAccount = CopyOrNewIfEmpty(o.originAccount)
+	}
+	if o.originAccount == nil {
+		o.logger.Debugf("[SetBalance] addr: %v, before origin balance: %v, before dirty balance: %v, after dirty balance: %v", o.Addr, 0, o.dirtyAccount.Balance, balance)
+	} else {
+		o.logger.Debugf("[SetBalance] addr: %v, before origin balance: %v, before dirty balance: %v, after dirty balance: %v", o.Addr, o.originAccount.Balance, o.dirtyAccount.Balance, balance)
 	}
 	o.dirtyAccount.Balance = balance
 }
@@ -246,6 +298,7 @@ func (o *SimpleAccount) SubBalance(amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
+	o.logger.Debugf("[SubBalance] addr: %v, sub amount: %v", o.Addr, amount)
 	o.SetBalance(new(big.Int).Sub(o.GetBalance(), amount))
 }
 
@@ -253,6 +306,7 @@ func (o *SimpleAccount) AddBalance(amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
+	o.logger.Debugf("[AddBalance] addr: %v, add amount: %v", o.Addr, amount)
 	o.SetBalance(new(big.Int).Add(o.GetBalance(), amount))
 }
 
@@ -286,6 +340,7 @@ func (o *SimpleAccount) Query(prefix string) (bool, [][]byte) {
 		return bytes.Compare(ret[i], ret[j]) < 0
 	})
 
+	o.logger.Debugf("[Query] addr: %v, query prefix: %v, ret size: %v", o.Addr, prefix, len(ret))
 	return len(ret) != 0, ret
 }
 

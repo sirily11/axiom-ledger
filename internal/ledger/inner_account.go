@@ -3,13 +3,20 @@ package ledger
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math/big"
+
+	"github.com/axiomesh/axiom-kit/types"
 )
 
 type InnerAccount struct {
 	Nonce    uint64   `json:"nonce"`
 	Balance  *big.Int `json:"balance"`
 	CodeHash []byte   `json:"code_hash"`
+}
+
+func (o *InnerAccount) String() string {
+	return fmt.Sprintf("{nonce: %d, balance: %v, code_hash: %v}", o.Nonce, o.Balance, types.NewHash(o.CodeHash))
 }
 
 // Marshal Marshal the account into byte

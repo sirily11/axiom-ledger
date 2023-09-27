@@ -89,6 +89,9 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 		exec.logger.WithFields(logrus.Fields{"block height": block.BlockHeader.Number,
 			"matchedHeight": exec.currentHeight + 1}).Warning("current block height is not matched")
 		if block.BlockHeader.Number <= exec.currentHeight {
+			if exec.rep.Config.Executor.DisableRollback {
+				panic(fmt.Sprintf("not supported rollback to %d", block.BlockHeader.Number))
+			}
 			err := exec.rollbackBlocks(block)
 			if err != nil {
 				exec.logger.WithError(err).Error("rollback blocks failed")

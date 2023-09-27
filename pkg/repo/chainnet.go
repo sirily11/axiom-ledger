@@ -73,7 +73,8 @@ func AriesConfig() *Config {
 		},
 		Ledger: Ledger{},
 		Executor: Executor{
-			Type: ExecTypeNative,
+			Type:            ExecTypeNative,
+			DisableRollback: false,
 		},
 		Genesis: Genesis{
 			ChainID:       23411,
@@ -166,14 +167,15 @@ func AriesConfig() *Config {
 			Enable: true,
 		},
 		Log: Log{
-			Level:          "info",
-			Filename:       "axiom-ledger",
-			ReportCaller:   false,
-			EnableCompress: false,
-			EnableColor:    true,
-			MaxAge:         30,
-			MaxSize:        128,
-			RotationTime:   Duration(24 * time.Hour),
+			Level:            "info",
+			Filename:         "axiom-ledger",
+			ReportCaller:     false,
+			EnableCompress:   false,
+			EnableColor:      true,
+			DisableTimestamp: false,
+			MaxAge:           30,
+			MaxSize:          128,
+			RotationTime:     Duration(24 * time.Hour),
 			Module: LogModule{
 				P2P:        "info",
 				Consensus:  "debug",

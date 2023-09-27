@@ -14,6 +14,12 @@ import (
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
+var configGenerateArgs = struct {
+	DefaultNodeIndex int
+	Solo             bool
+	EpochEnable      bool
+}{}
+
 var configCMD = &cli.Command{
 	Name:  "config",
 	Usage: "The config manage commands",
@@ -24,19 +30,22 @@ var configCMD = &cli.Command{
 			Action: generate,
 			Flags: []cli.Flag{
 				&cli.IntFlag{
-					Name:     "default-node-index",
-					Usage:    "use default node config by specified index(1,2,3,4), regenerate if not specified",
-					Required: false,
+					Name:        "default-node-index",
+					Usage:       "use default node config by specified index(1,2,3,4), regenerate if not specified",
+					Destination: &configGenerateArgs.DefaultNodeIndex,
+					Required:    false,
 				},
 				&cli.BoolFlag{
-					Name:     "solo",
-					Usage:    "generate solo config if specified",
-					Required: false,
+					Name:        "solo",
+					Usage:       "generate solo config if specified",
+					Destination: &configGenerateArgs.Solo,
+					Required:    false,
 				},
 				&cli.BoolFlag{
-					Name:     "epoch-enable",
-					Usage:    "generate epoch and wrf enabled config if specified",
-					Required: false,
+					Name:        "epoch-enable",
+					Usage:       "generate epoch and wrf enabled config if specified",
+					Destination: &configGenerateArgs.EpochEnable,
+					Required:    false,
 				},
 			},
 		},
@@ -85,13 +94,11 @@ func generate(ctx *cli.Context) error {
 		}
 	}
 
-	epochEnable := ctx.Bool("epoch-enable")
-	nodeIndex := ctx.Int("default-node-index")
-	r, err := repo.DefaultWithNodeIndex(p, nodeIndex-1, epochEnable)
+	r, err := repo.DefaultWithNodeIndex(p, configGenerateArgs.DefaultNodeIndex-1, configGenerateArgs.EpochEnable)
 	if err != nil {
 		return err
 	}
-	if ctx.Bool("solo") {
+	if configGenerateArgs.Solo {
 		r.Config.Consensus.Type = repo.ConsensusTypeSolo
 	}
 	if err := r.Flush(); err != nil {

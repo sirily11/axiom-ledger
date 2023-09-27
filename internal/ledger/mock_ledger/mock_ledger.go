@@ -3883,6 +3883,44 @@ func (c *IAccountSetSuicidedCall) DoAndReturn(f func(bool)) *IAccountSetSuicided
 	return c
 }
 
+// String mocks base method.
+func (m *MockIAccount) String() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "String")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// String indicates an expected call of String.
+func (mr *MockIAccountMockRecorder) String() *IAccountStringCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockIAccount)(nil).String))
+	return &IAccountStringCall{Call: call}
+}
+
+// IAccountStringCall wrap *gomock.Call
+type IAccountStringCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *IAccountStringCall) Return(arg0 string) *IAccountStringCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *IAccountStringCall) Do(f func() string) *IAccountStringCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *IAccountStringCall) DoAndReturn(f func() string) *IAccountStringCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // SubBalance mocks base method.
 func (m *MockIAccount) SubBalance(amount *big.Int) {
 	m.ctrl.T.Helper()

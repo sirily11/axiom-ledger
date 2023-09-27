@@ -72,14 +72,15 @@ func InitializeEthLog(logger *logrus.Entry) {
 	ethlog.Root().SetHandler(&ethHandler{logger: logger})
 }
 
-func Initialize(ctx context.Context, rep *repo.Repo) error {
+func Initialize(ctx context.Context, rep *repo.Repo, persist bool) error {
 	config := rep.Config
 	err := log.Initialize(
 		log.WithCtx(ctx),
 		log.WithEnableCompress(config.Log.EnableCompress),
 		log.WithReportCaller(config.Log.ReportCaller),
 		log.WithEnableColor(config.Log.EnableColor),
-		log.WithPersist(true),
+		log.WithDisableTimestamp(config.Log.DisableTimestamp),
+		log.WithPersist(persist),
 		log.WithFilePath(filepath.Join(rep.RepoRoot, repo.LogsDirName)),
 		log.WithFileName(config.Log.Filename),
 		log.WithMaxAge(int(config.Log.MaxAge)),

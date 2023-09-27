@@ -144,11 +144,12 @@ type Ping struct {
 }
 
 type Log struct {
-	Level          string `mapstructure:"level" toml:"level"`
-	Filename       string `mapstructure:"filename" toml:"filename"`
-	ReportCaller   bool   `mapstructure:"report_caller" toml:"report_caller"`
-	EnableCompress bool   `mapstructure:"enable_compress" toml:"enable_compress"`
-	EnableColor    bool   `mapstructure:"enable_color" toml:"enable_color"`
+	Level            string `mapstructure:"level" toml:"level"`
+	Filename         string `mapstructure:"filename" toml:"filename"`
+	ReportCaller     bool   `mapstructure:"report_caller" toml:"report_caller"`
+	EnableCompress   bool   `mapstructure:"enable_compress" toml:"enable_compress"`
+	EnableColor      bool   `mapstructure:"enable_color" toml:"enable_color"`
+	DisableTimestamp bool   `mapstructure:"disable_timestamp" toml:"disable_timestamp"`
 
 	// unit: day
 	MaxAge uint `mapstructure:"max_age" toml:"max_age"`
@@ -203,7 +204,8 @@ type Ledger struct {
 }
 
 type Executor struct {
-	Type string `mapstructure:"type" toml:"type"`
+	Type            string `mapstructure:"type" toml:"type"`
+	DisableRollback bool   `mapstructure:"disable_rollback" toml:"disable_rollback"`
 }
 
 var SupportMultiNode = make(map[string]bool)
@@ -322,7 +324,8 @@ func DefaultConfig(epochEnable bool) *Config {
 		},
 		Ledger: Ledger{},
 		Executor: Executor{
-			Type: ExecTypeNative,
+			Type:            ExecTypeNative,
+			DisableRollback: false,
 		},
 		Genesis: Genesis{
 			ChainID:       1356,
@@ -373,14 +376,15 @@ func DefaultConfig(epochEnable bool) *Config {
 			Enable: true,
 		},
 		Log: Log{
-			Level:          "info",
-			Filename:       "axiom-ledger",
-			ReportCaller:   false,
-			EnableCompress: false,
-			EnableColor:    true,
-			MaxAge:         30,
-			MaxSize:        128,
-			RotationTime:   Duration(24 * time.Hour),
+			Level:            "info",
+			Filename:         "axiom-ledger",
+			ReportCaller:     false,
+			EnableCompress:   false,
+			EnableColor:      true,
+			DisableTimestamp: false,
+			MaxAge:           30,
+			MaxSize:          128,
+			RotationTime:     Duration(24 * time.Hour),
 			Module: LogModule{
 				P2P:        "info",
 				Consensus:  "info",

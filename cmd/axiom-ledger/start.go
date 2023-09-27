@@ -38,7 +38,7 @@ func start(ctx *cli.Context) error {
 	}
 
 	appCtx, cancel := context.WithCancel(ctx.Context)
-	if err := loggers.Initialize(appCtx, r); err != nil {
+	if err := loggers.Initialize(appCtx, r, true); err != nil {
 		cancel()
 		return err
 	}
