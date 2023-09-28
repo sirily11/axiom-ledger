@@ -71,43 +71,51 @@ func (a *RBFTAdaptor) StateUpdate(lowWatermark, seqNo uint64, digest string, che
 		}
 	}
 
+	// update the current sync height
+	a.currentSyncHeight = startHeight
+
 	a.logger.WithFields(logrus.Fields{
 		"target":      a.StateUpdateHeight,
 		"target_hash": digest,
 		"start":       startHeight,
 	}).Info("State update start")
 
+	// todo(lrx): verify sign of each checkpoint?
+	var stateUpdatedCheckpoint *consensus.Checkpoint
+	if len(checkpoints) != 0 {
+		stateUpdatedCheckpoint = checkpoints[0].GetCheckpoint()
+	}
+
 	syncSize := a.StateUpdateHeight - startHeight + 1
-
-	blockCache := a.getBlockFromOthers(peers, int(syncSize), a.StateUpdateHeight)
-	lastBlock := blockCache[len(blockCache)-1]
-	if lastBlock.Height() != a.StateUpdateHeight || lastBlock.BlockHash.String() != digest {
-		panic(fmt.Errorf("sync block failed: require[height:%d, hash:%s], actual[height:%d, hash:%s]",
-			a.StateUpdateHeight, digest, lastBlock.Height(), lastBlock.BlockHash.String()))
+	pageSize := a.config.Config.Sync.FetchSizeLimit
+	if int(syncSize) < a.config.Config.Sync.FetchSizeLimit {
+		pageSize = int(syncSize)
 	}
 
-	for _, block := range blockCache {
-		if block == nil {
-			a.logger.Error("Receive a nil block")
-			return
-		}
-		localList := make([]bool, len(block.Transactions))
-		for i := 0; i < len(block.Transactions); i++ {
-			localList[i] = false
-		}
-
-		// todo(lrx): verify sign of each checkpoint?
-		var stateUpdatedCheckpoint *consensus.Checkpoint
-		if len(checkpoints) != 0 {
-			stateUpdatedCheckpoint = checkpoints[0].GetCheckpoint()
+	for a.StateUpdateHeight >= a.currentSyncHeight {
+		a.logger.WithFields(logrus.Fields{
+			"target":     a.StateUpdateHeight,
+			"pageSize":   pageSize,
+			"syncHeight": a.currentSyncHeight,
+		}).Info("State update page sync Start")
+		if err := a.pageSyncBlock(peers, pageSize, stateUpdatedCheckpoint); err != nil {
+			a.logger.Error(err)
+			panic(err)
 		}
 
-		commitEvent := &common.CommitEvent{
-			Block:                  block,
-			StateUpdatedCheckpoint: stateUpdatedCheckpoint,
+		// update the current sync height and page size
+		a.currentSyncHeight += uint64(pageSize)
+
+		if int(a.StateUpdateHeight-a.currentSyncHeight+1) < a.config.Config.Sync.FetchSizeLimit {
+			pageSize = int(a.StateUpdateHeight - a.currentSyncHeight + 1)
+		} else {
+			pageSize = a.config.Config.Sync.FetchSizeLimit
 		}
-		a.BlockC <- commitEvent
+
 	}
+
+	// reset the current sync height
+	a.currentSyncHeight = 0
 
 	a.logger.WithFields(logrus.Fields{
 		"target":      seqNo,
@@ -128,24 +136,48 @@ func (a *RBFTAdaptor) get(peers []string, i int) (block *types.Block, err error)
 	return nil, errors.New("can't get block from all peers")
 }
 
-func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, seqNo uint64) []*types.Block {
+func (a *RBFTAdaptor) pageSyncBlock(peers []string, pageSize int, checkpoints *consensus.Checkpoint) error {
+	blockCache := a.getBlockFromOthers(peers, pageSize, a.currentSyncHeight)
+	if len(blockCache) != pageSize {
+		return fmt.Errorf("block cache size is not equal to page size, need %d, got %d", pageSize, len(blockCache))
+	}
+
+	for index, block := range blockCache {
+		if block == nil {
+			return fmt.Errorf("receive a nil block[height: %d]", int(a.currentSyncHeight)+index)
+		}
+
+		commitEvent := &common.CommitEvent{
+			Block: block,
+		}
+
+		// if the last block is received, we should notify the state updated checkpoint to executor
+		if blockCache[len(blockCache)-1].Height() == a.StateUpdateHeight {
+			commitEvent.StateUpdatedCheckpoint = checkpoints
+		}
+		a.BlockC <- commitEvent
+	}
+	return nil
+}
+
+func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, currentSyncHeight uint64) []*types.Block {
 	blockCache := make([]*types.Block, size)
 	wp := workerpool.New(a.config.Config.Sync.FetchConcurrencyLimit)
 	for i := 0; i < size; i++ {
-		i := i
+		index := i
 		wp.Submit(func() {
 			if err := retry.Retry(func(attempt uint) (err error) {
-				curHeight := int(seqNo) - i
+				curHeight := int(currentSyncHeight) + index
 				block, err := a.get(peers, curHeight)
 				if err != nil {
 					a.logger.Info(err)
 					return err
 				}
 				a.lock.Lock()
-				blockCache[size-i-1] = block
+				blockCache[index] = block
 				a.lock.Unlock()
 				return nil
-			}, strategy.Wait(200*time.Millisecond)); err != nil {
+			}, strategy.Wait(500*time.Millisecond)); err != nil {
 				a.logger.Error(err)
 			}
 		})

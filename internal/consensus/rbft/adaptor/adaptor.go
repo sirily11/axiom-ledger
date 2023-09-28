@@ -40,6 +40,8 @@ type RBFTAdaptor struct {
 	getBlockFunc      func(uint64) (*types.Block, error)
 	StateUpdating     bool
 	StateUpdateHeight uint64
+
+	currentSyncHeight uint64
 	cancel            context.CancelFunc
 	config            *common.Config
 	EpochInfo         *rbft.EpochInfo

@@ -204,6 +204,7 @@ func AriesConsensusConfig() *ConsensusConfig {
 		},
 		Sync: ConsensusSync{
 			FetchConcurrencyLimit: 50,
+			FetchSizeLimit:        1000,
 		},
 		TxPool: TxPool{
 			PoolSize:            50000,
