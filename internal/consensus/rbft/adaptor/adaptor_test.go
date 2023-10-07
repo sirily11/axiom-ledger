@@ -23,9 +23,7 @@ func mockAdaptor(ctrl *gomock.Controller, t *testing.T) *RBFTAdaptor {
 	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb)
 	assert.Nil(t, err)
 	logger := log.NewWithModule("consensus")
-	blockC := make(chan *common.CommitEvent, 1024)
-	_, cancel := context.WithCancel(context.Background())
-	stack, err := NewRBFTAdaptor(testutil.MockConsensusConfig(logger, ctrl, t), blockC, cancel)
+	stack, err := NewRBFTAdaptor(testutil.MockConsensusConfig(logger, ctrl, t))
 	assert.Nil(t, err)
 
 	consensusMsgPipes := make(map[int32]network.Pipe, len(consensus.Type_name))
@@ -149,6 +147,23 @@ func TestStateUpdate(t *testing.T) {
 		ast.Equal(block3.BlockHash.String(), target.Block.BlockHash.String())
 		ast.Equal(true, adaptor.StateUpdating)
 	})
+
+	t.Run("StateUpdate with receive stop signal", func(t *testing.T) {
+		block4 := testutil.ConstructBlock("block4", uint64(4))
+		testutil.SetMockBlockLedger(block4, false)
+
+		block5 := testutil.ConstructBlock("block5", uint64(5))
+		testutil.SetMockBlockLedger(block5, false)
+
+		defer testutil.ResetMockBlockLedger()
+
+		adaptor.Cancel()
+		adaptor.StateUpdate(0, block5.BlockHeader.Number, block5.BlockHash.String(),
+			[]*consensus.SignedCheckpoint{signCkp}, nil)
+
+		ast.Equal(true, adaptor.closed)
+		ast.Equal(false, adaptor.StateUpdating)
+	})
 }
 
 // refactor this unit test
@@ -193,4 +208,21 @@ func TestEpochService(t *testing.T) {
 	e, err = adaptor.GetCurrentEpochInfo()
 	ast.Nil(err)
 	ast.Equal(uint64(1), e.Epoch)
+}
+
+func TestRBFTAdaptor_PostCommitEvent(t *testing.T) {
+	ast := assert.New(t)
+	ctrl := gomock.NewController(t)
+
+	adaptor := mockAdaptor(ctrl, t)
+	commitC := adaptor.GetCommitChannel()
+	adaptor.PostCommitEvent(&common.CommitEvent{
+		Block: &types.Block{
+			BlockHeader: &types.BlockHeader{
+				Number: 1,
+			},
+		},
+	})
+	commitEvent := <-commitC
+	ast.Equal(uint64(1), commitEvent.Block.BlockHeader.Number)
 }
