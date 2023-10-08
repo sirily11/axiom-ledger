@@ -17,6 +17,7 @@ type ReceiveMsgLimiter struct {
 
 type ConsensusSync struct {
 	FetchConcurrencyLimit int `mapstructure:"fetch_concurrency_limit" toml:"fetch_concurrency_limit"`
+	FetchSizeLimit        int `mapstructure:"fetch_size_limit" toml:"fetch_size_limit"`
 }
 
 type ConsensusConfig struct {
@@ -87,6 +88,7 @@ func DefaultConsensusConfig() *ConsensusConfig {
 		},
 		Sync: ConsensusSync{
 			FetchConcurrencyLimit: 50,
+			FetchSizeLimit:        1000,
 		},
 		TxPool: TxPool{
 			PoolSize:            50000,

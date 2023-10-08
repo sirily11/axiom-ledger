@@ -41,7 +41,6 @@ type Node struct {
 	config                 *common.Config
 	n                      rbft.Node[types.Transaction, *types.Transaction]
 	stack                  *adaptor.RBFTAdaptor
-	blockC                 chan *common.CommitEvent
 	logger                 logrus.FieldLogger
 	network                network.Network
 	consensusMsgPipes      map[int32]p2p.Pipe
@@ -67,17 +66,18 @@ func NewNode(config *common.Config) (*Node, error) {
 
 func newNode(config *common.Config) (*Node, error) {
 	rbftConfig, txpoolConfig := generateRbftConfig(config)
-	blockC := make(chan *common.CommitEvent, 1024)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	rbftAdaptor, err := adaptor.NewRBFTAdaptor(config, blockC, cancel)
+	rbftAdaptor, err := adaptor.NewRBFTAdaptor(config)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	mp := txpool.NewTxPool[types.Transaction, *types.Transaction](txpoolConfig)
 	n, err := rbft.NewNode[types.Transaction, *types.Transaction](rbftConfig, rbftAdaptor, mp)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
@@ -90,7 +90,6 @@ func newNode(config *common.Config) (*Node, error) {
 		n:                 n,
 		logger:            config.Logger,
 		stack:             rbftAdaptor,
-		blockC:            blockC,
 		receiveMsgLimiter: receiveMsgLimiter,
 		ctx:               ctx,
 		cancel:            cancel,
@@ -176,6 +175,7 @@ func (n *Node) listenValidTxs() {
 	for {
 		select {
 		case <-n.ctx.Done():
+			n.logger.Info("receive stop ctx, exist listenValidTxs")
 			return
 		case validTxs := <-n.txPreCheck.CommitValidTxs():
 			if err := n.n.Propose(validTxs.Txs, validTxs.Local); err != nil {
@@ -282,7 +282,7 @@ func (n *Node) listenExecutedBlockToReport() {
 			commitEvent := &common.CommitEvent{
 				Block: block,
 			}
-			n.blockC <- commitEvent
+			n.stack.PostCommitEvent(commitEvent)
 		case <-n.ctx.Done():
 			return
 		}
@@ -328,11 +328,13 @@ func (n *Node) listenBatchMemTxsToBroadcast() {
 }
 
 func (n *Node) Stop() {
+	n.stack.Cancel()
 	n.cancel()
 	if n.txCache.CloseC != nil {
 		close(n.txCache.CloseC)
 	}
 	n.n.Stop()
+	n.logger.Info("=====Consensus stopped=========")
 }
 
 func (n *Node) Prepare(tx *types.Transaction) error {
@@ -373,7 +375,7 @@ func (n *Node) submitTxsFromRemote(txs [][]byte) {
 }
 
 func (n *Node) Commit() chan *common.CommitEvent {
-	return n.blockC
+	return n.stack.GetCommitChannel()
 }
 
 func (n *Node) Step(msg []byte) error {

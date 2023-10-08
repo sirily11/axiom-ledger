@@ -175,10 +175,6 @@ func (axm *AxiomLedger) Start() error {
 }
 
 func (axm *AxiomLedger) Stop() error {
-	if err := axm.BlockExecutor.Stop(); err != nil {
-		return fmt.Errorf("block executor stop: %w", err)
-	}
-
 	if axm.repo.Config.Consensus.Type != repo.ConsensusTypeSolo {
 		if err := axm.Network.Stop(); err != nil {
 			return fmt.Errorf("network stop: %w", err)
@@ -187,6 +183,9 @@ func (axm *AxiomLedger) Stop() error {
 
 	axm.Consensus.Stop()
 
+	if err := axm.BlockExecutor.Stop(); err != nil {
+		return fmt.Errorf("block executor stop: %w", err)
+	}
 	axm.Cancel()
 
 	axm.logger.Infof("%s stopped", repo.AppName)

@@ -149,6 +149,8 @@ func MockConsensusConfig(logger logrus.FieldLogger, ctrl *gomock.Controller, t *
 			return genesisEpochInfo, nil
 		},
 	}
+
+	conf.Config.Sync.FetchSizeLimit = 2
 	return conf
 }
 
@@ -157,4 +159,13 @@ func GetChainMetaFunc() *types.ChainMeta {
 		ResetMockChainMeta()
 	}
 	return mockChainMeta
+}
+
+func ConstructBlocks(height uint64, num int) []*types.Block {
+	blockHashStr := fmt.Sprintf("block%d", height)
+	blocks := make([]*types.Block, 0)
+	for i := 0; i < num; i++ {
+		blocks = append(blocks, ConstructBlock(blockHashStr, height+uint64(i)))
+	}
+	return blocks
 }

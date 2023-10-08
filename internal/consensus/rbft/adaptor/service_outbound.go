@@ -16,6 +16,10 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 )
 
+const (
+	maxSyncBlockCacheSize = 10000
+)
+
 func (a *RBFTAdaptor) Execute(requests []*types.Transaction, localList []bool, seqNo uint64, timestamp int64, proposerAccount string) {
 	a.ReadyC <- &Ready{
 		Txs:             requests,
@@ -71,43 +75,55 @@ func (a *RBFTAdaptor) StateUpdate(lowWatermark, seqNo uint64, digest string, che
 		}
 	}
 
+	// update the current sync height
+	a.currentSyncHeight = startHeight
+
 	a.logger.WithFields(logrus.Fields{
 		"target":      a.StateUpdateHeight,
 		"target_hash": digest,
 		"start":       startHeight,
 	}).Info("State update start")
 
+	// todo(lrx): verify sign of each checkpoint?
+	var stateUpdatedCheckpoint *consensus.Checkpoint
+	if len(checkpoints) != 0 {
+		stateUpdatedCheckpoint = checkpoints[0].GetCheckpoint()
+	}
+
 	syncSize := a.StateUpdateHeight - startHeight + 1
-
-	blockCache := a.getBlockFromOthers(peers, int(syncSize), a.StateUpdateHeight)
-	lastBlock := blockCache[len(blockCache)-1]
-	if lastBlock.Height() != a.StateUpdateHeight || lastBlock.BlockHash.String() != digest {
-		panic(fmt.Errorf("sync block failed: require[height:%d, hash:%s], actual[height:%d, hash:%s]",
-			a.StateUpdateHeight, digest, lastBlock.Height(), lastBlock.BlockHash.String()))
+	fetchSizeLimit := a.config.Config.Sync.FetchSizeLimit
+	if a.config.Config.Sync.FetchSizeLimit > maxSyncBlockCacheSize {
+		fetchSizeLimit = maxSyncBlockCacheSize
+	}
+	pageSize := fetchSizeLimit
+	if int(syncSize) < fetchSizeLimit {
+		pageSize = int(syncSize)
 	}
 
-	for _, block := range blockCache {
-		if block == nil {
-			a.logger.Error("Receive a nil block")
-			return
-		}
-		localList := make([]bool, len(block.Transactions))
-		for i := 0; i < len(block.Transactions); i++ {
-			localList[i] = false
-		}
-
-		// todo(lrx): verify sign of each checkpoint?
-		var stateUpdatedCheckpoint *consensus.Checkpoint
-		if len(checkpoints) != 0 {
-			stateUpdatedCheckpoint = checkpoints[0].GetCheckpoint()
+	for a.StateUpdateHeight >= a.currentSyncHeight {
+		a.logger.WithFields(logrus.Fields{
+			"target":     a.StateUpdateHeight,
+			"pageSize":   pageSize,
+			"syncHeight": a.currentSyncHeight,
+		}).Info("State update page sync Start")
+		if err := a.pageSyncBlock(peers, pageSize, stateUpdatedCheckpoint); err != nil {
+			a.logger.Error(err)
+			panic(err)
 		}
 
-		commitEvent := &common.CommitEvent{
-			Block:                  block,
-			StateUpdatedCheckpoint: stateUpdatedCheckpoint,
+		// update the current sync height and page size
+		a.currentSyncHeight += uint64(pageSize)
+
+		if int(a.StateUpdateHeight-a.currentSyncHeight+1) < fetchSizeLimit {
+			pageSize = int(a.StateUpdateHeight - a.currentSyncHeight + 1)
+		} else {
+			pageSize = fetchSizeLimit
 		}
-		a.BlockC <- commitEvent
+
 	}
+
+	// reset the current sync height
+	a.currentSyncHeight = 0
 
 	a.logger.WithFields(logrus.Fields{
 		"target":      seqNo,
@@ -128,27 +144,70 @@ func (a *RBFTAdaptor) get(peers []string, i int) (block *types.Block, err error)
 	return nil, errors.New("can't get block from all peers")
 }
 
-func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, seqNo uint64) []*types.Block {
+func (a *RBFTAdaptor) pageSyncBlock(peers []string, pageSize int, checkpoints *consensus.Checkpoint) error {
+	blockCache := a.getBlockFromOthers(peers, pageSize, a.currentSyncHeight)
+	if len(blockCache) != pageSize && !a.closed {
+		return fmt.Errorf("block cache size is not equal to page size, need %d, got %d", pageSize, len(blockCache))
+	}
+
+	for index, block := range blockCache {
+		select {
+		case <-a.ctx.Done():
+			a.closed = true
+			a.StateUpdating = false
+			a.logger.Info("receive stop ctx, exist sync")
+			return nil
+		default:
+			if block == nil {
+				return fmt.Errorf("receive a nil block[height: %d]", int(a.currentSyncHeight)+index)
+			}
+
+			commitEvent := &common.CommitEvent{
+				Block: block,
+			}
+
+			// if the last block is received, we should notify the state updated checkpoint to executor
+			if blockCache[len(blockCache)-1].Height() == a.StateUpdateHeight {
+				commitEvent.StateUpdatedCheckpoint = checkpoints
+			}
+
+			a.BlockC <- commitEvent
+		}
+
+	}
+	return nil
+}
+
+func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, currentSyncHeight uint64) []*types.Block {
 	blockCache := make([]*types.Block, size)
 	wp := workerpool.New(a.config.Config.Sync.FetchConcurrencyLimit)
 	for i := 0; i < size; i++ {
-		i := i
-		wp.Submit(func() {
-			if err := retry.Retry(func(attempt uint) (err error) {
-				curHeight := int(seqNo) - i
-				block, err := a.get(peers, curHeight)
-				if err != nil {
-					a.logger.Info(err)
-					return err
+		select {
+		case <-a.ctx.Done():
+			wp.Stop()
+			a.closed = true
+			a.StateUpdating = false
+			a.logger.Info("receive stop ctx, exist sync")
+			return nil
+		default:
+			index := i
+			wp.Submit(func() {
+				if err := retry.Retry(func(attempt uint) (err error) {
+					curHeight := int(currentSyncHeight) + index
+					block, err := a.get(peers, curHeight)
+					if err != nil {
+						a.logger.Info(err)
+						return err
+					}
+					a.lock.Lock()
+					blockCache[index] = block
+					a.lock.Unlock()
+					return nil
+				}, strategy.Wait(500*time.Millisecond)); err != nil {
+					a.logger.Error(err)
 				}
-				a.lock.Lock()
-				blockCache[size-i-1] = block
-				a.lock.Unlock()
-				return nil
-			}, strategy.Wait(200*time.Millisecond)); err != nil {
-				a.logger.Error(err)
-			}
-		})
+			})
+		}
 	}
 	wp.StopWait()
 	return blockCache
@@ -156,4 +215,20 @@ func (a *RBFTAdaptor) getBlockFromOthers(peers []string, size int, seqNo uint64)
 
 func (a *RBFTAdaptor) SendFilterEvent(informType rbfttypes.InformType, message ...any) {
 	// TODO: add implement
+}
+
+func (a *RBFTAdaptor) PostCommitEvent(commitEvent *common.CommitEvent) {
+	a.postCommitEvent(commitEvent)
+}
+
+func (a *RBFTAdaptor) postCommitEvent(commitEvent *common.CommitEvent) {
+	a.logger.WithFields(logrus.Fields{
+		"height": commitEvent.Block.Height(),
+		"hash":   commitEvent.Block.Hash().String(),
+	}).Info("post commitEvent")
+	a.BlockC <- commitEvent
+}
+
+func (a *RBFTAdaptor) GetCommitChannel() chan *common.CommitEvent {
+	return a.BlockC
 }

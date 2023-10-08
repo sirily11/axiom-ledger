@@ -155,11 +155,11 @@ func (exec *BlockExecutor) ApplyReadonlyTransactions(txs []*types.Transaction) [
 func (exec *BlockExecutor) listenExecuteEvent() {
 	for {
 		select {
-		case commitEvent := <-exec.blockC:
-			exec.processExecuteEvent(commitEvent)
 		case <-exec.ctx.Done():
 			close(exec.blockC)
 			return
+		case commitEvent := <-exec.blockC:
+			exec.processExecuteEvent(commitEvent)
 		}
 	}
 }

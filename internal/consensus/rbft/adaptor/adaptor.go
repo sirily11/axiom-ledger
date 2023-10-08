@@ -40,10 +40,15 @@ type RBFTAdaptor struct {
 	getBlockFunc      func(uint64) (*types.Block, error)
 	StateUpdating     bool
 	StateUpdateHeight uint64
-	cancel            context.CancelFunc
+
+	currentSyncHeight uint64
+	Cancel            context.CancelFunc
 	config            *common.Config
 	EpochInfo         *rbft.EpochInfo
 	broadcastNodes    []string
+	closed            bool
+
+	ctx context.Context
 
 	lock sync.Mutex
 }
@@ -56,23 +61,26 @@ type Ready struct {
 	ProposerAccount string
 }
 
-func NewRBFTAdaptor(config *common.Config, blockC chan *common.CommitEvent, cancel context.CancelFunc) (*RBFTAdaptor, error) {
+func NewRBFTAdaptor(config *common.Config) (*RBFTAdaptor, error) {
 	store, err := storagemgr.Open(repo.GetStoragePath(config.RepoRoot, storagemgr.Consensus))
 	if err != nil {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	stack := &RBFTAdaptor{
 		store:            store,
 		priv:             config.PrivKey,
 		network:          config.Network,
 		ReadyC:           make(chan *Ready, 1024),
-		BlockC:           blockC,
+		BlockC:           make(chan *common.CommitEvent, 1024),
 		logger:           config.Logger,
 		getChainMetaFunc: config.GetChainMetaFunc,
 		getBlockFunc:     config.GetBlockFunc,
-		cancel:           cancel,
 		config:           config,
+
+		ctx:    ctx,
+		Cancel: cancel,
 	}
 
 	return stack, nil

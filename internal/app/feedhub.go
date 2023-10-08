@@ -32,10 +32,10 @@ func (axm *AxiomLedger) listenEvent() {
 
 	for {
 		select {
-		case ev := <-blockCh:
-			axm.Consensus.ReportState(ev.Block.BlockHeader.Number, ev.Block.BlockHash, ev.TxHashList, ev.StateUpdatedCheckpoint)
 		case <-axm.Ctx.Done():
 			return
+		case ev := <-blockCh:
+			axm.Consensus.ReportState(ev.Block.BlockHeader.Number, ev.Block.BlockHash, ev.TxHashList, ev.StateUpdatedCheckpoint)
 		}
 	}
 }

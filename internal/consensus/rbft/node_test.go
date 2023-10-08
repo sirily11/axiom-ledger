@@ -16,7 +16,6 @@ import (
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
-	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/precheck"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/precheck/mock_precheck"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/rbft/adaptor"
@@ -41,9 +40,8 @@ func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
 	logger.Logger.SetLevel(logrus.DebugLevel)
 	consensusConf := testutil.MockConsensusConfig(logger, ctrl, t)
 
-	blockC := make(chan *common.CommitEvent, 1024)
 	ctx, cancel := context.WithCancel(context.Background())
-	rbftAdaptor, err := adaptor.NewRBFTAdaptor(consensusConf, blockC, cancel)
+	rbftAdaptor, err := adaptor.NewRBFTAdaptor(consensusConf)
 	assert.Nil(t, err)
 	err = rbftAdaptor.UpdateEpoch()
 	assert.Nil(t, err)
@@ -55,7 +53,6 @@ func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
 		config:     consensusConf,
 		n:          mockRbft,
 		stack:      rbftAdaptor,
-		blockC:     blockC,
 		logger:     logger,
 		network:    consensusConf.Network,
 		ctx:        ctx,
