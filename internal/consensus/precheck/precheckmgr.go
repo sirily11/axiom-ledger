@@ -107,6 +107,7 @@ func (tp *TxPreCheckMgr) dispatchTxEvent() {
 					for _, tx := range txSet {
 						if err := tp.verifySignature(tx); err != nil {
 							tp.logger.Warningf("verify remote tx err:%s", err)
+							continue
 						}
 						validSignTxs = append(validSignTxs, tx)
 					}
