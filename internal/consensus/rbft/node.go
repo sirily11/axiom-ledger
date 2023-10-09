@@ -95,7 +95,7 @@ func newNode(config *common.Config) (*Node, error) {
 		cancel:            cancel,
 		txCache:           txcache.NewTxCache(rbftConfig.SetTimeout, uint64(rbftConfig.SetSize), config.Logger),
 		network:           config.Network,
-		txPreCheck:        precheck.NewTxPreCheckMgr(ctx, config.Logger, config.GetAccountBalance),
+		txPreCheck:        precheck.NewTxPreCheckMgr(ctx, config.EVMConfig, config.Logger, config.GetAccountBalance),
 	}, nil
 }
 

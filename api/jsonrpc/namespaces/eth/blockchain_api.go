@@ -164,7 +164,7 @@ func (api *BlockChainAPI) GetStorageAt(address common.Address, key string, block
 func (api *BlockChainAPI) Call(args types.CallArgs, blockNrOrHash *rpctypes.BlockNumberOrHash, _ *map[common.Address]rpctypes.Account) (ethhexutil.Bytes, error) {
 	api.logger.Debugf("eth_call, args: %v", args)
 
-	receipt, err := DoCall(api.ctx, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
+	receipt, err := DoCall(api.ctx, api.config.Executor.EVM, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (api *BlockChainAPI) Call(args types.CallArgs, blockNrOrHash *rpctypes.Bloc
 	return receipt.Return(), receipt.Err
 }
 
-func DoCall(ctx context.Context, api api.CoreAPI, args types.CallArgs, timeout time.Duration, globalGasCap uint64, logger logrus.FieldLogger) (*vm.ExecutionResult, error) {
+func DoCall(ctx context.Context, evmCfg repo.EVM, api api.CoreAPI, args types.CallArgs, timeout time.Duration, globalGasCap uint64, logger logrus.FieldLogger) (*vm.ExecutionResult, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	var cancel context.CancelFunc
@@ -204,7 +204,7 @@ func DoCall(ctx context.Context, api api.CoreAPI, args types.CallArgs, timeout t
 		return systemContract.Run(msg)
 	}
 
-	evm, err := api.Broker().GetEvm(msg, &vm.Config{NoBaseFee: true})
+	evm, err := api.Broker().GetEvm(msg, &vm.Config{NoBaseFee: true, DisableMaxCodeSizeLimit: evmCfg.DisableMaxCodeSizeLimit})
 	if err != nil {
 		return nil, errors.New("error get evm")
 	}
@@ -309,7 +309,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	executable := func(gas uint64) (bool, *vm.ExecutionResult, error) {
 		args.Gas = (*ethhexutil.Uint64)(&gas)
 
-		result, err := DoCall(api.ctx, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
+		result, err := DoCall(api.ctx, api.config.Executor.EVM, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
 		if err != nil {
 			if errors.Is(err, core.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit

@@ -78,6 +78,7 @@ func NewAxiomLedger(rep *repo.Repo, ctx context.Context, cancel context.CancelFu
 		common.WithGetCurrentEpochInfoFromEpochMgrContractFunc(func() (*rbft.EpochInfo, error) {
 			return base.GetCurrentEpochInfo(axm.ViewLedger.NewView().StateLedger)
 		}),
+		common.WithEVMConfig(axm.repo.Config.Executor.EVM),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("initialize consensus failed: %w", err)

@@ -11,6 +11,7 @@ import (
 	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
 	common2 "github.com/axiomesh/axiom-ledger/internal/consensus/common"
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
 const (
@@ -30,7 +31,7 @@ func newMockPreCheckMgr() (*TxPreCheckMgr, *logrus.Entry, context.CancelFunc) {
 		}
 		return val
 	}
-	return NewTxPreCheckMgr(ctx, logger, getAccountBalance), logger, cancel
+	return NewTxPreCheckMgr(ctx, repo.EVM{}, logger, getAccountBalance), logger, cancel
 }
 
 func cleanDb() {
