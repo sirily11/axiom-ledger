@@ -64,8 +64,8 @@ github.com/axiomesh/axiom-kit v0.0.3-0.20231007094145-952ce061d4d6 h1:8xDVdr3o4N
 github.com/axiomesh/axiom-kit v0.0.3-0.20231007094145-952ce061d4d6/go.mod h1:XuDEVIAtMfrAHhgEnAE9zEnlH/5ehyZwLVZRm4/RzDU=
 github.com/axiomesh/axiom-p2p v0.0.3-0.20230921022827-eb95438e52ce h1:CwVPSj9ryOQ/ER0hFll8CMPonGIRbVf2zI3HFOaHfy0=
 github.com/axiomesh/axiom-p2p v0.0.3-0.20230921022827-eb95438e52ce/go.mod h1:2fdcrufQztAOvXeUGU+IEFDGp2k605NAABNZeYogwZU=
-github.com/axiomesh/eth-kit v0.0.3-0.20230914073203-e09bfbf492c9 h1:qzBhOT7ibUXghI7hN1qwZEIgLdFGtSoCVvNo+Alckps=
-github.com/axiomesh/eth-kit v0.0.3-0.20230914073203-e09bfbf492c9/go.mod h1:3lh5eW+SoV+51Ige/ahQGetUQM7DkgIFOevnwkMp8FA=
+github.com/axiomesh/eth-kit v0.0.3-0.20231009042227-264fda908a53 h1:xHSy2tB4HaQL0CsiRT8XecLFKyXVwHrH01G/HgqzsUo=
+github.com/axiomesh/eth-kit v0.0.3-0.20231009042227-264fda908a53/go.mod h1:3lh5eW+SoV+51Ige/ahQGetUQM7DkgIFOevnwkMp8FA=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.5 h1:VvXlSJBzZpA/zum6Sj74hxwYI2DIxRWuNIoXAzHZz5o=

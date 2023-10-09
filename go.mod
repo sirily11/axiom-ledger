@@ -7,7 +7,7 @@ require (
 	github.com/axiomesh/axiom-bft v0.0.3-0.20230928085555-2d1cca3ff64e
 	github.com/axiomesh/axiom-kit v0.0.3-0.20231007094145-952ce061d4d6
 	github.com/axiomesh/axiom-p2p v0.0.3-0.20230921022827-eb95438e52ce
-	github.com/axiomesh/eth-kit v0.0.3-0.20230914073203-e09bfbf492c9
+	github.com/axiomesh/eth-kit v0.0.3-0.20231009042227-264fda908a53
 	github.com/cbergoon/merkletree v0.2.0
 	github.com/common-nighthawk/go-figure v0.0.0-20190529165535-67e0ed34491a
 	github.com/ethereum/go-ethereum v1.12.0

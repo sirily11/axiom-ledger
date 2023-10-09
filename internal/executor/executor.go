@@ -67,7 +67,7 @@ func New(rep *repo.Repo, ledger *ledger.Ledger) (*BlockExecutor, error) {
 		lock:             &sync.Mutex{},
 	}
 
-	blockExecutor.evm = newEvm(1, uint64(0), blockExecutor.evmChainCfg, blockExecutor.ledger.StateLedger, blockExecutor.ledger.ChainLedger, "")
+	blockExecutor.evm = newEvm(rep.Config.Executor.EVM, 1, uint64(0), blockExecutor.evmChainCfg, blockExecutor.ledger.StateLedger, blockExecutor.ledger.ChainLedger, "")
 
 	// initialize system contract
 	system.Initialize(loggers.Logger(loggers.Governance))
@@ -134,7 +134,7 @@ func (exec *BlockExecutor) ApplyReadonlyTransactions(txs []*types.Transaction) [
 	}
 
 	exec.ledger.StateLedger.PrepareBlock(meta.BlockHash, meta.Height)
-	exec.evm = newEvm(meta.Height, uint64(block.BlockHeader.Timestamp), exec.evmChainCfg, exec.ledger.StateLedger, exec.ledger.ChainLedger, "")
+	exec.evm = newEvm(exec.rep.Config.Executor.EVM, meta.Height, uint64(block.BlockHeader.Timestamp), exec.evmChainCfg, exec.ledger.StateLedger, exec.ledger.ChainLedger, "")
 	for i, tx := range txs {
 		exec.ledger.StateLedger.SetTxContext(tx.GetHash(), i)
 		receipt := exec.applyTransaction(i, tx)

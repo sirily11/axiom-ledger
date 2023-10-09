@@ -75,6 +75,9 @@ func AriesConfig() *Config {
 		Executor: Executor{
 			Type:            ExecTypeNative,
 			DisableRollback: false,
+			EVM: EVM{
+				DisableMaxCodeSizeLimit: false,
+			},
 		},
 		Genesis: Genesis{
 			ChainID:       23411,

@@ -13,6 +13,7 @@ import (
 
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	vm "github.com/axiomesh/eth-kit/evm"
 )
 
@@ -41,7 +42,8 @@ type TxPreCheckMgr struct {
 	BaseFee      *big.Int // current is 0
 	getBalanceFn func(address *types.Address) *big.Int
 
-	ctx context.Context
+	ctx       context.Context
+	evmConfig repo.EVM
 }
 
 func (tp *TxPreCheckMgr) PostUncheckedTxEvent(ev *common.UncheckedTxEvent) {
@@ -52,7 +54,7 @@ func (tp *TxPreCheckMgr) CommitValidTxs() chan *ValidTxs {
 	return tp.validTxsCh
 }
 
-func NewTxPreCheckMgr(ctx context.Context, logger logrus.FieldLogger, fn func(address *types.Address) *big.Int) *TxPreCheckMgr {
+func NewTxPreCheckMgr(ctx context.Context, evmConfig repo.EVM, logger logrus.FieldLogger, fn func(address *types.Address) *big.Int) *TxPreCheckMgr {
 	return &TxPreCheckMgr{
 		uncheckedCh:  make(chan *common.UncheckedTxEvent, defaultTxPreCheckSize),
 		verifyDataCh: make(chan *common.UncheckedTxEvent, defaultTxPreCheckSize),
@@ -61,6 +63,7 @@ func NewTxPreCheckMgr(ctx context.Context, logger logrus.FieldLogger, fn func(ad
 		ctx:          ctx,
 		BaseFee:      big.NewInt(0),
 		getBalanceFn: fn,
+		evmConfig:    evmConfig,
 	}
 }
 
@@ -254,7 +257,7 @@ func (tp *TxPreCheckMgr) verifyData(tx *types.Transaction) error {
 	}
 
 	// 5. if deployed a contract, Check whether the init code size has been exceeded.
-	if isContractCreation && len(tx.GetPayload()) > params.MaxInitCodeSize {
+	if isContractCreation && len(tx.GetPayload()) > params.MaxInitCodeSize && !tp.evmConfig.DisableMaxCodeSizeLimit {
 		return fmt.Errorf("%w: code size %v limit %v", core.ErrMaxInitCodeSizeExceeded, len(tx.GetPayload()), params.MaxInitCodeSize)
 	}
 
