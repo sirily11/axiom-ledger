@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etherTypes "github.com/ethereum/go-ethereum/core/types"
 	crypto1 "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -345,12 +346,14 @@ func testChainLedger_Commit(t *testing.T, kv string) {
 		TransactionHash: lg.StateLedger.(*StateLedgerImpl).logs.thash,
 	})
 	lg.StateLedger.(*StateLedgerImpl).GetLogs(*lg.StateLedger.(*StateLedgerImpl).logs.thash, 1, hash)
+	lg.StateLedger.(*StateLedgerImpl).Logs()
 	lg.StateLedger.(*StateLedgerImpl).GetCodeHash(account)
 	lg.StateLedger.(*StateLedgerImpl).GetCodeSize(account)
 	currentAccount := lg.StateLedger.(*StateLedgerImpl).GetAccount(account)
 	lg.StateLedger.(*StateLedgerImpl).setAccount(currentAccount)
 	lg.StateLedger.(*StateLedgerImpl).AddBalance(account, big.NewInt(1))
 	lg.StateLedger.(*StateLedgerImpl).SubBalance(account, big.NewInt(1))
+	lg.StateLedger.(*StateLedgerImpl).SetNonce(account, 1)
 	lg.StateLedger.(*StateLedgerImpl).AddRefund(1)
 	refund := lg.StateLedger.(*StateLedgerImpl).GetRefund()
 	assert.Equal(t, refund, uint64(1))
@@ -391,6 +394,8 @@ func testChainLedger_Commit(t *testing.T, kv string) {
 
 	ver := ldg.StateLedger.Version()
 	assert.Equal(t, uint64(0), ver)
+	err = lg.StateLedger.(*StateLedgerImpl).removeJournalsBeforeBlock(4)
+	assert.Nil(t, err)
 }
 
 func testChainLedger_EVMAccessor(t *testing.T, kvType string) {
@@ -445,6 +450,13 @@ func testChainLedger_EVMAccessor(t *testing.T, kvType string) {
 	ledger.StateLedger.(*StateLedgerImpl).StateDB()
 	ledger.StateLedger.SetTxContext(types.NewHash(hash.Bytes()), 1)
 	ledger.StateLedger.(*StateLedgerImpl).AddEVMLog(&etherTypes.Log{})
+
+	addr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	ledger.StateLedger.(*StateLedgerImpl).transientStorage = newTransientStorage()
+	ledger.StateLedger.(*StateLedgerImpl).SetEVMTransientState(addr, hash, hash)
+	ledger.StateLedger.(*StateLedgerImpl).GetEVMTransientState(addr, hash)
+	_ = ledger.StateLedger.(*StateLedgerImpl).transientStorage.Copy()
+	ledger.StateLedger.PrepareEVM(params.Rules{IsBerlin: true}, addr, addr, &addr, []common.Address{addr}, nil)
 }
 
 func testChainLedger_Rollback(t *testing.T, kvType string) {
@@ -976,4 +988,12 @@ func RightPadBytes(slice []byte, l int) []byte {
 	copy(padded, slice)
 
 	return padded
+}
+
+func TestEvmLogs(t *testing.T) {
+	logs := NewEvmLogs()
+	hash := types.NewHashByStr("0xe9FC370DD36C9BD5f67cCfbc031C909F53A3d8bC7084C01362c55f2D42bA841c")
+	logs.SetBHash(hash)
+	logs.SetTHash(hash)
+	logs.SetIndex(1)
 }
