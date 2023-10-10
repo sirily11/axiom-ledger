@@ -12,10 +12,10 @@ type PublicNetAPI struct {
 }
 
 // NewAPI creates an instance of the public Net Web3 API.
-func NewAPI(config *repo.Config) *PublicNetAPI {
+func NewAPI(rep *repo.Repo) *PublicNetAPI {
 	// parse the chainID from a integer string
 	return &PublicNetAPI{
-		networkVersion: config.Genesis.ChainID,
+		networkVersion: rep.Config.Genesis.ChainID,
 	}
 }
 

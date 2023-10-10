@@ -11,6 +11,7 @@ import (
 	"github.com/axiomesh/axiom-bft/txpool"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 )
 
 func defaultRbftConfig() rbft.Config {
@@ -98,7 +99,7 @@ func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
 		return config.GetAccountNonce(types.NewAddressByStr(addr))
 	}
 	txpoolConf := txpool.Config{
-		Logger:              defaultConfig.Logger,
+		Logger:              &common.Logger{FieldLogger: loggers.Logger(loggers.TxPool)},
 		BatchSize:           defaultConfig.GenesisEpochInfo.ConsensusParams.BlockMaxTxNum,
 		PoolSize:            readConfig.TxPool.PoolSize,
 		ToleranceTime:       readConfig.TxPool.ToleranceTime.ToDuration(),

@@ -23,6 +23,7 @@ const (
 	Storage    = "storage"
 	Profile    = "profile"
 	Finance    = "finance"
+	TxPool     = "txpool"
 )
 
 var w = &LoggerWrapper{
@@ -37,6 +38,7 @@ var w = &LoggerWrapper{
 		Storage:    log.NewWithModule(Storage),
 		Profile:    log.NewWithModule(Profile),
 		Finance:    log.NewWithModule(Finance),
+		TxPool:     log.NewWithModule(TxPool),
 	},
 }
 
@@ -112,6 +114,8 @@ func Initialize(ctx context.Context, rep *repo.Repo, persist bool) error {
 	m[Profile].Logger.SetLevel(log.ParseLevel(config.Log.Module.Profile))
 	m[Finance] = log.NewWithModule(Finance)
 	m[Finance].Logger.SetLevel(log.ParseLevel(config.Log.Module.Finance))
+	m[TxPool] = log.NewWithModule(TxPool)
+	m[TxPool].Logger.SetLevel(log.ParseLevel(config.Log.Module.TxPool))
 
 	w = &LoggerWrapper{loggers: m}
 	InitializeEthLog(m[API])

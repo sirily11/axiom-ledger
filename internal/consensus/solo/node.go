@@ -17,6 +17,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/precheck"
 	"github.com/axiomesh/axiom-ledger/internal/network"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
@@ -55,7 +56,7 @@ func NewNode(config *common.Config) (*Node, error) {
 	}
 
 	txpoolConf := txpool.Config{
-		Logger:              &common.Logger{FieldLogger: config.Logger},
+		Logger:              &common.Logger{FieldLogger: loggers.Logger(loggers.TxPool)},
 		BatchSize:           config.GenesisEpochInfo.ConsensusParams.BlockMaxTxNum,
 		PoolSize:            config.Config.TxPool.PoolSize,
 		GetAccountNonce:     fn,

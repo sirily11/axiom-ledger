@@ -18,7 +18,7 @@ import (
 )
 
 type ChainBrokerService struct {
-	config *repo.Config
+	rep *repo.Repo
 
 	// genesis     *repo.Genesis
 	api api.CoreAPI
@@ -32,10 +32,10 @@ type ChainBrokerService struct {
 	cancel context.CancelFunc
 }
 
-func NewChainBrokerService(coreAPI api.CoreAPI, config *repo.Config) (*ChainBrokerService, error) {
+func NewChainBrokerService(coreAPI api.CoreAPI, rep *repo.Repo) (*ChainBrokerService, error) {
 	logger := loggers.Logger(loggers.API)
 
-	jLimiter := config.JsonRPC.Limiter
+	jLimiter := rep.Config.JsonRPC.Limiter
 	rateLimiter, err := ratelimiter.NewJRateLimiterWithQuantum(jLimiter.Interval.ToDuration(), jLimiter.Capacity, jLimiter.Quantum)
 	if err != nil {
 		return nil, fmt.Errorf("create rate limiter failed: %w", err)
@@ -44,7 +44,7 @@ func NewChainBrokerService(coreAPI api.CoreAPI, config *repo.Config) (*ChainBrok
 	ctx, cancel := context.WithCancel(context.Background())
 	cbs := &ChainBrokerService{
 		logger:      logger,
-		config:      config,
+		rep:         rep,
 		api:         coreAPI,
 		ctx:         ctx,
 		cancel:      cancel,
@@ -67,7 +67,7 @@ func NewChainBrokerService(coreAPI api.CoreAPI, config *repo.Config) (*ChainBrok
 func (cbs *ChainBrokerService) init() error {
 	cbs.server = rpc.NewServer()
 
-	apis, err := GetAPIs(cbs.config, cbs.api, cbs.logger)
+	apis, err := GetAPIs(cbs.rep, cbs.api, cbs.logger)
 	if err != nil {
 		return fmt.Errorf("get apis failed: %w", err)
 	}
@@ -85,7 +85,7 @@ func (cbs *ChainBrokerService) init() error {
 func (cbs *ChainBrokerService) initWS() error {
 	cbs.wsServer = rpc.NewServer()
 
-	apis, err := GetAPIs(cbs.config, cbs.api, cbs.logger)
+	apis, err := GetAPIs(cbs.rep, cbs.api, cbs.logger)
 	if err != nil {
 		return fmt.Errorf("get apis failed: %w", err)
 	}
@@ -111,10 +111,10 @@ func (cbs *ChainBrokerService) Start() error {
 
 	go func() {
 		cbs.logger.WithFields(logrus.Fields{
-			"port": cbs.config.Port.JsonRpc,
+			"port": cbs.rep.Config.Port.JsonRpc,
 		}).Info("JSON-RPC service started")
 
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.config.Port.JsonRpc), cors.Default().Handler(router)); err != nil {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.rep.Config.Port.JsonRpc), cors.Default().Handler(router)); err != nil {
 			cbs.logger.WithFields(logrus.Fields{
 				"error": err.Error(),
 			}).Errorf("Failed to start JSON_RPC service: %s", err.Error())
@@ -124,10 +124,10 @@ func (cbs *ChainBrokerService) Start() error {
 
 	go func() {
 		cbs.logger.WithFields(logrus.Fields{
-			"port": cbs.config.Port.WebSocket,
+			"port": cbs.rep.Config.Port.WebSocket,
 		}).Info("Websocket service started")
 
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.config.Port.WebSocket), cors.Default().Handler(wsRouter)); err != nil {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.rep.Config.Port.WebSocket), cors.Default().Handler(wsRouter)); err != nil {
 			cbs.logger.WithFields(logrus.Fields{
 				"error": err.Error(),
 			}).Errorf("Failed to start websocket service: %s", err.Error())

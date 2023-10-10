@@ -119,7 +119,6 @@ func (a *RBFTAdaptor) StateUpdate(lowWatermark, seqNo uint64, digest string, che
 		} else {
 			pageSize = fetchSizeLimit
 		}
-
 	}
 
 	// reset the current sync height
@@ -173,7 +172,6 @@ func (a *RBFTAdaptor) pageSyncBlock(peers []string, pageSize int, checkpoints *c
 
 			a.BlockC <- commitEvent
 		}
-
 	}
 	return nil
 }

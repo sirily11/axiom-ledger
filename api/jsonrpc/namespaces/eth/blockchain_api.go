@@ -29,20 +29,20 @@ import (
 type BlockChainAPI struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	config *repo.Config
+	rep    *repo.Repo
 	api    api.CoreAPI
 	logger logrus.FieldLogger
 }
 
-func NewBlockChainAPI(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) *BlockChainAPI {
+func NewBlockChainAPI(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) *BlockChainAPI {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &BlockChainAPI{ctx: ctx, cancel: cancel, config: config, api: api, logger: logger}
+	return &BlockChainAPI{ctx: ctx, cancel: cancel, rep: rep, api: api, logger: logger}
 }
 
 // ChainId returns the chain's identifier in hex format
 func (api *BlockChainAPI) ChainId() (ethhexutil.Uint, error) { // nolint
 	api.logger.Debug("eth_chainId")
-	return ethhexutil.Uint(api.config.Genesis.ChainID), nil
+	return ethhexutil.Uint(api.rep.Config.Genesis.ChainID), nil
 }
 
 // BlockNumber returns the current block number.
@@ -110,7 +110,7 @@ func (api *BlockChainAPI) GetBlockByNumber(blockNum rpctypes.BlockNumber, fullTx
 		return nil, err
 	}
 
-	return formatBlock(api.api, api.config, block, fullTx)
+	return formatBlock(api.api, api.rep.Config, block, fullTx)
 }
 
 // GetBlockByHash returns the block identified by hash.
@@ -121,7 +121,7 @@ func (api *BlockChainAPI) GetBlockByHash(hash common.Hash, fullTx bool) (map[str
 	if err != nil {
 		return nil, err
 	}
-	return formatBlock(api.api, api.config, block, fullTx)
+	return formatBlock(api.api, api.rep.Config, block, fullTx)
 }
 
 // GetCode returns the contract code at the given address, blockNum is ignored.
@@ -164,7 +164,7 @@ func (api *BlockChainAPI) GetStorageAt(address common.Address, key string, block
 func (api *BlockChainAPI) Call(args types.CallArgs, blockNrOrHash *rpctypes.BlockNumberOrHash, _ *map[common.Address]rpctypes.Account) (ethhexutil.Bytes, error) {
 	api.logger.Debugf("eth_call, args: %v", args)
 
-	receipt, err := DoCall(api.ctx, api.config.Executor.EVM, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
+	receipt, err := DoCall(api.ctx, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	// Determine the highest gas limit can be used during the estimation.
 	// if args.Gas == nil || uint64(*args.Gas) < params.TxGas {
 	// 	// Retrieve the block to act as the gas ceiling
-	// 	args.Gas = (*ethhexutil.Uint64)(&api.config.GasLimit)
+	// 	args.Gas = (*ethhexutil.Uint64)(&api.rep.GasLimit)
 	// }
 	// Determine the lowest and highest possible gas limits to binary search in between
 	var (
@@ -258,7 +258,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
 		hi = uint64(*args.Gas)
 	} else {
-		hi = api.config.Genesis.GasLimit
+		hi = api.rep.Config.Genesis.GasLimit
 	}
 
 	var feeCap *big.Int
@@ -297,7 +297,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 		}
 	}
 
-	gasCap := api.config.JsonRPC.GasCap
+	gasCap := api.rep.Config.JsonRPC.GasCap
 	if gasCap != 0 && hi > gasCap {
 		api.logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
 		hi = gasCap
@@ -309,7 +309,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	executable := func(gas uint64) (bool, *vm.ExecutionResult, error) {
 		args.Gas = (*ethhexutil.Uint64)(&gas)
 
-		result, err := DoCall(api.ctx, api.config.Executor.EVM, api.api, args, api.config.JsonRPC.EVMTimeout.ToDuration(), api.config.JsonRPC.GasCap, api.logger)
+		result, err := DoCall(api.ctx, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
 		if err != nil {
 			if errors.Is(err, core.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit

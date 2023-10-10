@@ -22,14 +22,14 @@ import (
 type TransactionAPI struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	config *repo.Config
+	rep    *repo.Repo
 	api    api.CoreAPI
 	logger logrus.FieldLogger
 }
 
-func NewTransactionAPI(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) *TransactionAPI {
+func NewTransactionAPI(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) *TransactionAPI {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &TransactionAPI{ctx: ctx, cancel: cancel, config: config, api: api, logger: logger}
+	return &TransactionAPI{ctx: ctx, cancel: cancel, rep: rep, api: api, logger: logger}
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block identified by its height.
@@ -143,7 +143,7 @@ func (api *TransactionAPI) GetTransactionReceipt(hash common.Hash) (map[string]a
 	api.logger.Debugf("eth_getTransactionReceipt, hash: %s", hash.String())
 
 	txHash := types.NewHash(hash.Bytes())
-	// tx, meta, err := getEthTransactionByHash(api.config, api.api, api.logger, txHash)
+	// tx, meta, err := getEthTransactionByHash(api.rep, api.api, api.logger, txHash)
 	tx, err := api.api.Broker().GetTransaction(txHash)
 	if err != nil {
 		return nil, nil
@@ -231,6 +231,10 @@ func (api *TransactionAPI) GetTransactionReceipt(hash common.Hash) (map[string]a
 
 // SendRawTransaction send a raw Ethereum transaction.
 func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
+	if api.rep.ReadonlyMode {
+		return [32]byte{}, errors.New("readonly mode cannot process tx")
+	}
+
 	tx := &types.Transaction{}
 	if err := tx.Unmarshal(data); err != nil {
 		return [32]byte{}, err
@@ -241,7 +245,7 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, 
 	}
 
 	if err := api.api.Broker().ConsensusReady(); err != nil {
-		if api.config.JsonRPC.RejectTxsIfConsensusAbnormal {
+		if api.rep.Config.JsonRPC.RejectTxsIfConsensusAbnormal {
 			return [32]byte{}, fmt.Errorf("the system is temporarily unavailable %s, tx: %s", err.Error(), tx.GetHash().String())
 		}
 		api.logger.Warnf("Receive new eth tx: %s, but system maybe be temporarily unavailable %s", tx.GetHash().String(), err.Error())

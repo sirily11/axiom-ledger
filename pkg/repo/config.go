@@ -171,6 +171,7 @@ type LogModule struct {
 	Storage    string `mapstructure:"storage" toml:"storage"`
 	Profile    string `mapstructure:"profile" toml:"profile"`
 	Finance    string `mapstructure:"finance" toml:"finance"`
+	TxPool     string `mapstructure:"txpool" toml:"txpool"`
 }
 
 type Genesis struct {

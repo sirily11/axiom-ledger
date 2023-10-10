@@ -24,14 +24,14 @@ const (
 )
 
 // GetAPIs returns the list of all APIs from the Ethereum namespaces
-func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([]rpc.API, error) {
+func GetAPIs(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) ([]rpc.API, error) {
 	var apis []rpc.API
 
 	apis = append(apis,
 		rpc.API{
 			Namespace: AxmNamespace,
 			Version:   apiVersion,
-			Service:   axm.NewAxmAPI(config, api, logger),
+			Service:   axm.NewAxmAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
@@ -40,7 +40,7 @@ func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([
 		rpc.API{
 			Namespace: EthNamespace,
 			Version:   apiVersion,
-			Service:   eth.NewBlockChainAPI(config, api, logger),
+			Service:   eth.NewBlockChainAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
@@ -49,7 +49,7 @@ func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([
 		rpc.API{
 			Namespace: EthNamespace,
 			Version:   apiVersion,
-			Service:   eth.NewAxiomAPI(config, api, logger),
+			Service:   eth.NewAxiomAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
@@ -58,7 +58,7 @@ func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([
 		rpc.API{
 			Namespace: EthNamespace,
 			Version:   apiVersion,
-			Service:   filters.NewAPI(config, api, logger),
+			Service:   filters.NewAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
@@ -67,7 +67,7 @@ func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([
 		rpc.API{
 			Namespace: EthNamespace,
 			Version:   apiVersion,
-			Service:   eth.NewTransactionAPI(config, api, logger),
+			Service:   eth.NewTransactionAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
@@ -85,7 +85,7 @@ func GetAPIs(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) ([
 		rpc.API{
 			Namespace: NetNamespace,
 			Version:   apiVersion,
-			Service:   net.NewAPI(config),
+			Service:   net.NewAPI(rep),
 			Public:    true,
 		},
 	)

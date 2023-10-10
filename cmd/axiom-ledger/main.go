@@ -35,6 +35,15 @@ func main() {
 			Name:   "start",
 			Usage:  "Start a long-running daemon process",
 			Action: start,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:        "readonly",
+					Aliases:     []string{"r"},
+					Usage:       "enable readonly mode(disable consensus and network), only support read api",
+					Destination: &startArgs.Readonly,
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:    "version",
