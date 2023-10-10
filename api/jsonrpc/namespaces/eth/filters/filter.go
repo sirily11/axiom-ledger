@@ -193,8 +193,13 @@ func (f *Filter) getBlockReceipts(blockNum uint64) ([]*types.Receipt, error) {
 }
 
 func includes(addresses []*types.Address, a *types.Address) bool {
+	// todo
+	// temporary fix for panic caused by nil addresses or a
+	if a == nil {
+		return false
+	}
 	for _, addr := range addresses {
-		if addr.String() == a.String() {
+		if addr != nil && addr.String() == a.String() {
 			return true
 		}
 	}
