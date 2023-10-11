@@ -12,14 +12,14 @@ import (
 type AxmAPI struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	config *repo.Config
+	rep    *repo.Repo
 	api    api.CoreAPI
 	logger logrus.FieldLogger
 }
 
-func NewAxmAPI(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) *AxmAPI {
+func NewAxmAPI(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) *AxmAPI {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &AxmAPI{ctx: ctx, cancel: cancel, config: config, api: api, logger: logger}
+	return &AxmAPI{ctx: ctx, cancel: cancel, rep: rep, api: api, logger: logger}
 }
 
 func (api *AxmAPI) Status() any {

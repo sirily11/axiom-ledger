@@ -18,14 +18,14 @@ import (
 type AxiomAPI struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	config *repo.Config
+	rep    *repo.Repo
 	api    api.CoreAPI
 	logger logrus.FieldLogger
 }
 
-func NewAxiomAPI(config *repo.Config, api api.CoreAPI, logger logrus.FieldLogger) *AxiomAPI {
+func NewAxiomAPI(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) *AxiomAPI {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &AxiomAPI{ctx: ctx, cancel: cancel, config: config, api: api, logger: logger}
+	return &AxiomAPI{ctx: ctx, cancel: cancel, rep: rep, api: api, logger: logger}
 }
 
 // GasPrice returns the current gas price based on dynamic adjustment strategy.
@@ -80,7 +80,7 @@ func (api *AxiomAPI) Syncing() (any, error) {
 }
 
 func (api *AxiomAPI) Accounts() ([]common.Address, error) {
-	accounts := api.config.Genesis.Accounts
+	accounts := api.rep.Config.Genesis.Accounts
 	res := make([]common.Address, 0)
 	for _, account := range accounts {
 		res = append(res, common.HexToAddress(account))

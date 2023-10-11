@@ -7,25 +7,15 @@ import (
 )
 
 func (axm *AxiomLedger) start() {
-	go axm.listenEvent()
-
-	go func() {
-		for {
-			select {
-			case commitEvent := <-axm.Consensus.Commit():
-				axm.logger.WithFields(logrus.Fields{
-					"height": commitEvent.Block.BlockHeader.Number,
-					"count":  len(commitEvent.Block.Transactions),
-				}).Info("Generated block")
-				axm.BlockExecutor.AsyncExecuteBlock(commitEvent)
-			case <-axm.Ctx.Done():
-				return
-			}
-		}
-	}()
+	go axm.listenWaitReportBlock()
+	go axm.listenWaitExecuteBlock()
 }
 
-func (axm *AxiomLedger) listenEvent() {
+func (axm *AxiomLedger) listenWaitReportBlock() {
+	if axm.Repo.ReadonlyMode {
+		return
+	}
+
 	blockCh := make(chan events.ExecutedEvent)
 	blockSub := axm.BlockExecutor.SubscribeBlockEvent(blockCh)
 	defer blockSub.Unsubscribe()
@@ -36,6 +26,24 @@ func (axm *AxiomLedger) listenEvent() {
 			return
 		case ev := <-blockCh:
 			axm.Consensus.ReportState(ev.Block.BlockHeader.Number, ev.Block.BlockHash, ev.TxHashList, ev.StateUpdatedCheckpoint)
+		}
+	}
+}
+
+func (axm *AxiomLedger) listenWaitExecuteBlock() {
+	if axm.Repo.ReadonlyMode {
+		return
+	}
+	for {
+		select {
+		case commitEvent := <-axm.Consensus.Commit():
+			axm.logger.WithFields(logrus.Fields{
+				"height": commitEvent.Block.BlockHeader.Number,
+				"count":  len(commitEvent.Block.Transactions),
+			}).Info("Generated block")
+			axm.BlockExecutor.AsyncExecuteBlock(commitEvent)
+		case <-axm.Ctx.Done():
+			return
 		}
 	}
 }

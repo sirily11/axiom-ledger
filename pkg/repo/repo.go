@@ -35,6 +35,8 @@ type Repo struct {
 	// TODO: Move to epoch manager service
 	// Track current epoch info, will be updated bt executor
 	EpochInfo *rbft.EpochInfo
+
+	ReadonlyMode bool
 }
 
 func (r *Repo) PrintNodeInfo() {

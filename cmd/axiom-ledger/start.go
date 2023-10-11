@@ -21,6 +21,10 @@ import (
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
+var startArgs = struct {
+	Readonly bool
+}{}
+
 func start(ctx *cli.Context) error {
 	p, err := getRootPath(ctx)
 	if err != nil {
@@ -36,6 +40,7 @@ func start(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	r.ReadonlyMode = startArgs.Readonly
 
 	appCtx, cancel := context.WithCancel(ctx.Context)
 	if err := loggers.Initialize(appCtx, r, true); err != nil {
@@ -74,7 +79,7 @@ func start(ctx *cli.Context) error {
 	}
 
 	// start json-rpc service
-	cbs, err := jsonrpc.NewChainBrokerService(api, r.Config)
+	cbs, err := jsonrpc.NewChainBrokerService(api, r)
 	if err != nil {
 		return err
 	}

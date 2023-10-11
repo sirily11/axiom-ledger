@@ -33,7 +33,7 @@ import (
 type AxiomLedger struct {
 	Ctx           context.Context
 	Cancel        context.CancelFunc
-	repo          *repo.Repo
+	Repo          *repo.Repo
 	logger        logrus.FieldLogger
 	ViewLedger    *ledger.Ledger
 	BlockExecutor executor.Executor
@@ -52,36 +52,39 @@ func NewAxiomLedger(rep *repo.Repo, ctx context.Context, cancel context.CancelFu
 	}
 
 	chainMeta := axm.ViewLedger.ChainLedger.GetChainMeta()
-	axm.Consensus, err = consensus.New(
-		rep.Config.Consensus.Type,
-		common.WithConfig(rep.RepoRoot, rep.ConsensusConfig),
-		common.WithSelfAccountAddress(rep.AccountAddress),
-		common.WithGenesisEpochInfo(rep.Config.Genesis.EpochInfo.Clone()),
-		common.WithConsensusType(rep.Config.Consensus.Type),
-		common.WithPrivKey(rep.AccountKey),
-		common.WithNetwork(axm.Network),
-		common.WithLogger(loggers.Logger(loggers.Consensus)),
-		common.WithApplied(chainMeta.Height),
-		common.WithDigest(chainMeta.BlockHash.String()),
-		common.WithGenesisDigest(axm.ViewLedger.ChainLedger.GetBlockHash(1).String()),
-		common.WithGetChainMetaFunc(axm.ViewLedger.ChainLedger.GetChainMeta),
-		common.WithGetBlockFunc(axm.ViewLedger.ChainLedger.GetBlock),
-		common.WithGetAccountBalanceFunc(func(address *types.Address) *big.Int {
-			return axm.ViewLedger.NewView().StateLedger.GetBalance(address)
-		}),
-		common.WithGetAccountNonceFunc(func(address *types.Address) uint64 {
-			return axm.ViewLedger.NewView().StateLedger.GetNonce(address)
-		}),
-		common.WithGetEpochInfoFromEpochMgrContractFunc(func(epoch uint64) (*rbft.EpochInfo, error) {
-			return base.GetEpochInfo(axm.ViewLedger.NewView().StateLedger, epoch)
-		}),
-		common.WithGetCurrentEpochInfoFromEpochMgrContractFunc(func() (*rbft.EpochInfo, error) {
-			return base.GetCurrentEpochInfo(axm.ViewLedger.NewView().StateLedger)
-		}),
-		common.WithEVMConfig(axm.repo.Config.Executor.EVM),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initialize consensus failed: %w", err)
+
+	if !rep.ReadonlyMode {
+		axm.Consensus, err = consensus.New(
+			rep.Config.Consensus.Type,
+			common.WithConfig(rep.RepoRoot, rep.ConsensusConfig),
+			common.WithSelfAccountAddress(rep.AccountAddress),
+			common.WithGenesisEpochInfo(rep.Config.Genesis.EpochInfo.Clone()),
+			common.WithConsensusType(rep.Config.Consensus.Type),
+			common.WithPrivKey(rep.AccountKey),
+			common.WithNetwork(axm.Network),
+			common.WithLogger(loggers.Logger(loggers.Consensus)),
+			common.WithApplied(chainMeta.Height),
+			common.WithDigest(chainMeta.BlockHash.String()),
+			common.WithGenesisDigest(axm.ViewLedger.ChainLedger.GetBlockHash(1).String()),
+			common.WithGetChainMetaFunc(axm.ViewLedger.ChainLedger.GetChainMeta),
+			common.WithGetBlockFunc(axm.ViewLedger.ChainLedger.GetBlock),
+			common.WithGetAccountBalanceFunc(func(address *types.Address) *big.Int {
+				return axm.ViewLedger.NewView().StateLedger.GetBalance(address)
+			}),
+			common.WithGetAccountNonceFunc(func(address *types.Address) uint64 {
+				return axm.ViewLedger.NewView().StateLedger.GetNonce(address)
+			}),
+			common.WithGetEpochInfoFromEpochMgrContractFunc(func(epoch uint64) (*rbft.EpochInfo, error) {
+				return base.GetEpochInfo(axm.ViewLedger.NewView().StateLedger, epoch)
+			}),
+			common.WithGetCurrentEpochInfoFromEpochMgrContractFunc(func() (*rbft.EpochInfo, error) {
+				return base.GetCurrentEpochInfo(axm.ViewLedger.NewView().StateLedger)
+			}),
+			common.WithEVMConfig(axm.Repo.Config.Executor.EVM),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("initialize consensus failed: %w", err)
+		}
 	}
 
 	return axm, nil
@@ -131,22 +134,25 @@ func NewAxiomLedgerWithoutConsensus(rep *repo.Repo, ctx context.Context, cancel 
 		return nil, fmt.Errorf("create BlockExecutor: %w", err)
 	}
 
-	net, err := network.New(rep, loggers.Logger(loggers.P2P), rwLdg.NewView())
-	if err != nil {
-		return nil, fmt.Errorf("create peer manager: %w", err)
+	var net network.Network
+	if !rep.ReadonlyMode {
+		net, err = network.New(rep, loggers.Logger(loggers.P2P), rwLdg.NewView())
+		if err != nil {
+			return nil, fmt.Errorf("create peer manager: %w", err)
+		}
 	}
 
 	axm := &AxiomLedger{
 		Ctx:           ctx,
 		Cancel:        cancel,
-		repo:          rep,
+		Repo:          rep,
 		logger:        logger,
 		ViewLedger:    rwLdg.NewView(),
 		BlockExecutor: txExec,
 		Network:       net,
 	}
 	// read current epoch info from ledger
-	axm.repo.EpochInfo, err = base.GetCurrentEpochInfo(axm.ViewLedger.StateLedger)
+	axm.Repo.EpochInfo, err = base.GetCurrentEpochInfo(axm.ViewLedger.StateLedger)
 	if err != nil {
 		return nil, err
 	}
@@ -154,14 +160,16 @@ func NewAxiomLedgerWithoutConsensus(rep *repo.Repo, ctx context.Context, cancel 
 }
 
 func (axm *AxiomLedger) Start() error {
-	if repo.SupportMultiNode[axm.repo.Config.Consensus.Type] {
+	if repo.SupportMultiNode[axm.Repo.Config.Consensus.Type] && !axm.Repo.ReadonlyMode {
 		if err := axm.Network.Start(); err != nil {
 			return fmt.Errorf("peer manager start: %w", err)
 		}
 	}
 
-	if err := axm.Consensus.Start(); err != nil {
-		return fmt.Errorf("consensus start: %w", err)
+	if !axm.Repo.ReadonlyMode {
+		if err := axm.Consensus.Start(); err != nil {
+			return fmt.Errorf("consensus start: %w", err)
+		}
 	}
 
 	if err := axm.BlockExecutor.Start(); err != nil {
@@ -176,14 +184,14 @@ func (axm *AxiomLedger) Start() error {
 }
 
 func (axm *AxiomLedger) Stop() error {
-	if axm.repo.Config.Consensus.Type != repo.ConsensusTypeSolo {
+	if axm.Repo.Config.Consensus.Type != repo.ConsensusTypeSolo && !axm.Repo.ReadonlyMode {
 		if err := axm.Network.Stop(); err != nil {
 			return fmt.Errorf("network stop: %w", err)
 		}
 	}
-
-	axm.Consensus.Stop()
-
+	if !axm.Repo.ReadonlyMode {
+		axm.Consensus.Stop()
+	}
 	if err := axm.BlockExecutor.Stop(); err != nil {
 		return fmt.Errorf("block executor stop: %w", err)
 	}
@@ -195,22 +203,25 @@ func (axm *AxiomLedger) Stop() error {
 }
 
 func (axm *AxiomLedger) printLogo() {
-	for {
-		time.Sleep(100 * time.Millisecond)
-		err := axm.Consensus.Ready()
-		if err == nil {
-			axm.logger.WithFields(logrus.Fields{
-				"consensus_type": axm.repo.Config.Consensus.Type,
-			}).Info("Consensus is ready")
-			fig := figure.NewFigure(repo.AppName, "slant", true)
-			axm.logger.WithField(log.OnlyWriteMsgWithoutFormatterField, nil).Infof(`
+	if !axm.Repo.ReadonlyMode {
+		for {
+			time.Sleep(100 * time.Millisecond)
+			err := axm.Consensus.Ready()
+			if err == nil {
+				break
+			}
+		}
+	}
+
+	axm.logger.WithFields(logrus.Fields{
+		"consensus_type": axm.Repo.Config.Consensus.Type,
+	}).Info("Consensus is ready")
+	fig := figure.NewFigure(repo.AppName, "slant", true)
+	axm.logger.WithField(log.OnlyWriteMsgWithoutFormatterField, nil).Infof(`
 =========================================================================================
 %s
 =========================================================================================
 `, fig.String())
-			return
-		}
-	}
 }
 
 func raiseUlimit(limitNew uint64) error {
