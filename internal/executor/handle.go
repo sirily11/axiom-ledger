@@ -133,6 +133,7 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 		panic(err)
 	}
 
+	exec.getLogsForReceipt(receipts, block.Height(), block.BlockHash)
 	receiptRoot, err := exec.calcReceiptMerkleRoot(receipts)
 	if err != nil {
 		panic(err)
@@ -172,7 +173,7 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	calcBlockSize.Observe(float64(block.Size()))
 	executeBlockDuration.Observe(float64(time.Since(current)) / float64(time.Second))
 
-	exec.getLogsForReceipt(receipts, block.Height(), block.BlockHash)
+	exec.getLogsBlockHashForReceipt(receipts, block.BlockHash)
 	block.BlockHeader.Bloom = ledger.CreateBloom(receipts)
 
 	data := &ledger.BlockData{
@@ -405,5 +406,13 @@ func (exec *BlockExecutor) getLogsForReceipt(receipts []*types.Receipt, height u
 	for _, receipt := range receipts {
 		receipt.EvmLogs = exec.ledger.StateLedger.GetLogs(*receipt.TxHash, height, hash)
 		receipt.Bloom = ledger.CreateBloom(ledger.EvmReceipts{receipt})
+	}
+}
+
+func (exec *BlockExecutor) getLogsBlockHashForReceipt(receipts []*types.Receipt, hash *types.Hash) {
+	for _, receipt := range receipts {
+		for _, evmLog := range receipt.EvmLogs {
+			evmLog.BlockHash = hash
+		}
 	}
 }
