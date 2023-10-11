@@ -320,6 +320,18 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 		exec.processExecuteEvent(rollbackCommitEvent1)
 	})
 
+	t.Run("test getLogsBlockHashForReceipt", func(t *testing.T) {
+		var evmLog []*types.EvmLog
+		evmLog = append(evmLog, &types.EvmLog{
+			BlockNumber: 1,
+		})
+		var receipt []*types.Receipt
+		receipt = append(receipt, &types.Receipt{
+			EvmLogs: evmLog,
+		})
+		exec.getLogsBlockHashForReceipt(receipt[:], genesisBlock.BlockHash)
+	})
+
 	assert.Nil(t, exec.Stop())
 }
 
