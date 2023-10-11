@@ -29,12 +29,10 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -271,12 +269,10 @@ func TestNodeManager_RunForNodeUpgradePropose(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -365,12 +361,10 @@ func TestNodeManager_GetNodeMembers(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -420,12 +414,10 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -751,12 +743,10 @@ func TestNodeManager_RunForRemoveVote(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -868,12 +858,10 @@ func TestNodeManager_RunForUpgradeVote(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()

@@ -64,14 +64,32 @@ func TestContractInitGenesisData(t *testing.T) {
 
 	repoRoot := t.TempDir()
 	genesis := repo.DefaultConfig(false)
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
 	err = InitGenesisData(&genesis.Genesis, mockLedger.StateLedger)
+	assert.Nil(t, err)
+}
+
+func TestContractCheckAndUpdateAllState(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	chainLedger := mock_ledger.NewMockChainLedger(mockCtl)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+	mockLedger := &ledger.Ledger{
+		ChainLedger: chainLedger,
+		StateLedger: stateLedger,
+	}
+
+	repoRoot := t.TempDir()
+	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
+
+	CheckAndUpdateAllState(1, mockLedger.StateLedger)
 	assert.Nil(t, err)
 }

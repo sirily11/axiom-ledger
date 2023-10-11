@@ -15,7 +15,6 @@ require (
 	github.com/gammazero/workerpool v1.1.3
 	github.com/google/btree v1.1.2
 	github.com/gorilla/mux v1.8.0
-	github.com/hashicorp/golang-lru/v2 v2.0.6
 	github.com/juju/ratelimit v1.0.1
 	github.com/libp2p/go-libp2p v0.27.7
 	github.com/mitchellh/go-homedir v1.1.0
@@ -86,6 +85,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.6 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.3 // indirect

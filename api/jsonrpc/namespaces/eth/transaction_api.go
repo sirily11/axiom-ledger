@@ -134,14 +134,15 @@ func (api *TransactionAPI) GetTransactionCount(address common.Address, blockNrOr
 		}
 	}(time.Now())
 
-	api.logger.Debugf("eth_getTransactionCount, address: %s", address)
+	api.logger.Debugf("eth_getTransactionCount, address: %s, blockNrOrHash: %v", address, blockNrOrHash)
 	if blockNrOrHash != nil {
 		if blockNumber, ok := blockNrOrHash.Number(); ok && blockNumber == rpctypes.PendingBlockNumber {
 			nonce := api.api.TxPool().GetPendingTxCountByAccount(address.String())
 			return (*hexutil.Uint64)(&nonce), nil
 		}
 	}
-	stateLedger, err := getStateLedgerAt(api.api)
+	api.logger.Debugf("eth_getTransactionCount from ledger")
+	stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
