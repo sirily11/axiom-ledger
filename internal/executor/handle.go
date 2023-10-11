@@ -110,7 +110,6 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	exec.evm = newEvm(exec.rep.Config.Executor.EVM, block.Height(), uint64(block.BlockHeader.Timestamp), exec.evmChainCfg, exec.ledger.StateLedger, exec.ledger.ChainLedger, block.BlockHeader.ProposerAccount)
 	exec.ledger.StateLedger.PrepareBlock(block.BlockHash, block.Height())
 	receipts := exec.applyTransactions(block.Transactions)
-	exec.getLogsForReceipt(receipts, block.Height(), block.BlockHash)
 
 	// check need turn into NewEpoch
 	epochInfo := exec.rep.EpochInfo
@@ -173,6 +172,7 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	calcBlockSize.Observe(float64(block.Size()))
 	executeBlockDuration.Observe(float64(time.Since(current)) / float64(time.Second))
 
+	exec.getLogsForReceipt(receipts, block.Height(), block.BlockHash)
 	block.BlockHeader.Bloom = ledger.CreateBloom(receipts)
 
 	data := &ledger.BlockData{

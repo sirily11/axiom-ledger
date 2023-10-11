@@ -204,7 +204,7 @@ func (n *Node) listenConsensusMsg() {
 				}
 
 				if err := n.Step(msg.Data); err != nil {
-					n.logger.WithField("err", err).Warn("Process consensus message failed")
+					n.logger.WithFields(logrus.Fields{"pipe": pipe.String(), "err": err, "from": msg.From}).Warn("Process consensus message failed")
 					continue
 				}
 			}
@@ -220,7 +220,7 @@ func (n *Node) listenConsensusMsg() {
 				}
 
 				if err := n.Step(msg.Data); err != nil {
-					n.logger.WithField("err", err).Warn("Process consensus message failed")
+					n.logger.WithFields(logrus.Fields{"pipe": n.consensusGlobalMsgPipe.String(), "err": err, "from": msg.From}).Warn("Process consensus message failed")
 					continue
 				}
 			}
