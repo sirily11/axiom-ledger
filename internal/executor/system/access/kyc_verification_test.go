@@ -103,7 +103,7 @@ func TestKycVerification_RunForSubmit(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		cm.Reset(stateLedger)
+		cm.Reset(1, stateLedger)
 
 		result, err := cm.Run(&vm.Message{
 			From: types.NewAddressByStr(test.Caller).ETHAddress(),
@@ -163,7 +163,7 @@ func TestKycVerification_RunForRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	address := types.NewAddressByStr(admin1).ETHAddress()
-	cm.Reset(stateLedger)
+	cm.Reset(1, stateLedger)
 	_, err = cm.Submit(&address, &SubmitArgs{KycInfos: []*KycInfo{
 		{
 			User:    *types.NewAddressByStr(admin3),
@@ -201,7 +201,7 @@ func TestKycVerification_RunForRemove(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		cm.Reset(stateLedger)
+		cm.Reset(1, stateLedger)
 
 		result, err := cm.Run(&vm.Message{
 			From: types.NewAddressByStr(test.Caller).ETHAddress(),
@@ -299,13 +299,22 @@ func generateRunData(t *testing.T, method string, anyArgs any) []byte {
 	return data
 }
 
-func TestKycVerification_CheckAndUpdateState(t *testing.T) {
+func TestKycVerification_Reset(t *testing.T) {
 	cm := NewKycVerification(&common.SystemContractConfig{
 		Logger: logrus.New(),
 	})
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	cm.CheckAndUpdateState(100, stateLedger)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	ld, err := leveldb.New(filepath.Join(repoRoot, "kyc_verification"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycVerifyContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	cm.Reset(100, stateLedger)
 }
 
 func TestKycVerification_ParseErrorArgs(t *testing.T) {
@@ -563,7 +572,7 @@ func TestKycVerification_SaveLog(t *testing.T) {
 		Logger: logrus.New(),
 	})
 	assert.Nil(t, cm.currentLog)
-	cm.Reset(stateLedger)
+	cm.Reset(1, stateLedger)
 	assert.NotNil(t, cm.currentLog)
 	cm.currentLog.Removed = false
 	cm.currentLog.Data = []byte{0, 1, 2}
@@ -727,7 +736,7 @@ func TestVerify(t *testing.T) {
 
 	for _, test := range testcases {
 		submit := test.submitAddr.ETHAddress()
-		cm.Reset(stateLedger)
+		cm.Reset(1, stateLedger)
 		_, err := cm.Submit(&submit, test.submitArgs)
 		assert.Nil(t, err)
 		verify, err := Verify(stateLedger, test.needApprove)
@@ -755,7 +764,7 @@ func TestKycVerification_ErrorSubmit(t *testing.T) {
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	cm.Reset(stateLedger)
+	cm.Reset(1, stateLedger)
 	admins := []string{admin1}
 	InitKycServicesAndKycInfos(stateLedger, admins, admins)
 
@@ -815,7 +824,7 @@ func TestKycVerification_ErrorRemove(t *testing.T) {
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	cm.Reset(stateLedger)
+	cm.Reset(1, stateLedger)
 	admins := []string{admin1}
 	InitKycServicesAndKycInfos(stateLedger, admins, admins)
 

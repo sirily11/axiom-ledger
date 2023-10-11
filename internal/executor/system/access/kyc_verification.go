@@ -9,18 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/axiomesh/axiom-ledger/pkg/loggers"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/sirupsen/logrus"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/samber/lo"
-
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	vm "github.com/axiomesh/eth-kit/evm"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -131,7 +129,7 @@ func initMethodSignature() map[string][]byte {
 	return m2sig
 }
 
-func (c *KycVerification) Reset(stateLedger ledger.StateLedger) {
+func (c *KycVerification) Reset(lastHeight uint64, stateLedger ledger.StateLedger) {
 	addr := types.NewAddressByStr(common.KycVerifyContractAddr)
 	c.account = stateLedger.GetOrCreateAccount(addr)
 	c.stateLedger = stateLedger
@@ -157,8 +155,6 @@ func (c *KycVerification) EstimateGas(callArgs *types.CallArgs) (uint64, error) 
 	}
 	return gas, nil
 }
-
-func (c *KycVerification) CheckAndUpdateState(lastHeight uint64, stateLedger ledger.StateLedger) {}
 
 func (c *KycVerification) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	defer c.SaveLog(c.stateLedger, c.currentLog)

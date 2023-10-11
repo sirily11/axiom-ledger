@@ -46,7 +46,7 @@ type KycServiceManager struct {
 	proposalID     *ProposalID
 }
 
-func (ac *KycServiceManager) Reset(stateLedger ledger.StateLedger) {
+func (ac *KycServiceManager) Reset(lastHeight uint64, stateLedger ledger.StateLedger) {
 	addr := types.NewAddressByStr(common.KycServiceContractAddr)
 	ac.account = stateLedger.GetOrCreateAccount(addr)
 	ac.stateLedger = stateLedger
@@ -57,6 +57,8 @@ func (ac *KycServiceManager) Reset(stateLedger ledger.StateLedger) {
 
 	councilAddr := types.NewAddressByStr(common.CouncilManagerContractAddr)
 	ac.councilAccount = stateLedger.GetOrCreateAccount(councilAddr)
+
+	ac.checkAndUpdateState(lastHeight)
 }
 
 // NewKycServiceManager constructs a new NewKycServiceManager
@@ -113,7 +115,9 @@ func (ac *KycServiceManager) EstimateGas(callArgs *types.CallArgs) (uint64, erro
 	return gas, nil
 }
 
-func (ac *KycServiceManager) CheckAndUpdateState(u uint64, stateLedger ledger.StateLedger) {}
+func (ac *KycServiceManager) checkAndUpdateState(lastHeight uint64) {
+	//TODO: need use CheckAndUpdate
+}
 
 func (ac *KycServiceManager) vote(user *ethcommon.Address, voteArgs *KycVoteArgs) (*vm.ExecutionResult, error) {
 	result := &vm.ExecutionResult{UsedGas: KycVoteGas}
