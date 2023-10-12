@@ -504,6 +504,9 @@ func testChainLedger_Rollback(t *testing.T, kvType string) {
 	accounts, stateRoot3 := ledger.StateLedger.FlushDirtyData()
 	ledger.PersistBlockData(genBlockData(3, accounts, stateRoot3))
 
+	ledger.ChainLedger.(*ChainLedgerImpl).chainMeta.Height = ledger.ChainLedger.(*ChainLedgerImpl).chainMeta.Height - 1
+	ledger.ChainLedger.(*ChainLedgerImpl).checkChainMeta()
+
 	assert.Equal(t, stateRoot3, stateLedger.prevJnlHash)
 	block, err := ledger.ChainLedger.GetBlock(3)
 	assert.Nil(t, err)
