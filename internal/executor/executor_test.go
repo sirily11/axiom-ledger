@@ -114,12 +114,38 @@ func TestSubscribeLogsEvent(t *testing.T) {
 
 func TestGetLogsForReceipt(t *testing.T) {
 	executor := executor_start(t)
-	receipts := []*types.Receipt{&types.Receipt{
-		EvmLogs: []*types.EvmLog{&types.EvmLog{
+	receipts := []*types.Receipt{{
+		EvmLogs: []*types.EvmLog{{
 			BlockNumber: 0,
 		}},
 	}}
 	executor.getLogsForReceipt(receipts, &types.Hash{})
+}
+
+func TestGetBlockHashFunc(t *testing.T) {
+	r, err := repo.Default(t.TempDir())
+	assert.Nil(t, err)
+
+	mockCtl := gomock.NewController(t)
+	chainLedger := mock_ledger.NewMockChainLedger(mockCtl)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+	mockLedger := &ledger.Ledger{
+		ChainLedger: chainLedger,
+		StateLedger: stateLedger,
+	}
+
+	// mock data for ledger
+	chainMeta := &types.ChainMeta{
+		Height:    1,
+		BlockHash: types.NewHashByStr(from),
+	}
+	chainLedger.EXPECT().GetChainMeta().Return(chainMeta).AnyTimes()
+	chainLedger.EXPECT().GetBlockHash(gomock.Any()).Return(nil)
+
+	executor, _ := New(r, mockLedger)
+
+	getHash := getBlockHashFunc(executor.ledger.ChainLedger)
+	getHash(10)
 }
 
 func TestBlockExecutor_ExecuteBlock(t *testing.T) {
@@ -580,6 +606,7 @@ func TestBlockExecutor_ApplyReadonlyTransactionsWithError(t *testing.T) {
 
 	txs3 = append(txs3, tx4, tx5, tx6)
 	exec.ApplyReadonlyTransactions(txs3)
+
 }
 
 func generateNodeAddProposeData(t *testing.T, extraArgs NodeExtraArgs) []byte {
