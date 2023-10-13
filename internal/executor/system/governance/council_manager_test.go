@@ -166,7 +166,30 @@ func TestRunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: CouncilProposalGas,
+				UsedGas: common.CalculateDynamicGas(generateProposeData(t, CouncilExtraArgs{
+					Candidates: []*CouncilMember{
+						{
+							Address: admin1,
+							Weight:  1,
+							Name:    "111",
+						},
+						{
+							Address: admin2,
+							Weight:  1,
+							Name:    "222",
+						},
+						{
+							Address: admin3,
+							Weight:  1,
+							Name:    "333",
+						},
+						{
+							Address: admin4,
+							Weight:  1,
+							Name:    "444",
+						},
+					},
+				})),
 				ReturnData: generateReturnData(t, &TestCouncilProposal{
 					ID:          1,
 					Type:        CouncilElect,
@@ -228,7 +251,30 @@ func TestRunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: CouncilProposalGas,
+				UsedGas: common.CalculateDynamicGas(generateProposeData(t, CouncilExtraArgs{
+					Candidates: []*CouncilMember{
+						{
+							Address: admin1,
+							Weight:  1,
+							Name:    "111",
+						},
+						{
+							Address: admin2,
+							Weight:  1,
+							Name:    "222",
+						},
+						{
+							Address: admin3,
+							Weight:  1,
+							Name:    "333",
+						},
+						{
+							Address: admin4,
+							Weight:  1,
+							Name:    "444",
+						},
+					},
+				})),
 			},
 			Err: ErrNotFoundCouncilMember,
 		},
@@ -348,7 +394,7 @@ func TestRunForVote(t *testing.T) {
 			Caller: admin2,
 			Data:   generateVoteData(t, cm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: CouncilVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateVoteData(t, cm.proposalID.GetID()-1, Pass)),
 				ReturnData: generateReturnData(t, &TestCouncilProposal{
 					ID:          1,
 					Type:        CouncilElect,
@@ -387,7 +433,7 @@ func TestRunForVote(t *testing.T) {
 			Caller: admin3,
 			Data:   generateVoteData(t, cm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: CouncilVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateVoteData(t, cm.proposalID.GetID()-1, Pass)),
 				ReturnData: generateReturnData(t, &TestCouncilProposal{
 					ID:          1,
 					Type:        CouncilElect,
@@ -476,7 +522,7 @@ func TestEstimateGas(t *testing.T) {
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, CouncilProposalGas, gas)
+	assert.Equal(t, common.CalculateDynamicGas(data), gas)
 
 	// test vote
 	data = hexutil.Bytes(generateVoteData(t, 1, Pass))
@@ -486,7 +532,7 @@ func TestEstimateGas(t *testing.T) {
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, CouncilVoteGas, gas)
+	assert.Equal(t, common.CalculateDynamicGas(data), gas)
 }
 
 func generateProposeData(t *testing.T, extraArgs CouncilExtraArgs) []byte {

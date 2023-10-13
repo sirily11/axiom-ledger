@@ -310,7 +310,7 @@ func (o *SimpleAccount) AddBalance(amount *big.Int) {
 	o.SetBalance(new(big.Int).Add(o.GetBalance(), amount))
 }
 
-// Query Query the value using key
+// Query the value using key
 func (o *SimpleAccount) Query(prefix string) (bool, [][]byte) {
 	var ret [][]byte
 	stored := make(map[string][]byte)
