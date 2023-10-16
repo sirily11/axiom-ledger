@@ -119,6 +119,12 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 			panic(err)
 		}
 		exec.rep.EpochInfo = newEpoch
+		exec.logger.WithFields(logrus.Fields{
+			"height":                commitEvent.Block.BlockHeader.Number,
+			"new_epoch":             newEpoch.Epoch,
+			"new_epoch_start_block": newEpoch.StartBlock,
+		}).Info("Turn into new epoch")
+		exec.ledger.StateLedger.Finalise()
 	}
 
 	applyTxsDuration.Observe(float64(time.Since(current)) / float64(time.Second))
