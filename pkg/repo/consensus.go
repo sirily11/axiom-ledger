@@ -48,10 +48,11 @@ type TxCache struct {
 }
 
 type RBFT struct {
-	EnableMultiPipes bool        `mapstructure:"enable_multi_pipes" toml:"enable_multi_pipes"`
-	EnableMetrics    bool        `mapstructure:"enable_metrics" toml:"enable_metrics"`
-	CheckInterval    Duration    `mapstructure:"check_interval" toml:"check_interval"`
-	Timeout          RBFTTimeout `mapstructure:"timeout" toml:"timeout"`
+	EnableMultiPipes                              bool        `mapstructure:"enable_multi_pipes" toml:"enable_multi_pipes"`
+	EnableMetrics                                 bool        `mapstructure:"enable_metrics" toml:"enable_metrics"`
+	CheckInterval                                 Duration    `mapstructure:"check_interval" toml:"check_interval"`
+	MinimumNumberOfBatchesToRetainAfterCheckpoint uint64      `mapstructure:"minimum_number_of_batches_to_retain_after_checkpoint" toml:"minimum_number_of_batches_to_retain_after_checkpoint"`
+	Timeout                                       RBFTTimeout `mapstructure:"timeout" toml:"timeout"`
 }
 
 type RBFTTimeout struct {
@@ -105,6 +106,7 @@ func DefaultConsensusConfig() *ConsensusConfig {
 			EnableMultiPipes: false,
 			EnableMetrics:    true,
 			CheckInterval:    Duration(3 * time.Minute),
+			MinimumNumberOfBatchesToRetainAfterCheckpoint: 10,
 			Timeout: RBFTTimeout{
 				SyncState:        Duration(3 * time.Second),
 				SyncInterval:     Duration(1 * time.Minute),

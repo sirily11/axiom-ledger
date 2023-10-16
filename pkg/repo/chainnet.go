@@ -224,6 +224,7 @@ func AriesConsensusConfig() *ConsensusConfig {
 			EnableMultiPipes: false,
 			EnableMetrics:    true,
 			CheckInterval:    Duration(3 * time.Minute),
+			MinimumNumberOfBatchesToRetainAfterCheckpoint: 10,
 			Timeout: RBFTTimeout{
 				SyncState:        Duration(3 * time.Second),
 				SyncInterval:     Duration(1 * time.Minute),
