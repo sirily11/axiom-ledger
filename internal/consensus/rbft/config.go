@@ -38,6 +38,7 @@ func defaultRbftConfig() rbft.Config {
 		Logger:                  nil,
 		NoTxBatchTimeout:        0,
 		CheckPoolRemoveTimeout:  30 * time.Minute,
+		MinimumNumberOfBatchesToRetainAfterCheckpoint: 10,
 	}
 }
 
@@ -94,6 +95,9 @@ func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
 		defaultConfig.MetricsProv = &prometheus.Provider{
 			Name: "rbft",
 		}
+	}
+	if readConfig.Rbft.MinimumNumberOfBatchesToRetainAfterCheckpoint > 0 {
+		defaultConfig.MinimumNumberOfBatchesToRetainAfterCheckpoint = readConfig.Rbft.MinimumNumberOfBatchesToRetainAfterCheckpoint
 	}
 	fn := func(addr string) uint64 {
 		return config.GetAccountNonce(types.NewAddressByStr(addr))
