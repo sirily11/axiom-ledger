@@ -20,10 +20,6 @@ import (
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
-const (
-	ldgCacheSize = 100
-)
-
 var _ ChainLedger = (*ChainLedgerImpl)(nil)
 
 type ChainLedgerImpl struct {
@@ -56,12 +52,12 @@ func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.Blo
 		return nil, fmt.Errorf("check chain meta: %w", err)
 	}
 
-	txCache, err := lru.New[uint64, []*types.Transaction](ldgCacheSize)
+	txCache, err := lru.New[uint64, []*types.Transaction](rep.Config.Ledger.ChainLedgerCacheSize)
 	if err != nil {
 		return nil, fmt.Errorf("new tx cache: %w", err)
 	}
 
-	receiptCache, err := lru.New[uint64, []*types.Receipt](ldgCacheSize)
+	receiptCache, err := lru.New[uint64, []*types.Receipt](rep.Config.Ledger.ChainLedgerCacheSize)
 	if err != nil {
 		return nil, fmt.Errorf("new receipt cache: %w", err)
 	}
