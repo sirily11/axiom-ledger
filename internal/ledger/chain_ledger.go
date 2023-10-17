@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/axiomesh/axiom-kit/storage"
@@ -19,6 +20,10 @@ import (
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
+const (
+	ldgCacheSize = 100
+)
+
 var _ ChainLedger = (*ChainLedgerImpl)(nil)
 
 type ChainLedgerImpl struct {
@@ -27,6 +32,9 @@ type ChainLedgerImpl struct {
 	repo            *repo.Repo
 	chainMeta       *types.ChainMeta
 	logger          logrus.FieldLogger
+
+	txCache      *lru.Cache[uint64, []*types.Transaction]
+	receiptCache *lru.Cache[uint64, []*types.Receipt]
 }
 
 func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.BlockFile) (*ChainLedgerImpl, error) {
@@ -47,6 +55,19 @@ func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.Blo
 	if err != nil {
 		return nil, fmt.Errorf("check chain meta: %w", err)
 	}
+
+	txCache, err := lru.New[uint64, []*types.Transaction](ldgCacheSize)
+	if err != nil {
+		return nil, fmt.Errorf("new tx cache: %w", err)
+	}
+
+	receiptCache, err := lru.New[uint64, []*types.Receipt](ldgCacheSize)
+	if err != nil {
+		return nil, fmt.Errorf("new receipt cache: %w", err)
+	}
+
+	c.txCache = txCache
+	c.receiptCache = receiptCache
 
 	return c, nil
 }
@@ -94,13 +115,18 @@ func (l *ChainLedgerImpl) GetBlock(height uint64) (*types.Block, error) {
 		return nil, fmt.Errorf("unmarshal tx hash data error: %w", err)
 	}
 
-	txsBytes, err := l.bf.Get(blockfile.BlockFileTXsTable, height)
-	if err != nil {
-		return nil, fmt.Errorf("get transactions with height %d from blockfile failed: %w", height, err)
-	}
-	txs, err := types.UnmarshalTransactions(txsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal txs bytes error: %w", err)
+	var txs []*types.Transaction
+	txs, ok := l.txCache.Get(height)
+	if !ok {
+		txsBytes, err := l.bf.Get(blockfile.BlockFileTXsTable, height)
+		if err != nil {
+			return nil, fmt.Errorf("get transactions with height %d from blockfile failed: %w", height, err)
+		}
+		txs, err = types.UnmarshalTransactions(txsBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal txs bytes error: %w", err)
+		}
+		l.txCache.Add(height, txs)
 	}
 
 	block.Transactions = txs
@@ -151,13 +177,19 @@ func (l *ChainLedgerImpl) GetTransaction(hash *types.Hash) (*types.Transaction, 
 	if err := meta.Unmarshal(metaBytes); err != nil {
 		return nil, fmt.Errorf("unmarshal transaction meta bytes error: %w", err)
 	}
-	txsBytes, err := l.bf.Get(blockfile.BlockFileTXsTable, meta.BlockHeight)
-	if err != nil {
-		return nil, fmt.Errorf("get transactions with height %d from blockfile failed: %w", meta.BlockHeight, err)
-	}
-	txs, err := types.UnmarshalTransactions(txsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal txs bytes error: %w", err)
+
+	var txs []*types.Transaction
+	txs, ok := l.txCache.Get(meta.BlockHeight)
+	if !ok {
+		txsBytes, err := l.bf.Get(blockfile.BlockFileTXsTable, meta.BlockHeight)
+		if err != nil {
+			return nil, fmt.Errorf("get transactions with height %d from blockfile failed: %w", meta.BlockHeight, err)
+		}
+		txs, err = types.UnmarshalTransactions(txsBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal txs bytes error: %w", err)
+		}
+		l.txCache.Add(meta.BlockHeight, txs)
 	}
 
 	return txs[meta.Index], nil
@@ -201,14 +233,20 @@ func (l *ChainLedgerImpl) GetReceipt(hash *types.Hash) (*types.Receipt, error) {
 	if err := meta.Unmarshal(metaBytes); err != nil {
 		return nil, fmt.Errorf("unmarshal transaction meta bytes error: %w", err)
 	}
-	rsBytes, err := l.bf.Get(blockfile.BlockFileReceiptTable, meta.BlockHeight)
-	if err != nil {
-		return nil, fmt.Errorf("get receipts with height %d from blockfile failed: %w", meta.BlockHeight, err)
-	}
 
-	rs, err := types.UnmarshalReceipts(rsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal receipt bytes error: %w", err)
+	var rs []*types.Receipt
+	rs, ok := l.receiptCache.Get(meta.BlockHeight)
+	if !ok {
+		rsBytes, err := l.bf.Get(blockfile.BlockFileReceiptTable, meta.BlockHeight)
+		if err != nil {
+			return nil, fmt.Errorf("get receipts with height %d from blockfile failed: %w", meta.BlockHeight, err)
+		}
+
+		rs, err = types.UnmarshalReceipts(rsBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal receipt bytes error: %w", err)
+		}
+		l.receiptCache.Add(meta.BlockHeight, rs)
 	}
 
 	return rs[meta.Index], nil
@@ -260,6 +298,13 @@ func (l *ChainLedgerImpl) PersistExecutionResult(block *types.Block, receipts []
 	}
 
 	batcher.Commit()
+
+	if len(block.Transactions) > 0 {
+		l.txCache.Add(l.chainMeta.Height, block.Transactions)
+	}
+	if len(receipts) > 0 {
+		l.receiptCache.Add(l.chainMeta.Height, receipts)
+	}
 
 	l.UpdateChainMeta(meta)
 
@@ -397,6 +442,9 @@ func (l *ChainLedgerImpl) removeChainDataOnBlock(batch storage.Batch, height uin
 	for _, tx := range block.Transactions {
 		batch.Delete(compositeKey(transactionMetaKey, tx.GetHash().String()))
 	}
+
+	l.txCache.Remove(height)
+	l.receiptCache.Remove(height)
 
 	return nil
 }
