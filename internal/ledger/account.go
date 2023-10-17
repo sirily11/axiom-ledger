@@ -355,7 +355,7 @@ func (o *SimpleAccount) Finalise() {
 	for key, value := range o.dirtyState {
 		o.pendingState[key] = value
 	}
-	// o.dirtyState = make(map[string][]byte)
+	o.dirtyState = make(map[string][]byte)
 }
 
 func (o *SimpleAccount) getJournalIfModified() *blockJournalEntry {

@@ -531,7 +531,9 @@ func testChainLedger_Rollback(t *testing.T, kvType string) {
 	hash = ledger.ChainLedger.GetBlockHash(100)
 	assert.NotNil(t, hash)
 
-	num, err := ledger.ChainLedger.GetTransactionCount(3)
+	num, err := ledger.ChainLedger.GetTransactionCount(0)
+	assert.NotNil(t, err)
+	num, err = ledger.ChainLedger.GetTransactionCount(3)
 	assert.Nil(t, err)
 	assert.NotNil(t, num)
 
