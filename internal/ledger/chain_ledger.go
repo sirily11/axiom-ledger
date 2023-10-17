@@ -300,10 +300,10 @@ func (l *ChainLedgerImpl) PersistExecutionResult(block *types.Block, receipts []
 	batcher.Commit()
 
 	if len(block.Transactions) > 0 {
-		l.txCache.Add(l.chainMeta.Height, block.Transactions)
+		l.txCache.Add(meta.Height, block.Transactions)
 	}
 	if len(receipts) > 0 {
-		l.receiptCache.Add(l.chainMeta.Height, receipts)
+		l.receiptCache.Add(meta.Height, receipts)
 	}
 
 	l.UpdateChainMeta(meta)
