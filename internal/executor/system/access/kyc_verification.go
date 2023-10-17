@@ -24,17 +24,18 @@ import (
 )
 
 const (
-	SubmitMethod   = "Submit"
-	RemoveMethod   = "Remove"
-	KycInfoKey     = "kycinfo"
-	KycServicesKey = "kycservices"
+	SubmitMethod          = "Submit"
+	RemoveMethod          = "Remove"
+	KycSubmitGas   uint64 = 30000
+	KycRemoveGas   uint64 = 30000
+	KycInfoKey            = "kycinfo"
+	KycServicesKey        = "kycservices"
 )
 
 var _ common.SystemContract = (*KycVerification)(nil)
 
 var (
 	ErrCheckSubmitInfo = errors.New("check submit info fail")
-	ErrCheckRemoveInfo = errors.New("check submit info fail")
 )
 
 type KycFlag uint8
@@ -47,17 +48,13 @@ const (
 )
 
 const (
-	LongTermValidity int64 = -1
-)
-
-const (
 	NotVerified KycFlag = iota
 	Verified
 )
 
 type KycInfo struct {
-	User    string
-	KycAddr string
+	User    types.Address
+	KycAddr types.Address
 	KycFlag KycFlag
 	Expires int64
 }
@@ -67,19 +64,19 @@ type BaseExtraArgs struct {
 }
 
 type SubmitArgs struct {
-	KycInfos []KycInfo
+	KycInfos []*KycInfo
 }
 
 type RemoveArgs struct {
-	Addresses []string
+	Addresses []*types.Address
 }
 
 type KycService struct {
-	KycAddr string
+	KycAddr types.Address
 }
 
 type KycServiceArgs struct {
-	Services []KycService
+	Services []*KycService
 }
 
 var method2Sig = map[string]string{
@@ -144,12 +141,21 @@ func (c *KycVerification) Reset(stateLedger ledger.StateLedger) {
 }
 
 func (c *KycVerification) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
-	_, err := c.getArgs(&vm.Message{Data: *callArgs.Data})
+	args, err := c.getArgs(&vm.Message{Data: *callArgs.Data})
 	if err != nil {
 		return 0, err
 	}
-	dynamicGas := common.CalculateDynamicGas(*callArgs.Data)
-	return dynamicGas, nil
+
+	var gas uint64
+	switch args.(type) {
+	case *SubmitArgs:
+		gas = KycSubmitGas
+	case *RemoveArgs:
+		gas = KycRemoveGas
+	default:
+		return 0, fmt.Errorf("ACCESS ERROR: unknown access args")
+	}
+	return gas, nil
 }
 
 func (c *KycVerification) CheckAndUpdateState(lastHeight uint64, stateLedger ledger.StateLedger) {}
@@ -168,11 +174,7 @@ func (c *KycVerification) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	case *RemoveArgs:
 		result, err = c.Remove(&msg.From, v)
 	default:
-		return nil, fmt.Errorf("access error: Run: unknown access args")
-	}
-	usedGas := common.CalculateDynamicGas(msg.Data)
-	if result != nil {
-		result.UsedGas = usedGas
+		return nil, fmt.Errorf("ACCESS ERROR: Run: unknown access args")
 	}
 	return result, err
 }
@@ -193,7 +195,7 @@ func (c *KycVerification) getArgs(msg *vm.Message) (any, error) {
 			return nil, err
 		}
 		submitArgs := &SubmitArgs{}
-		if err = json.Unmarshal(args.Extra, submitArgs); err != nil {
+		if err = json.Unmarshal(args.Extra, &submitArgs); err != nil {
 			return nil, err
 		}
 		return submitArgs, nil
@@ -203,31 +205,31 @@ func (c *KycVerification) getArgs(msg *vm.Message) (any, error) {
 			return nil, err
 		}
 		removeArgs := &RemoveArgs{}
-		if err = json.Unmarshal(args.Extra, removeArgs); err != nil {
+		if err = json.Unmarshal(args.Extra, &removeArgs); err != nil {
 			return nil, err
 		}
 		return removeArgs, nil
 	default:
-		return nil, fmt.Errorf("access error: getArgs: wrong method name")
+		return nil, fmt.Errorf("ACCESS ERROR: getArgs: wrong method name")
 	}
 }
 
 // ParseArgs parse the arguments to specified interface by method name
 func (c *KycVerification) ParseArgs(msg *vm.Message, methodName string, ret any) error {
 	if len(msg.Data) < 4 {
-		return fmt.Errorf("access error: ParseArgs: msg data length is not improperly formatted: %q - Bytes: %+v", msg.Data, msg.Data)
+		return fmt.Errorf("ACCESS ERROR: ParseArgs: msg data length is not improperly formatted: %q - Bytes: %+v", msg.Data, msg.Data)
 	}
 	// discard method id
 	data := msg.Data[4:]
 	var args abi.Arguments
 	if method, ok := c.gabi.Methods[methodName]; ok {
 		if len(data)%32 != 0 {
-			return fmt.Errorf("access error: ParseArgs: improperly formatted output: %q - Bytes: %+v", data, data)
+			return fmt.Errorf("ACCESS ERROR: ParseArgs: improperly formatted output: %q - Bytes: %+v", data, data)
 		}
 		args = method.Inputs
 	}
 	if args == nil {
-		return fmt.Errorf("access error: ParseArgs: could not locate named method: %s", methodName)
+		return fmt.Errorf("ACCESS ERROR: ParseArgs: could not locate named method: %s", methodName)
 	}
 	unpacked, err := args.Unpack(data)
 	if err != nil {
@@ -239,18 +241,18 @@ func (c *KycVerification) ParseArgs(msg *vm.Message, methodName string, ret any)
 func (c *KycVerification) getMethodName(data []byte) (string, error) {
 	for methodName, methodSig := range c.method2Sig {
 		id := methodSig[:4]
-		c.logger.Debugf("access error: getMethodName: method is: %v, get method id: %v", id, data[:4])
+		c.logger.Debugf("ACCESS ERROR: getMethodName: method is: %v, get method id: %v", id, data[:4])
 		if bytes.Equal(id, data[:4]) {
 			return methodName, nil
 		}
 	}
-	return "", fmt.Errorf("access error: getMethodName")
+	return "", fmt.Errorf("ACCESS ERROR: getMethodName")
 }
 
 func (c *KycVerification) Submit(from *ethcommon.Address, args *SubmitArgs) (*vm.ExecutionResult, error) {
 	success := CheckInServices(c.account, from.String())
 	if !success {
-		return nil, fmt.Errorf("access error: Submit: fail by checking kyc services")
+		return nil, fmt.Errorf("ACCESS ERROR: Submit: fail by checking kyc services")
 	}
 	for _, info := range args.KycInfos {
 		err := c.checkSubmitInfo(from, info)
@@ -268,21 +270,19 @@ func (c *KycVerification) Submit(from *ethcommon.Address, args *SubmitArgs) (*vm
 		return nil, err
 	}
 	return &vm.ExecutionResult{
+		UsedGas:    KycSubmitGas,
 		ReturnData: b,
+		Err:        nil,
 	}, nil
 }
 
 func (c *KycVerification) Remove(from *ethcommon.Address, args *RemoveArgs) (*vm.ExecutionResult, error) {
 	success := CheckInServices(c.account, from.String())
 	if !success {
-		return nil, fmt.Errorf("access error: Remove: check kyc service fail")
+		return nil, fmt.Errorf("ACCESS ERROR: Remove: check kyc service fail")
 	}
 	for _, addr := range args.Addresses {
-		err := c.checkRemoveInfo(addr)
-		if err != nil {
-			return nil, err
-		}
-		err = c.removeKycInfo(addr)
+		err := c.removeKycInfo(addr.String())
 		if err != nil {
 			return nil, err
 		}
@@ -292,52 +292,38 @@ func (c *KycVerification) Remove(from *ethcommon.Address, args *RemoveArgs) (*vm
 		return nil, err
 	}
 	return &vm.ExecutionResult{
+		UsedGas:    KycRemoveGas,
 		ReturnData: b,
+		Err:        nil,
 	}, nil
 }
 
-func Verify(lg ledger.StateLedger, needApprove string) (bool, error) {
-	logger := loggers.Logger(loggers.Access)
+func Verify(lg ledger.StateLedger, needApprove *types.Address) (bool, error) {
 	account := lg.GetOrCreateAccount(types.NewAddressByStr(common.KycVerifyContractAddr))
-	state, bytes := account.GetState([]byte(KycInfoKey + needApprove))
+	state, bytes := account.GetState([]byte(KycInfoKey + needApprove.String()))
 	if !state {
-		logger.Debugf("verify user addr fail by GetState, addr is %s", needApprove)
-		return false, fmt.Errorf("access error")
+		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by GetState")
 	}
 	info := &KycInfo{}
 	if err := json.Unmarshal(bytes, &info); err != nil {
-		logger.Debugf("verify fail by json.Unmarshal, addr is %s", needApprove)
-		return false, fmt.Errorf("access error")
+		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by json.Unmarshal")
 	}
 	// long-term validity
-	if info.Expires == LongTermValidity && info.KycFlag == Verified {
+	if info.Expires == -1 && info.KycFlag == 1 {
 		return true, nil
 	}
-	if time.Now().Unix() > info.Expires || info.KycFlag != Verified {
-		logger.Debugf("verify fail by checking kyc info, addr is %s", needApprove)
-		return false, fmt.Errorf("access error")
+	if time.Now().Unix() > info.Expires || info.KycFlag != 1 {
+		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info")
 	}
 	return true, nil
 }
 
-func (c *KycVerification) saveKycInfo(info KycInfo) error {
+func (c *KycVerification) saveKycInfo(info *KycInfo) error {
 	b, err := json.Marshal(info)
 	if err != nil {
 		return err
 	}
-	c.account.SetState([]byte(KycInfoKey+info.User), b)
-	return nil
-}
-
-func (c *KycVerification) getKycInfo(addr string) *KycInfo {
-	state, i := c.account.GetState([]byte(KycInfoKey + addr))
-	if state {
-		res := &KycInfo{}
-		err := json.Unmarshal(i, res)
-		if err != nil {
-			return res
-		}
-	}
+	c.account.SetState([]byte(KycInfoKey+info.User.String()), b)
 	return nil
 }
 
@@ -373,46 +359,40 @@ func CheckInServices(account ledger.IAccount, addr string) bool {
 		return false
 	}
 	isExist = common.IsInSlice[string](addr, lo.Map[*KycService, string](Services, func(item *KycService, index int) string {
-		return item.KycAddr
+		return item.KycAddr.String()
 	}))
 	return isExist
 }
 
-func AddAndRemoveKycService(lg ledger.StateLedger, modifyType ModifyType, inputServices []KycService) error {
+func AddAndRemoveKycService(lg ledger.StateLedger, modifyType ModifyType, inputServices []*KycService) error {
 	existServices, err := GetKycServices(lg)
 	if err != nil {
 		return err
 	}
-	switch modifyType {
-	case AddKycService:
+	if modifyType == AddKycService {
 		existServices = append(existServices, inputServices...)
-		addrToServiceMap := lo.Associate(existServices, func(service KycService) (string, KycService) {
-			return service.KycAddr, service
+		addrToServiceMap := lo.Associate(existServices, func(service *KycService) (ethcommon.Address, *KycService) {
+			return service.KycAddr.ETHAddress(), service
 		})
-		existServices = lo.MapToSlice(addrToServiceMap, func(key string, value KycService) KycService {
+		existServices = lo.MapToSlice(addrToServiceMap, func(key ethcommon.Address, value *KycService) *KycService {
 			return value
 		})
-		return SetKycService(lg, existServices)
-	case RemoveKycService:
-		if len(existServices) > 0 {
-			addrToServiceMap := lo.Associate(existServices, func(service KycService) (string, KycService) {
-				return service.KycAddr, service
-			})
-			filteredMembers := lo.Reject(inputServices, func(service KycService, _ int) bool {
-				_, exists := addrToServiceMap[service.KycAddr]
-				return exists
-			})
-			existServices = filteredMembers
-			return SetKycService(lg, existServices)
-		} else {
-			return fmt.Errorf("access error: remove kyc services from an empty list")
-		}
-	default:
-		return fmt.Errorf("access error: wrong submit type")
+	} else if modifyType == RemoveKycService && len(existServices) > 0 {
+		addrToServiceMap := lo.Associate(existServices, func(service *KycService) (ethcommon.Address, *KycService) {
+			return service.KycAddr.ETHAddress(), service
+		})
+		filteredMembers := lo.Reject(inputServices, func(service *KycService, _ int) bool {
+			_, exists := addrToServiceMap[service.KycAddr.ETHAddress()]
+			return exists
+		})
+		existServices = filteredMembers
+	} else if modifyType == RemoveKycService && len(existServices) <= 0 {
+		return fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list")
 	}
+	return SetKycService(lg, existServices)
 }
 
-func SetKycService(lg ledger.StateLedger, services []KycService) error {
+func SetKycService(lg ledger.StateLedger, services []*KycService) error {
 	cb, err := json.Marshal(services)
 	if err != nil {
 		return err
@@ -421,9 +401,9 @@ func SetKycService(lg ledger.StateLedger, services []KycService) error {
 	return nil
 }
 
-func GetKycServices(lg ledger.StateLedger) ([]KycService, error) {
+func GetKycServices(lg ledger.StateLedger) ([]*KycService, error) {
 	success, data := lg.GetOrCreateAccount(types.NewAddressByStr(common.KycVerifyContractAddr)).GetState([]byte(KycServicesKey))
-	var services []KycService
+	var services []*KycService
 	if success {
 		if err := json.Unmarshal(data, &services); err != nil {
 			return nil, err
@@ -451,11 +431,12 @@ func InitKycServicesAndKycInfos(lg ledger.StateLedger, initVerifiedUsers []strin
 	sort.Strings(allAddresses)
 	// set init verified users
 	for _, addrStr := range allAddresses {
+		addr := types.NewAddressByStr(addrStr)
 		info := &KycInfo{
-			User:    addrStr,
-			KycAddr: addrStr,
+			User:    *addr,
+			KycAddr: *addr,
 			KycFlag: Verified,
-			Expires: LongTermValidity,
+			Expires: -1,
 		}
 		b, err := json.Marshal(info)
 		if err != nil {
@@ -466,8 +447,9 @@ func InitKycServicesAndKycInfos(lg ledger.StateLedger, initVerifiedUsers []strin
 	// set init kyc services addresses
 	var kycServices []*KycService
 	for _, addrStr := range initKycServices {
+		addr := types.NewAddressByStr(addrStr)
 		service := &KycService{
-			KycAddr: addrStr,
+			KycAddr: *addr,
 		}
 		kycServices = append(kycServices, service)
 	}
@@ -492,43 +474,14 @@ func (c *KycVerification) SaveLog(stateLedger ledger.StateLedger, currentLog *co
 	}
 }
 
-func (c *KycVerification) checkSubmitInfo(from *ethcommon.Address, info KycInfo) error {
-	// check user addr
-	if addr := types.NewAddressByStr(info.User); addr.ETHAddress().String() != info.User {
-		c.logger.Debugf("access error: info user addr is invalid")
+func (c *KycVerification) checkSubmitInfo(from *ethcommon.Address, info *KycInfo) error {
+	if info == nil || info.KycAddr.String() != from.String() {
+		c.logger.Debugf("ACCESS ERROR: info == nil or kyc addr is not same")
 		return ErrCheckSubmitInfo
 	}
-	// check kyc service addr
-	if info.KycAddr != from.String() {
-		c.logger.Debugf("access error: kyc addr is not same")
+	if time.Now().Unix() > info.Expires && info.Expires != -1 {
+		c.logger.Debugf("ACCESS ERROR: kyc info is expired")
 		return ErrCheckSubmitInfo
-	}
-	// check time
-	if time.Now().Unix() > info.Expires {
-		c.logger.Debugf("access error: kyc info is expired")
-		return ErrCheckSubmitInfo
-	}
-	// check kycflag
-	if info.KycFlag != Verified {
-		c.logger.Debugf("access error: kyc info is not verified")
-		return ErrCheckSubmitInfo
-	}
-	// check admins
-	kycInfo := c.getKycInfo(info.User)
-	if kycInfo != nil && kycInfo.Expires == -1 && kycInfo.KycFlag == Verified {
-		c.logger.Debugf("access error: try to modify system user's kyc info")
-		return ErrCheckSubmitInfo
-	}
-
-	return nil
-}
-
-func (c *KycVerification) checkRemoveInfo(addr string) error {
-	// check admin
-	info := c.getKycInfo(addr)
-	if info != nil && info.KycFlag == Verified && info.Expires == LongTermValidity {
-		c.logger.Debugf("access error: try to remove system user's kyc info")
-		return ErrCheckRemoveInfo
 	}
 	return nil
 }

@@ -65,34 +65,25 @@ func TestKycVerification_RunForSubmit(t *testing.T) {
 		{
 			Caller: admin1,
 			Data: generateRunData(t, SubmitMethod, &SubmitArgs{
-				KycInfos: []KycInfo{
+				KycInfos: []*KycInfo{
 					{
-						User:    admin3,
-						KycAddr: admin1,
+						User:    *types.NewAddressByStr(admin3),
+						KycAddr: *types.NewAddressByStr(admin1),
 						KycFlag: Verified,
-						Expires: time.Now().Unix() + 10000,
+						Expires: -1,
 					},
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateRunData(t, SubmitMethod, &SubmitArgs{
-					KycInfos: []KycInfo{
-						{
-							User:    admin3,
-							KycAddr: admin1,
-							KycFlag: Verified,
-							Expires: time.Now().Unix() + 10000,
-						},
-					},
-				})),
-				Err: nil,
+				UsedGas: KycSubmitGas,
+				Err:     nil,
 				ReturnData: generateReturnData(t, &SubmitArgs{
-					KycInfos: []KycInfo{
+					KycInfos: []*KycInfo{
 						{
-							User:    admin3,
-							KycAddr: admin1,
+							User:    *types.NewAddressByStr(admin3),
+							KycAddr: *types.NewAddressByStr(admin1),
 							KycFlag: Verified,
-							Expires: time.Now().Unix() + 10000,
+							Expires: -1,
 						},
 					},
 				}),
@@ -103,11 +94,11 @@ func TestKycVerification_RunForSubmit(t *testing.T) {
 			Caller: admin1,
 			Data:   []byte{0, 1, 2, 3},
 			Expected: vm.ExecutionResult{
-				UsedGas:    0,
-				Err:        fmt.Errorf("access error: getMethodName"),
+				UsedGas:    KycSubmitGas,
+				Err:        fmt.Errorf("ACCESS ERROR: getMethodName"),
 				ReturnData: nil,
 			},
-			Err: fmt.Errorf("access error: getMethodName"),
+			Err: fmt.Errorf("ACCESS ERROR: getMethodName"),
 		},
 	}
 
@@ -134,14 +125,14 @@ func TestKycVerification_RunForSubmit(t *testing.T) {
 			assert.Equal(t, *expectedArgs, *actualArgs)
 
 			for _, info := range expectedArgs.KycInfos {
-				state, bytes := account.GetState([]byte(KycInfoKey + info.User))
+				state, bytes := account.GetState([]byte(KycInfoKey + info.User.ETHAddress().String()))
 				assert.True(t, state)
 				dbInfo := &KycInfo{}
 				err = json.Unmarshal(bytes, dbInfo)
 				assert.Nil(t, err)
-				assert.Equal(t, info, *dbInfo)
+				assert.Equal(t, info, dbInfo)
 
-				verify, err := Verify(stateLedger, info.User)
+				verify, err := Verify(stateLedger, &info.User)
 				assert.Nil(t, err)
 				assert.Equal(t, true, verify)
 			}
@@ -173,12 +164,12 @@ func TestKycVerification_RunForRemove(t *testing.T) {
 
 	address := types.NewAddressByStr(admin1).ETHAddress()
 	cm.Reset(stateLedger)
-	_, err = cm.Submit(&address, &SubmitArgs{KycInfos: []KycInfo{
+	_, err = cm.Submit(&address, &SubmitArgs{KycInfos: []*KycInfo{
 		{
-			User:    admin3,
-			KycAddr: admin1,
+			User:    *types.NewAddressByStr(admin3),
+			KycAddr: *types.NewAddressByStr(admin1),
 			KycFlag: Verified,
-			Expires: time.Now().Unix() + 10000,
+			Expires: -1,
 		},
 	}})
 	assert.Nil(t, err)
@@ -192,20 +183,16 @@ func TestKycVerification_RunForRemove(t *testing.T) {
 		{
 			Caller: admin1,
 			Data: generateRunData(t, RemoveMethod, &RemoveArgs{
-				Addresses: []string{
-					admin3,
+				Addresses: []*types.Address{
+					types.NewAddressByStr(admin3),
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateRunData(t, RemoveMethod, &RemoveArgs{
-					Addresses: []string{
-						admin3,
-					},
-				})),
-				Err: nil,
+				UsedGas: KycRemoveGas,
+				Err:     nil,
 				ReturnData: generateReturnData(t, &RemoveArgs{
-					Addresses: []string{
-						admin3,
+					Addresses: []*types.Address{
+						types.NewAddressByStr(admin3),
 					},
 				}),
 			},
@@ -236,7 +223,7 @@ func TestKycVerification_RunForRemove(t *testing.T) {
 			assert.Equal(t, *expectedArgs, *actualArgs)
 
 			for _, addr := range expectedArgs.Addresses {
-				state, bytes := account.GetState([]byte(KycInfoKey + addr))
+				state, bytes := account.GetState([]byte(KycInfoKey + addr.ETHAddress().String()))
 				if state {
 					dbInfo := &KycInfo{}
 					err := json.Unmarshal(bytes, dbInfo)
@@ -263,10 +250,10 @@ func TestEstimateGas(t *testing.T) {
 	to := types.NewAddressByStr(common.KycVerifyContractAddr).ETHAddress()
 
 	data := hexutil.Bytes(generateRunData(t, SubmitMethod, &SubmitArgs{
-		KycInfos: []KycInfo{
+		KycInfos: []*KycInfo{
 			{
-				User:    admin1,
-				KycAddr: admin1,
+				User:    *types.NewAddressByStr(admin1),
+				KycAddr: *types.NewAddressByStr(admin1),
 				KycFlag: Verified,
 				Expires: -1,
 			},
@@ -278,16 +265,16 @@ func TestEstimateGas(t *testing.T) {
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, common.CalculateDynamicGas(data), gas)
+	assert.Equal(t, KycSubmitGas, gas)
 
-	data = hexutil.Bytes(generateRunData(t, RemoveMethod, &RemoveArgs{Addresses: []string{admin1}}))
+	data = hexutil.Bytes(generateRunData(t, RemoveMethod, &RemoveArgs{Addresses: []*types.Address{types.NewAddressByStr(admin1)}}))
 	gas, err = cm.EstimateGas(&types.CallArgs{
 		From: &from,
 		To:   &to,
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, common.CalculateDynamicGas(data), gas)
+	assert.Equal(t, KycRemoveGas, gas)
 
 	// test error args
 	data = hexutil.Bytes([]byte{0, 1, 2, 3})
@@ -335,7 +322,7 @@ func TestKycVerification_ParseErrorArgs(t *testing.T) {
 		{
 			method:   "Submit",
 			data:     []byte{1},
-			Expected: fmt.Errorf("access error: ParseArgs: msg data length is not improperly formatted: %q - Bytes: %+v", []byte{1}, []byte{1}).Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: msg data length is not improperly formatted: %q - Bytes: %+v", []byte{1}, []byte{1}).Error(),
 		},
 		{
 			method:   "Submit",
@@ -345,17 +332,17 @@ func TestKycVerification_ParseErrorArgs(t *testing.T) {
 		{
 			method:   "Submit",
 			data:     []byte{1, 2, 3, 4, 5, 6, 7, 8},
-			Expected: fmt.Errorf("access error: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{5, 6, 7, 8}, []byte{5, 6, 7, 8}).Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{5, 6, 7, 8}, []byte{5, 6, 7, 8}).Error(),
 		},
 		{
 			method:   "test method",
 			data:     []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36},
-			Expected: fmt.Errorf("access error: ParseArgs: could not locate named method: %s", "test method").Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: could not locate named method: %s", "test method").Error(),
 		},
 		{
 			method:   "test method",
 			data:     truedata,
-			Expected: fmt.Errorf("access error: ParseArgs: could not locate named method: %s", "test method").Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: could not locate named method: %s", "test method").Error(),
 		},
 	}
 
@@ -372,10 +359,10 @@ func TestGetArgsForSubmit(t *testing.T) {
 	cm := NewKycVerification(&common.SystemContractConfig{
 		Logger: logrus.New(),
 	})
-	submitArgs := &SubmitArgs{KycInfos: []KycInfo{
+	submitArgs := &SubmitArgs{KycInfos: []*KycInfo{
 		{
-			User:    admin3,
-			KycAddr: admin1,
+			User:    *types.NewAddressByStr(admin3),
+			KycAddr: *types.NewAddressByStr(admin1),
 			KycFlag: 1,
 			Expires: -1,
 		},
@@ -392,16 +379,16 @@ func TestGetArgsForSubmit(t *testing.T) {
 
 	actualArgs, ok := arg.(*SubmitArgs)
 	assert.True(t, ok)
-	assert.Equal(t, submitArgs.KycInfos[0].User, actualArgs.KycInfos[0].User)
+	assert.Equal(t, submitArgs.KycInfos[0].User.String(), actualArgs.KycInfos[0].User.String())
 }
 
 func TestGetArgsForRemove(t *testing.T) {
 	cm := NewKycVerification(&common.SystemContractConfig{
 		Logger: logrus.New(),
 	})
-	removeArgs := &RemoveArgs{Addresses: []string{
-		admin1,
-		admin2,
+	removeArgs := &RemoveArgs{Addresses: []*types.Address{
+		types.NewAddressByStr(admin1),
+		types.NewAddressByStr(admin2),
 	}}
 	marshal, err := json.Marshal(removeArgs)
 	assert.Nil(t, err)
@@ -415,7 +402,7 @@ func TestGetArgsForRemove(t *testing.T) {
 	actualArgs, ok := arg.(*RemoveArgs)
 	assert.True(t, ok)
 
-	assert.Equal(t, removeArgs.Addresses[0], actualArgs.Addresses[0])
+	assert.Equal(t, removeArgs.Addresses[0].String(), actualArgs.Addresses[0].String())
 
 }
 
@@ -466,18 +453,18 @@ func TestAddAndRemoveKycService(t *testing.T) {
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
-	kycservices := []KycService{
+	kycservices := []*KycService{
 		{
-			admin1,
+			*types.NewAddressByStr(admin1),
 		},
 		{
-			admin2,
+			*types.NewAddressByStr(admin2),
 		},
 	}
 
 	testcases := []struct {
 		method ModifyType
-		data   []KycService
+		data   []*KycService
 		err    error
 	}{
 		{
@@ -493,12 +480,7 @@ func TestAddAndRemoveKycService(t *testing.T) {
 		{
 			method: RemoveKycService,
 			data:   kycservices,
-			err:    fmt.Errorf("access error: remove kyc services from an empty list"),
-		},
-		{
-			method: 3,
-			data:   nil,
-			err:    fmt.Errorf("access error: wrong submit type"),
+			err:    fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list"),
 		},
 	}
 	for _, test := range testcases {
@@ -527,12 +509,12 @@ func TestGetKycServices(t *testing.T) {
 	assert.True(t, len(services) == 0)
 
 	// case 2 not nil list
-	kycservices := []KycService{
+	kycservices := []*KycService{
 		{
-			admin1,
+			*types.NewAddressByStr(admin1),
 		},
 		{
-			admin2,
+			*types.NewAddressByStr(admin2),
 		},
 	}
 	err = SetKycService(stateLedger, kycservices)
@@ -552,12 +534,12 @@ func TestSetKycService(t *testing.T) {
 	assert.Nil(t, err)
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycVerifyContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
-	kycservices := []KycService{
+	kycservices := []*KycService{
 		{
-			admin1,
+			*types.NewAddressByStr(admin1),
 		},
 		{
-			admin2,
+			*types.NewAddressByStr(admin2),
 		},
 	}
 	err = SetKycService(stateLedger, kycservices)
@@ -598,29 +580,29 @@ func TestKycVerification_checkErrSubmitInfo(t *testing.T) {
 	})
 	testcases := []struct {
 		from    *types.Address
-		kycinfo KycInfo
+		kycinfo *KycInfo
 		err     error
 	}{
 		{
 			from: types.NewAddressByStr(admin1),
-			kycinfo: KycInfo{
-				User:    admin1,
-				KycAddr: admin2,
+			kycinfo: &KycInfo{
+				User:    *types.NewAddressByStr(admin1),
+				KycAddr: *types.NewAddressByStr(admin2),
 				KycFlag: 1,
-				Expires: time.Now().Unix() + 1000,
+				Expires: -1,
 			},
 			err: ErrCheckSubmitInfo,
 		},
 		{
 			from:    types.NewAddressByStr(admin1),
-			kycinfo: KycInfo{},
+			kycinfo: nil,
 			err:     ErrCheckSubmitInfo,
 		},
 		{
 			from: types.NewAddressByStr(admin1),
-			kycinfo: KycInfo{
-				User:    admin1,
-				KycAddr: admin1,
+			kycinfo: &KycInfo{
+				User:    *types.NewAddressByStr(admin1),
+				KycAddr: *types.NewAddressByStr(admin1),
 				KycFlag: 1,
 				Expires: 1,
 			},
@@ -628,23 +610,13 @@ func TestKycVerification_checkErrSubmitInfo(t *testing.T) {
 		},
 		{
 			from: types.NewAddressByStr(admin1),
-			kycinfo: KycInfo{
-				User:    admin1,
-				KycAddr: admin1,
+			kycinfo: &KycInfo{
+				User:    *types.NewAddressByStr(admin1),
+				KycAddr: *types.NewAddressByStr(admin1),
 				KycFlag: 3,
-				Expires: time.Now().Unix() + 1000,
+				Expires: -1,
 			},
-			err: ErrCheckSubmitInfo,
-		},
-		{
-			from: types.NewAddressByStr(admin1),
-			kycinfo: KycInfo{
-				User:    "admin1",
-				KycAddr: admin1,
-				KycFlag: 1,
-				Expires: time.Now().Unix() + 1000,
-			},
-			err: ErrCheckSubmitInfo,
+			err: nil,
 		},
 	}
 
@@ -673,16 +645,15 @@ func TestVerify(t *testing.T) {
 
 	// test fail to get state
 	testcase := struct {
-		needApproveAddr string
-		expected        bool
-		err             error
+		needApprove *types.Address
+		expected    bool
+		err         error
 	}{
-		needApproveAddr: admin2,
-		expected:        false,
-		// Verify: fail by GetState
-		err: fmt.Errorf("access error"),
+		needApprove: types.NewAddressByStr(admin2),
+		expected:    false,
+		err:         fmt.Errorf("ACCESS ERROR: Verify: fail by GetState"),
 	}
-	verify, err := Verify(stateLedger, testcase.needApproveAddr)
+	verify, err := Verify(stateLedger, testcase.needApprove)
 	assert.Equal(t, testcase.err, err)
 	assert.Equal(t, testcase.expected, verify)
 
@@ -690,61 +661,75 @@ func TestVerify(t *testing.T) {
 	admins := []string{admin1}
 	InitKycServicesAndKycInfos(stateLedger, admins, admins)
 	testcases := []struct {
-		needApprove string
-		kycInfo     KycInfo
+		needApprove *types.Address
+		submitAddr  *types.Address
+		submitArgs  *SubmitArgs
 		expected    bool
 		err         error
 	}{
 		{
-			needApprove: admin2,
-			kycInfo: KycInfo{
-				User:    admin2,
-				KycAddr: admin1,
-				KycFlag: Verified,
-				Expires: time.Now().Unix() + 10000,
-			},
+			needApprove: types.NewAddressByStr(admin2),
+			submitAddr:  types.NewAddressByStr(admin1),
+			submitArgs: &SubmitArgs{KycInfos: []*KycInfo{
+				{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin1),
+					KycFlag: 1,
+					Expires: -1,
+				},
+			}},
 			expected: true,
 			err:      nil,
 		},
 		{
-			needApprove: admin2,
-			kycInfo: KycInfo{
-				User:    admin2,
-				KycAddr: admin1,
-				KycFlag: Verified,
-				Expires: time.Now().Unix() + 1000,
-			},
+			needApprove: types.NewAddressByStr(admin2),
+			submitAddr:  types.NewAddressByStr(admin1),
+			submitArgs: &SubmitArgs{KycInfos: []*KycInfo{
+				{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin1),
+					KycFlag: 1,
+					Expires: time.Now().Unix() + 1000,
+				},
+			}},
 			expected: true,
 			err:      nil,
 		},
 		{
-			needApprove: admin2,
-			kycInfo: KycInfo{User: admin2,
-				KycAddr: admin1,
-				KycFlag: NotVerified,
-				Expires: time.Now().Unix() + 10000,
-			},
+			needApprove: types.NewAddressByStr(admin2),
+			submitAddr:  types.NewAddressByStr(admin1),
+			submitArgs: &SubmitArgs{KycInfos: []*KycInfo{
+				{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin1),
+					KycFlag: 0,
+					Expires: -1,
+				},
+			}},
 			expected: false,
-			// Verify: fail by checking kyc info
-			err: fmt.Errorf("access error"),
+			err:      fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info"),
 		},
 		{
-			needApprove: admin2,
-			kycInfo: KycInfo{
-				User:    admin2,
-				KycAddr: admin1,
-				KycFlag: 2,
-				Expires: time.Now().Unix() + 10000,
-			},
+			needApprove: types.NewAddressByStr(admin2),
+			submitAddr:  types.NewAddressByStr(admin1),
+			submitArgs: &SubmitArgs{KycInfos: []*KycInfo{
+				{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin1),
+					KycFlag: 2,
+					Expires: time.Now().Unix() + 10000,
+				},
+			}},
 			expected: false,
-			// Verify: fail by checking kyc info
-			err: fmt.Errorf("access error"),
+			err:      fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info"),
 		},
 	}
 
 	for _, test := range testcases {
+		submit := test.submitAddr.ETHAddress()
 		cm.Reset(stateLedger)
-		cm.saveKycInfo(test.kycInfo)
+		_, err := cm.Submit(&submit, test.submitArgs)
+		assert.Nil(t, err)
 		verify, err := Verify(stateLedger, test.needApprove)
 		assert.Equal(t, test.err, err)
 		assert.Equal(t, test.expected, verify)
@@ -782,21 +767,21 @@ func TestKycVerification_ErrorSubmit(t *testing.T) {
 		{
 			from: types.NewAddressByStr(admin2).ETHAddress(),
 			args: &SubmitArgs{
-				KycInfos: []KycInfo{{
-					User:    admin2,
-					KycAddr: admin2,
+				KycInfos: []*KycInfo{{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin2),
 					KycFlag: 0,
 					Expires: 0,
 				}},
 			},
-			err: fmt.Errorf("access error: Submit: fail by checking kyc services"),
+			err: fmt.Errorf("ACCESS ERROR: Submit: fail by checking kyc services"),
 		},
 		{
 			from: types.NewAddressByStr(admin1).ETHAddress(),
 			args: &SubmitArgs{
-				KycInfos: []KycInfo{{
-					User:    admin2,
-					KycAddr: admin2,
+				KycInfos: []*KycInfo{{
+					User:    *types.NewAddressByStr(admin2),
+					KycAddr: *types.NewAddressByStr(admin2),
 					KycFlag: 0,
 					Expires: 0,
 				}},
@@ -842,14 +827,14 @@ func TestKycVerification_ErrorRemove(t *testing.T) {
 		{
 			from: types.NewAddressByStr(admin2).ETHAddress(),
 			args: &RemoveArgs{
-				Addresses: []string{admin1},
+				Addresses: []*types.Address{types.NewAddressByStr(admin1)},
 			},
-			err: fmt.Errorf("access error: Remove: check kyc service fail"),
+			err: fmt.Errorf("ACCESS ERROR: Remove: check kyc service fail"),
 		},
 		{
 			from: types.NewAddressByStr(admin1).ETHAddress(),
 			args: &RemoveArgs{
-				Addresses: []string{admin3},
+				Addresses: []*types.Address{types.NewAddressByStr(admin3)},
 			},
 			err: nil,
 		},
@@ -924,14 +909,14 @@ func TestKycVerification_getErrorArgs(t *testing.T) {
 			data: &vm.Message{
 				Data: []byte{83, 44, 81, 214, 0},
 			},
-			Expected: fmt.Errorf("access error: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{0}, []byte{0}).Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{0}, []byte{0}).Error(),
 		},
 		{
 			method: "Remove",
 			data: &vm.Message{
 				Data: []byte{42, 198, 250, 166, 0},
 			},
-			Expected: fmt.Errorf("access error: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{0}, []byte{0}).Error(),
+			Expected: fmt.Errorf("ACCESS ERROR: ParseArgs: improperly formatted output: %q - Bytes: %+v", []byte{0}, []byte{0}).Error(),
 		},
 	}
 

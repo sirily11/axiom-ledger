@@ -244,7 +244,7 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, 
 
 	// kyc verify switch
 	if api.rep.Config.Access.KycVerification == repo.EnableKycVerify {
-		success, err := access.Verify(api.api.Broker().GetViewStateLedger().NewView(), tx.GetFrom().String())
+		success, err := access.Verify(api.api.Broker().GetViewStateLedger().NewView(), tx.GetFrom())
 		if err != nil || !success {
 			return [32]byte{}, err
 		}

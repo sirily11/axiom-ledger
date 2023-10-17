@@ -2,6 +2,7 @@ package governance
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/axiomesh/axiom-kit/types"
@@ -14,7 +15,9 @@ import (
 )
 
 const (
-	KycProposalKey = "KycProposal"
+	KycProposalGas uint64 = 30000
+	KycVoteGas     uint64 = 30000
+	KycProposalKey        = "KycProposal"
 )
 
 var _ common.SystemContract = (*KycServiceManager)(nil)
@@ -70,50 +73,50 @@ func NewKycServiceManager(cfg *common.SystemContractConfig) *KycServiceManager {
 
 func (ac *KycServiceManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	defer ac.gov.SaveLog(ac.stateLedger, ac.currentLog)
+
 	// parse method and arguments from msg payload
 	args, err := ac.gov.GetArgs(msg)
 	if err != nil {
 		return nil, err
 	}
 
-	gasUse := common.CalculateDynamicGas(msg.Data)
 	switch v := args.(type) {
 	case *ProposalArgs:
 		proposalArgs, err := ac.getKycProposalArgs(v)
 		if err != nil {
 			return nil, err
 		}
-		proposeRes, err := ac.propose(&msg.From, proposalArgs)
-		// gas will not be used if err
-		if proposeRes != nil {
-			proposeRes.UsedGas = gasUse
-		}
-		return proposeRes, err
+		return ac.propose(&msg.From, proposalArgs)
 	case *VoteArgs:
-		voteRes, err := ac.vote(&msg.From, &KycVoteArgs{BaseVoteArgs: v.BaseVoteArgs})
-		// gas will not be used if err
-		if voteRes != nil {
-			voteRes.UsedGas = gasUse
-		}
-		return voteRes, err
+		return ac.vote(&msg.From, &KycVoteArgs{BaseVoteArgs: v.BaseVoteArgs})
 	default:
 		return nil, fmt.Errorf("unknown proposal args")
 	}
 }
 
 func (ac *KycServiceManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
-	_, err := ac.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
+	args, err := ac.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
 	if err != nil {
 		return 0, err
 	}
-	gas := common.CalculateDynamicGas(*callArgs.Data)
+
+	var gas uint64
+	switch args.(type) {
+	case *ProposalArgs:
+		gas = KycProposalGas
+	case *VoteArgs:
+		gas = KycVoteGas
+	default:
+		return 0, errors.New("unknown proposal args")
+	}
+
 	return gas, nil
 }
 
 func (ac *KycServiceManager) CheckAndUpdateState(u uint64, stateLedger ledger.StateLedger) {}
 
 func (ac *KycServiceManager) vote(user *ethcommon.Address, voteArgs *KycVoteArgs) (*vm.ExecutionResult, error) {
-	result := &vm.ExecutionResult{}
+	result := &vm.ExecutionResult{UsedGas: KycVoteGas}
 
 	// get proposal
 	proposal, err := ac.loadKycProposal(voteArgs.ProposalId)
@@ -178,18 +181,8 @@ func (ac *KycServiceManager) voteServicesAddRemove(user *ethcommon.Address, prop
 }
 
 func (ac *KycServiceManager) propose(addr *ethcommon.Address, args *KycProposalArgs) (*vm.ExecutionResult, error) {
-	result := &vm.ExecutionResult{}
-
-	// check finished council proposals and kyc service proposals
-	if _, err := ac.checkFinishedProposal(); err != nil {
-		return nil, err
-	}
-
-	// check proposal services has repeated address
-	if len(lo.Uniq[string](lo.Map[access.KycService, string](args.Services, func(item access.KycService, index int) string {
-		return item.KycAddr
-	}))) != len(args.Services) {
-		return nil, fmt.Errorf("kyc services address repeated")
+	result := &vm.ExecutionResult{
+		UsedGas: KycProposalGas,
 	}
 
 	result.ReturnData, result.Err = ac.proposeServicesAddRemove(addr, args)
@@ -205,7 +198,7 @@ func (ac *KycServiceManager) getKycProposalArgs(args *ProposalArgs) (*KycProposa
 	}
 	serviceArgs := &access.KycServiceArgs{}
 	if err := json.Unmarshal(args.Extra, serviceArgs); err != nil {
-		return nil, fmt.Errorf("unmarshal services extra arguments error")
+		return nil, fmt.Errorf("unmarshal node extra arguments error")
 	}
 	kycArgs.KycServiceArgs = *serviceArgs
 	return kycArgs, nil
@@ -249,34 +242,4 @@ func (ac *KycServiceManager) saveKycProposal(proposal *KycProposal) ([]byte, err
 	// save proposal
 	ac.account.SetState([]byte(fmt.Sprintf("%s%d", KycProposalKey, proposal.ID)), b)
 	return b, nil
-}
-
-func (ac *KycServiceManager) checkFinishedProposal() (bool, error) {
-	if isExist, data := ac.councilAccount.Query(CouncilProposalKey); isExist {
-		for _, proposalData := range data {
-			proposal := &CouncilProposal{}
-			if err := json.Unmarshal(proposalData, proposal); err != nil {
-				return false, fmt.Errorf("check finished council proposal fail: json.Unmarshal fail")
-			}
-
-			if proposal.Status == Voting {
-				return false, fmt.Errorf("check finished council proposal fail: exist voting proposal")
-			}
-		}
-	}
-
-	if isExist, data := ac.account.Query(KycProposalKey); isExist {
-		for _, proposalData := range data {
-			proposal := &KycProposal{}
-			if err := json.Unmarshal(proposalData, proposal); err != nil {
-				return false, fmt.Errorf("check finished kyc service proposal fail: json.Unmarshal fail")
-			}
-
-			if proposal.Status == Voting {
-				return false, fmt.Errorf("check finished kyc service proposal fail: exist voting proposal")
-			}
-		}
-	}
-
-	return true, nil
 }

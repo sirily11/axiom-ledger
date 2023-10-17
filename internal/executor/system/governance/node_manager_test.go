@@ -83,13 +83,7 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeAddProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
+				UsedGas: NodeManagementProposalGas,
 			},
 			Err: nil,
 		},
@@ -103,13 +97,6 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeAddProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
 				Err: ErrNotFoundCouncilMember,
 			},
 			Err: nil,
@@ -127,16 +114,6 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeAddProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
 				Err: ErrRepeatedNodeID,
 			},
 			Err: nil,
@@ -151,13 +128,7 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeRemoveProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
+				UsedGas: NodeManagementProposalGas,
 			},
 			Err: nil,
 		},
@@ -171,13 +142,6 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeRemoveProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
 				Err: ErrNotFoundCouncilMember,
 			},
 			Err: nil,
@@ -195,16 +159,6 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeRemoveProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
 				Err: ErrRepeatedNodeID,
 			},
 			Err: nil,
@@ -221,7 +175,7 @@ func TestNodeManager_RunForPropose(t *testing.T) {
 
 		assert.Equal(t, test.Err, err)
 		if res != nil {
-			assert.Equal(t, test.Expected.UsedGas, res.UsedGas)
+			assert.Equal(t, uint64(NodeManagementProposalGas), res.UsedGas)
 			assert.Equal(t, test.Expected.Err, res.Err)
 		}
 	}
@@ -291,13 +245,7 @@ func TestNodeManager_RunForNodeUpgradePropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeUpgradeProposeData(t, NodeExtraArgs{
-					Nodes: []*NodeMember{
-						{
-							NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
-						},
-					},
-				})),
+				UsedGas: NodeManagementProposalGas,
 			},
 			Err: nil,
 		},
@@ -313,7 +261,7 @@ func TestNodeManager_RunForNodeUpgradePropose(t *testing.T) {
 
 		assert.Equal(t, test.Err, err)
 		if res != nil {
-			assert.Equal(t, test.Expected.UsedGas, res.UsedGas)
+			assert.Equal(t, uint64(NodeManagementProposalGas), res.UsedGas)
 			assert.Equal(t, test.Expected.Err, res.Err)
 		}
 	}
@@ -440,7 +388,7 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 			Caller: admin1,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrUseHasVoted,
 			},
 			Err: nil,
@@ -449,7 +397,7 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 			Caller: admin2,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 			},
 			Err: nil,
 		},
@@ -457,7 +405,7 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 			Caller: admin2,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrUseHasVoted,
 			},
 			Err: nil,
@@ -466,7 +414,7 @@ func TestNodeManager_RunForAddVote(t *testing.T) {
 			Caller: "0x1000000000000000000000000000000000000000",
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrNotFoundCouncilMember,
 			},
 			Err: nil,
@@ -563,7 +511,7 @@ func TestNodeManager_RunForRemoveVote(t *testing.T) {
 			Caller: admin1,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 			},
 			Err: nil,
 		},
@@ -571,7 +519,7 @@ func TestNodeManager_RunForRemoveVote(t *testing.T) {
 			Caller: admin1,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrUseHasVoted,
 			},
 			Err: nil,
@@ -580,7 +528,7 @@ func TestNodeManager_RunForRemoveVote(t *testing.T) {
 			Caller: "0x1000000000000000000000000000000000000000",
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrNotFoundCouncilMember,
 			},
 			Err: nil,
@@ -676,7 +624,7 @@ func TestNodeManager_RunForUpgradeVote(t *testing.T) {
 			Caller: admin1,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 			},
 			Err: nil,
 		},
@@ -684,7 +632,7 @@ func TestNodeManager_RunForUpgradeVote(t *testing.T) {
 			Caller: admin1,
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrUseHasVoted,
 			},
 			Err: nil,
@@ -693,7 +641,7 @@ func TestNodeManager_RunForUpgradeVote(t *testing.T) {
 			Caller: "0x1000000000000000000000000000000000000000",
 			Data:   generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: common.CalculateDynamicGas(generateNodeVoteData(t, nm.proposalID.GetID()-1, Pass)),
+				UsedGas: NodeManagementVoteGas,
 				Err:     ErrNotFoundCouncilMember,
 			},
 			Err: nil,
@@ -738,7 +686,7 @@ func TestNodeManager_EstimateGas(t *testing.T) {
 		Data: &dataBytes,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, common.CalculateDynamicGas(dataBytes), gas)
+	assert.Equal(t, NodeManagementProposalGas, gas)
 
 	// test vote
 	data, err = gabi.Pack(VoteMethod, uint64(1), uint8(Pass), []byte(""))
@@ -750,7 +698,7 @@ func TestNodeManager_EstimateGas(t *testing.T) {
 		Data: &dataBytes,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, common.CalculateDynamicGas(dataBytes), gas)
+	assert.Equal(t, NodeManagementVoteGas, gas)
 }
 
 func generateNodeAddProposeData(t *testing.T, extraArgs NodeExtraArgs) []byte {
@@ -819,7 +767,7 @@ func runVoteMethod(nm *NodeManager, msg *vm.Message) (*vm.ExecutionResult, error
 		return nil, nil
 	}
 
-	result := &vm.ExecutionResult{UsedGas: common.CalculateDynamicGas(msg.Data)}
+	result := &vm.ExecutionResult{UsedGas: NodeManagementVoteGas}
 
 	// get proposal
 	proposal, err := nm.loadNodeProposal(voteArgs.ProposalId)
