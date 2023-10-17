@@ -9,6 +9,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -35,7 +36,7 @@ type TestKycServiceProposal struct {
 	PassVotes   []string
 	RejectVotes []string
 	Status      ProposalStatus
-	Services    []*access.KycService
+	Services    []access.KycService
 }
 
 func TestKycServiceManager_RunForPropose(t *testing.T) {
@@ -90,12 +91,12 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 		{
 			Caller: KycService1,
 			Data: generateKycProposeData(t, KycServiceAdd, access.KycServiceArgs{
-				Services: []*access.KycService{
+				Services: []access.KycService{
 					{
-						KycAddr: *types.NewAddressByStr(KycService1),
+						KycAddr: KycService1,
 					},
 					{
-						KycAddr: *types.NewAddressByStr(KycService2),
+						KycAddr: KycService2,
 					},
 				},
 			}),
@@ -105,17 +106,26 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 		{
 			Caller: admin1,
 			Data: generateKycProposeData(t, KycServiceAdd, access.KycServiceArgs{
-				Services: []*access.KycService{
+				Services: []access.KycService{
 					{
-						KycAddr: *types.NewAddressByStr(KycService1),
+						KycAddr: KycService1,
 					},
 					{
-						KycAddr: *types.NewAddressByStr(KycService2),
+						KycAddr: KycService2,
 					},
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycProposalGas,
+				UsedGas: common.CalculateDynamicGas(generateKycProposeData(t, KycServiceAdd, access.KycServiceArgs{
+					Services: []access.KycService{
+						{
+							KycAddr: KycService1,
+						},
+						{
+							KycAddr: KycService2,
+						},
+					},
+				})),
 				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
 					ID:          1,
 					Type:        KycServiceAdd,
@@ -124,12 +134,12 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 					PassVotes:   []string{admin1},
 					RejectVotes: nil,
 					Status:      Voting,
-					Services: []*access.KycService{
+					Services: []access.KycService{
 						{
-							KycAddr: *types.NewAddressByStr(KycService1),
+							KycAddr: KycService1,
 						},
 						{
-							KycAddr: *types.NewAddressByStr(KycService2),
+							KycAddr: KycService2,
 						},
 					},
 				}),
@@ -140,7 +150,7 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 			Caller: admin1,
 			Data:   []byte{0, 1, 2, 3},
 			Expected: vm.ExecutionResult{
-				UsedGas:    KycProposalGas,
+				UsedGas:    common.CalculateDynamicGas([]byte{0, 1, 2, 3}),
 				ReturnData: nil,
 				Err:        ErrMethodName,
 			},
@@ -231,12 +241,12 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			BlockNumber:  1000,
 		},
 		KycServiceArgs: access.KycServiceArgs{
-			Services: []*access.KycService{
+			Services: []access.KycService{
 				{
-					KycAddr: *types.NewAddressByStr(KycService1),
+					KycAddr: KycService1,
 				},
 				{
-					KycAddr: *types.NewAddressByStr(KycService2),
+					KycAddr: KycService2,
 				},
 			},
 		},
@@ -252,7 +262,7 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			Caller: admin2,
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateKycVoteData(t, ks.proposalID.GetID()-1, Pass)),
 				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
 					ID:          1,
 					Type:        KycServiceAdd,
@@ -261,12 +271,12 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 					PassVotes:   []string{admin1, admin2},
 					RejectVotes: nil,
 					Status:      Voting,
-					Services: []*access.KycService{
+					Services: []access.KycService{
 						{
-							KycAddr: *types.NewAddressByStr(KycService1),
+							KycAddr: KycService1,
 						},
 						{
-							KycAddr: *types.NewAddressByStr(KycService2),
+							KycAddr: KycService2,
 						},
 					},
 				}),
@@ -277,7 +287,7 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			Caller: admin3,
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateKycVoteData(t, ks.proposalID.GetID()-1, Pass)),
 				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
 					ID:          1,
 					Type:        KycServiceAdd,
@@ -286,12 +296,12 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 					PassVotes:   []string{admin1, admin2, admin3},
 					RejectVotes: nil,
 					Status:      Approved,
-					Services: []*access.KycService{
+					Services: []access.KycService{
 						{
-							KycAddr: *types.NewAddressByStr(KycService1),
+							KycAddr: KycService1,
 						},
 						{
-							KycAddr: *types.NewAddressByStr(KycService2),
+							KycAddr: KycService2,
 						},
 					},
 				}),
@@ -302,7 +312,7 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			Caller: "0xfff0000000000000000000000000000000000000",
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateKycVoteData(t, ks.proposalID.GetID()-1, Pass)),
 				Err:     ErrNotFoundCouncilMember,
 			},
 			Err: ErrNotFoundCouncilMember,
@@ -389,12 +399,12 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 			BlockNumber:  1000,
 		},
 		KycServiceArgs: access.KycServiceArgs{
-			Services: []*access.KycService{
+			Services: []access.KycService{
 				{
-					KycAddr: *types.NewAddressByStr(KycService1),
+					KycAddr: KycService1,
 				},
 				{
-					KycAddr: *types.NewAddressByStr(KycService2),
+					KycAddr: KycService2,
 				},
 			},
 		},
@@ -410,7 +420,7 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 			Caller: admin2,
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateKycVoteData(t, ks.proposalID.GetID()-1, Pass)),
 				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
 					ID:          1,
 					Type:        KycServiceRemove,
@@ -419,12 +429,12 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 					PassVotes:   []string{admin1, admin2},
 					RejectVotes: nil,
 					Status:      Voting,
-					Services: []*access.KycService{
+					Services: []access.KycService{
 						{
-							KycAddr: *types.NewAddressByStr(KycService1),
+							KycAddr: KycService1,
 						},
 						{
-							KycAddr: *types.NewAddressByStr(KycService2),
+							KycAddr: KycService2,
 						},
 					},
 				}),
@@ -435,7 +445,7 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 			Caller: admin3,
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycVoteGas,
+				UsedGas: common.CalculateDynamicGas(generateKycVoteData(t, ks.proposalID.GetID()-1, Pass)),
 				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
 					ID:          1,
 					Type:        KycServiceRemove,
@@ -444,17 +454,17 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 					PassVotes:   []string{admin1, admin2, admin3},
 					RejectVotes: nil,
 					Status:      Approved,
-					Services: []*access.KycService{
+					Services: []access.KycService{
 						{
-							KycAddr: *types.NewAddressByStr(KycService1),
+							KycAddr: KycService1,
 						},
 						{
-							KycAddr: *types.NewAddressByStr(KycService2),
+							KycAddr: KycService2,
 						},
 					},
 				}),
 			},
-			Err: fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list"),
+			Err: fmt.Errorf("access error: remove kyc services from an empty list"),
 		},
 	}
 
@@ -491,12 +501,12 @@ func TestKycServiceManager_EstimateGas(t *testing.T) {
 	from := types.NewAddressByStr(admin1).ETHAddress()
 	to := types.NewAddressByStr(common.KycServiceContractAddr).ETHAddress()
 	data := hexutil.Bytes(generateKycProposeData(t, KycServiceAdd, access.KycServiceArgs{
-		Services: []*access.KycService{
+		Services: []access.KycService{
 			{
-				KycAddr: *types.NewAddressByStr(KycService1),
+				KycAddr: KycService1,
 			},
 			{
-				KycAddr: *types.NewAddressByStr(KycService2),
+				KycAddr: KycService2,
 			},
 		},
 	}))
@@ -507,7 +517,8 @@ func TestKycServiceManager_EstimateGas(t *testing.T) {
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, KycProposalGas, gas)
+	intrinsicGas, _ := vm.IntrinsicGas(data, []ethtype.AccessTuple{}, false, true, true, true)
+	assert.Equal(t, intrinsicGas, gas)
 
 	// test vote
 	data = hexutil.Bytes(generateKycVoteData(t, 1, Pass))
@@ -517,7 +528,8 @@ func TestKycServiceManager_EstimateGas(t *testing.T) {
 		Data: &data,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, KycVoteGas, gas)
+	intrinsicGas, _ = vm.IntrinsicGas(data, []ethtype.AccessTuple{}, false, true, true, true)
+	assert.Equal(t, intrinsicGas, gas)
 
 	// test error args
 	data = hexutil.Bytes([]byte{0, 1, 2, 3})
@@ -608,4 +620,82 @@ func TestKycServiceManager_loadKycProposal(t *testing.T) {
 	ks.Reset(stateLedger)
 	_, err = ks.loadKycProposal(1)
 	assert.Equal(t, fmt.Errorf("node proposal not found for the id"), err)
+}
+
+func TestKycServiceManager_checkFinishedProposal_kycProposal(t *testing.T) {
+	ks := NewKycServiceManager(&common.SystemContractConfig{
+		Logger: logrus.New(),
+	})
+
+	mockCtl := gomock.NewController(t)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	ld, err := leveldb.New(filepath.Join(repoRoot, "kycservice_manager"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycServiceContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	ks.Reset(stateLedger)
+
+	kycProposal := &KycProposal{
+		BaseProposal: BaseProposal{
+			ID:          1,
+			Type:        0,
+			Strategy:    0,
+			Proposer:    "",
+			Title:       "",
+			Desc:        "",
+			BlockNumber: 0,
+			TotalVotes:  0,
+			PassVotes:   nil,
+			RejectVotes: nil,
+			Status:      Voting,
+		},
+	}
+	b, _ := json.Marshal(kycProposal)
+	ks.account.SetState([]byte(fmt.Sprintf("%s%d", KycProposalKey, kycProposal.ID)), b)
+	_, err = ks.checkFinishedProposal()
+	assert.Equal(t, fmt.Errorf("check finished kyc service proposal fail: exist voting proposal"), err)
+}
+
+func TestKycServiceManager_checkFinishedProposal_councilProposal(t *testing.T) {
+	ks := NewKycServiceManager(&common.SystemContractConfig{
+		Logger: logrus.New(),
+	})
+
+	mockCtl := gomock.NewController(t)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	ld, err := leveldb.New(filepath.Join(repoRoot, "kycservice_manager"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycServiceContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+
+	proposal := &CouncilProposal{
+		BaseProposal: BaseProposal{
+			ID:          1,
+			Type:        0,
+			Strategy:    0,
+			Proposer:    "",
+			Title:       "",
+			Desc:        "",
+			BlockNumber: 0,
+			TotalVotes:  0,
+			PassVotes:   nil,
+			RejectVotes: nil,
+			Status:      Voting,
+		},
+	}
+	b, _ := json.Marshal(proposal)
+	ks.Reset(stateLedger)
+	ks.councilAccount.SetState([]byte(fmt.Sprintf("%s%d", CouncilProposalKey, proposal.ID)), b)
+	_, err = ks.checkFinishedProposal()
+	assert.Equal(t, fmt.Errorf("check finished council proposal fail: exist voting proposal"), err)
 }
