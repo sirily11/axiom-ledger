@@ -6,20 +6,18 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
-
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	vm "github.com/axiomesh/eth-kit/evm"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -149,7 +147,7 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		ks.Reset(stateLedger)
+		ks.Reset(1, stateLedger)
 
 		result, err := ks.Run(&vm.Message{
 			From: types.NewAddressByStr(test.Caller).ETHAddress(),
@@ -220,7 +218,7 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 	}, "10000000")
 	assert.Nil(t, err)
 
-	ks.Reset(stateLedger)
+	ks.Reset(1, stateLedger)
 
 	addr := types.NewAddressByStr(admin1).ETHAddress()
 	ks.propose(&addr, &KycProposalArgs{
@@ -310,7 +308,7 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		ks.Reset(stateLedger)
+		ks.Reset(1, stateLedger)
 
 		result, err := ks.Run(&vm.Message{
 			From: types.NewAddressByStr(test.Caller).ETHAddress(),
@@ -378,7 +376,7 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 	}, "10000000")
 	assert.Nil(t, err)
 
-	ks.Reset(stateLedger)
+	ks.Reset(1, stateLedger)
 
 	addr := types.NewAddressByStr(admin1).ETHAddress()
 	ks.propose(&addr, &KycProposalArgs{
@@ -459,7 +457,7 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		ks.Reset(stateLedger)
+		ks.Reset(1, stateLedger)
 
 		result, err := ks.Run(&vm.Message{
 			From: types.NewAddressByStr(test.Caller).ETHAddress(),
@@ -579,13 +577,22 @@ func generateKycReturnData(t *testing.T, testProposal *TestKycServiceProposal) [
 	return b
 }
 
-func TestKycServiceManager_CheckAndUpdateState(t *testing.T) {
+func TestKycServiceManager_Reset(t *testing.T) {
 	ks := NewKycServiceManager(&common.SystemContractConfig{
 		Logger: logrus.New(),
 	})
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	ks.CheckAndUpdateState(100, stateLedger)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	assert.Nil(t, err)
+	ld, err := leveldb.New(filepath.Join(repoRoot, "kycservice_manager"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycServiceContractAddr), ledger.NewChanger())
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	ks.Reset(100, stateLedger)
 }
 
 func TestKycServiceManager_loadKycProposal(t *testing.T) {
@@ -605,7 +612,7 @@ func TestKycServiceManager_loadKycProposal(t *testing.T) {
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycServiceContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
-	ks.Reset(stateLedger)
+	ks.Reset(1, stateLedger)
 	_, err = ks.loadKycProposal(1)
 	assert.Equal(t, fmt.Errorf("node proposal not found for the id"), err)
 }

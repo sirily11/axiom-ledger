@@ -102,7 +102,7 @@ func NewNodeManager(cfg *common.SystemContractConfig) *NodeManager {
 	}
 }
 
-func (nm *NodeManager) Reset(stateLedger ledger.StateLedger) {
+func (nm *NodeManager) Reset(lastHeight uint64, stateLedger ledger.StateLedger) {
 	addr := types.NewAddressByStr(common.NodeManagerContractAddr)
 	nm.account = stateLedger.GetOrCreateAccount(addr)
 	nm.stateLedger = stateLedger
@@ -113,6 +113,9 @@ func (nm *NodeManager) Reset(stateLedger ledger.StateLedger) {
 
 	councilAddr := types.NewAddressByStr(common.CouncilManagerContractAddr)
 	nm.councilAccount = stateLedger.GetOrCreateAccount(councilAddr)
+
+	// check and update
+	nm.checkAndUpdateState(lastHeight)
 }
 
 func (nm *NodeManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
@@ -428,40 +431,18 @@ func (nm *NodeManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
 	return gas, nil
 }
 
-func (nm *NodeManager) CheckAndUpdateState(lastHeight uint64, stateLedger ledger.StateLedger) {
-	nm.Reset(stateLedger)
-
-	if isExist, data := nm.account.Query(NodeProposalKey); isExist {
-		for _, proposalData := range data {
-			proposal := &NodeProposal{}
-			if err := json.Unmarshal(proposalData, proposal); err != nil {
-				nm.gov.logger.Errorf("unmarshal council proposal error: %s", err)
-				return
-			}
-
-			if proposal.Status == Approved || proposal.Status == Rejected {
-				// proposal is finnished, no need update
-				continue
-			}
-
-			if proposal.BlockNumber != 0 && proposal.BlockNumber <= lastHeight {
-				// means proposal is out of deadline,status change to rejected
-				proposal.Status = Rejected
-
-				// remove node is special, proposal should be auto approved when out of deadline
-				if proposal.Type == NodeRemove {
-					proposal.Status = Approved
-				}
-
-				b, err := nm.saveNodeProposal(proposal)
-				if err != nil {
-					nm.gov.logger.Errorf("unmarshal node proposal error: %s", err)
-				}
-
-				nm.gov.RecordLog(nm.currentLog, VoteMethod, &proposal.BaseProposal, b)
-				nm.gov.SaveLog(stateLedger, nm.currentLog)
-			}
+func (nm *NodeManager) checkAndUpdateState(lastHeight uint64) {
+	save := func(proposal *NodeProposal) ([]byte, error) {
+		// remove node is special, proposal should be auto approved when out of deadline
+		if proposal.Type == NodeRemove {
+			proposal.Status = Approved
 		}
+
+		return nm.saveNodeProposal(proposal)
+	}
+
+	if err := CheckAndUpdateState[NodeProposal](lastHeight, nm.account, NodeProposalKey, save); err != nil {
+		nm.gov.logger.Errorf("check and update state error: %s", err)
 	}
 }
 
