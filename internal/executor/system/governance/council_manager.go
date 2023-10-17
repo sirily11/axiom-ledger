@@ -37,6 +37,13 @@ const (
 
 	// MinCouncilMembersCount is min council members count
 	MinCouncilMembersCount = 4
+
+	// TODO: set used gas
+	// CouncilProposalGas is used gas for council proposal
+	CouncilProposalGas uint64 = 30000
+
+	// CouncilVoteGas is used gas for council vote
+	CouncilVoteGas uint64 = 21600
 )
 
 // CouncilExtraArgs is council proposal extra arguments
@@ -139,10 +146,6 @@ func (cm *CouncilManager) Run(msg *vm.Message) (result *vm.ExecutionResult, err 
 		return nil, errors.New("unknown proposal args")
 	}
 
-	if result != nil {
-		usedGas := common.CalculateDynamicGas(msg.Data)
-		result.UsedGas = usedGas
-	}
 	return result, err
 }
 
@@ -203,6 +206,7 @@ func (cm *CouncilManager) propose(addr ethcommon.Address, args *CouncilProposalA
 	cm.gov.RecordLog(cm.currentLog, ProposeMethod, &proposal.BaseProposal, b)
 
 	return &vm.ExecutionResult{
+		UsedGas:    CouncilProposalGas,
 		ReturnData: b,
 		Err:        err,
 	}, nil
@@ -211,7 +215,7 @@ func (cm *CouncilManager) propose(addr ethcommon.Address, args *CouncilProposalA
 // Vote a proposal, return vote status
 func (cm *CouncilManager) vote(user ethcommon.Address, voteArgs *CouncilVoteArgs) (*vm.ExecutionResult, error) {
 	cm.gov.logger.Debugf("Vote council election, addr: %s, args: %+v", user.String(), voteArgs)
-	result := &vm.ExecutionResult{}
+	result := &vm.ExecutionResult{UsedGas: CouncilVoteGas}
 
 	// check user can vote
 	isExist, _ := CheckInCouncil(cm.account, user.String())
@@ -284,12 +288,22 @@ func (cm *CouncilManager) saveProposal(proposal *CouncilProposal) ([]byte, error
 }
 
 func (cm *CouncilManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
-	_, err := cm.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
+	args, err := cm.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
 	if err != nil {
 		return 0, err
 	}
 
-	return common.CalculateDynamicGas(*callArgs.Data), nil
+	var gas uint64
+	switch args.(type) {
+	case *ProposalArgs:
+		gas = CouncilProposalGas
+	case *VoteArgs:
+		gas = CouncilVoteGas
+	default:
+		return 0, errors.New("unknown proposal args")
+	}
+
+	return gas, nil
 }
 
 func (cm *CouncilManager) CheckAndUpdateState(lastHeight uint64, stateLedger ledger.StateLedger) {

@@ -1,7 +1,6 @@
 package common
 
 import (
-	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 
 	"github.com/axiomesh/axiom-kit/types"
@@ -65,9 +64,4 @@ type Log struct {
 	Topics  []*types.Hash
 	Data    []byte
 	Removed bool
-}
-
-func CalculateDynamicGas(bytes []byte) uint64 {
-	gas, _ := vm.IntrinsicGas(bytes, []ethtype.AccessTuple{}, false, true, true, true)
-	return gas
 }
