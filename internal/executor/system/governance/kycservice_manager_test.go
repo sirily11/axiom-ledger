@@ -2,9 +2,15 @@ package governance
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
@@ -14,10 +20,6 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	vm "github.com/axiomesh/eth-kit/evm"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -452,7 +454,7 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 					},
 				}),
 			},
-			Err: fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list"),
+			Err: errors.New("ACCESS ERROR: remove kyc services from an empty list"),
 		},
 	}
 
@@ -614,5 +616,5 @@ func TestKycServiceManager_loadKycProposal(t *testing.T) {
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	ks.Reset(1, stateLedger)
 	_, err = ks.loadKycProposal(1)
-	assert.Equal(t, fmt.Errorf("node proposal not found for the id"), err)
+	assert.Equal(t, errors.New("node proposal not found for the id"), err)
 }

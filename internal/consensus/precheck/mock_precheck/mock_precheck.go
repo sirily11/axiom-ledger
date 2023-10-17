@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_precheck/mock_precheck.go -package mock_precheck -source precheck.go -typed
 //
+
 // Package mock_precheck is a generated GoMock package.
 package mock_precheck
 

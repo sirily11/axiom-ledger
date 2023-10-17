@@ -6,11 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestProposal_CheckAndUpdateState(t *testing.T) {
@@ -81,5 +82,4 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 
 		account.SetState([]byte("/proposalkey"), nil)
 	}
-
 }

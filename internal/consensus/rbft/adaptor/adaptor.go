@@ -28,6 +28,7 @@ var _ rbft.ServiceOutbound[types.Transaction, *types.Transaction] = (*RBFTAdapto
 var _ rbft.EpochService = (*RBFTAdaptor)(nil)
 
 type RBFTAdaptor struct {
+	epochStore        storage.Storage
 	store             storage.Storage
 	priv              *ecdsa.PrivateKey
 	network           network.Network
@@ -67,8 +68,14 @@ func NewRBFTAdaptor(config *common.Config) (*RBFTAdaptor, error) {
 		return nil, err
 	}
 
+	epochStore, err := storagemgr.Open(repo.GetStoragePath(config.RepoRoot, storagemgr.Epoch))
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	stack := &RBFTAdaptor{
+		epochStore:       epochStore,
 		store:            store,
 		priv:             config.PrivKey,
 		network:          config.Network,

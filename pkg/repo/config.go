@@ -242,13 +242,13 @@ func (c *Config) Bytes() ([]byte, error) {
 
 func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 	var epochPeriod uint64 = 10000000
-	var checkpointPeriod uint64 = 10
-	var highWatermarkCheckpointPeriod uint64 = 4
+	var checkpointPeriod uint64 = 1
+	var highWatermarkCheckpointPeriod uint64 = 10
 	var proposerElectionType = rbft.ProposerElectionTypeRotating
 	if epochEnable {
 		epochPeriod = 100
 		checkpointPeriod = 1
-		highWatermarkCheckpointPeriod = 40
+		highWatermarkCheckpointPeriod = 10
 		proposerElectionType = rbft.ProposerElectionTypeWRF
 	}
 

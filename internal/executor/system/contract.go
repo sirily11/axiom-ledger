@@ -1,6 +1,9 @@
 package system
 
 import (
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
+
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
@@ -8,8 +11,6 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/governance"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 )
 
 // addr2ContractConstruct is address to system contract
@@ -64,7 +65,7 @@ func InitGenesisData(genesis *repo.Genesis, lg ledger.StateLedger) error {
 		return err
 	}
 
-	//init kyc services and kyc infos
+	// init kyc services and kyc infos
 	admins := lo.Map[*repo.Admin, string](genesis.Admins, func(x *repo.Admin, _ int) string {
 		return x.Address
 	})

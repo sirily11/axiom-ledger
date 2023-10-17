@@ -15,6 +15,7 @@ const (
 	Ledger     = "ledger"
 	Blockfile  = "blockfile"
 	Consensus  = "consensus"
+	Epoch      = "epoch"
 )
 
 var globalStorageMgr = &storageMgr{

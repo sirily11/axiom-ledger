@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_ledger/mock_ledger.go -package mock_ledger -source ledger.go -typed
 //
+
 // Package mock_ledger is a generated GoMock package.
 package mock_ledger
 

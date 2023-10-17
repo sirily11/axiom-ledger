@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_api/mock_api.go -package mock_api -source api.go -typed
 //
+
 // Package mock_api is a generated GoMock package.
 package mock_api
 

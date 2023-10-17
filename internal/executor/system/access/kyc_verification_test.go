@@ -2,27 +2,26 @@ package access
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
-	"github.com/axiomesh/axiom-ledger/internal/ledger"
-	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
-	vm "github.com/axiomesh/eth-kit/evm"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/axiomesh/axiom-ledger/internal/ledger"
+	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 const (
@@ -95,10 +94,10 @@ func TestKycVerification_RunForSubmit(t *testing.T) {
 			Data:   []byte{0, 1, 2, 3},
 			Expected: vm.ExecutionResult{
 				UsedGas:    KycSubmitGas,
-				Err:        fmt.Errorf("ACCESS ERROR: getMethodName"),
+				Err:        errors.New("ACCESS ERROR: getMethodName"),
 				ReturnData: nil,
 			},
-			Err: fmt.Errorf("ACCESS ERROR: getMethodName"),
+			Err: errors.New("ACCESS ERROR: getMethodName"),
 		},
 	}
 
@@ -336,7 +335,7 @@ func TestKycVerification_ParseErrorArgs(t *testing.T) {
 		{
 			method:   "Submit",
 			data:     []byte{1, 2, 3, 4},
-			Expected: fmt.Errorf("abi: attempting to unmarshall an empty string while arguments are expected").Error(),
+			Expected: errors.New("abi: attempting to unmarshall an empty string while arguments are expected").Error(),
 		},
 		{
 			method:   "Submit",
@@ -412,7 +411,6 @@ func TestGetArgsForRemove(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, removeArgs.Addresses[0].String(), actualArgs.Addresses[0].String())
-
 }
 
 func TestKycVerification_GetErrArgs(t *testing.T) {
@@ -489,14 +487,13 @@ func TestAddAndRemoveKycService(t *testing.T) {
 		{
 			method: RemoveKycService,
 			data:   kycservices,
-			err:    fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list"),
+			err:    errors.New("ACCESS ERROR: remove kyc services from an empty list"),
 		},
 	}
 	for _, test := range testcases {
 		err := AddAndRemoveKycService(stateLedger, test.method, test.data)
 		assert.Equal(t, test.err, err)
 	}
-
 }
 
 func TestGetKycServices(t *testing.T) {
@@ -634,7 +631,6 @@ func TestKycVerification_checkErrSubmitInfo(t *testing.T) {
 		err := cm.checkSubmitInfo(&address, test.kycinfo)
 		assert.Equal(t, test.err, err)
 	}
-
 }
 
 func TestVerify(t *testing.T) {
@@ -660,7 +656,7 @@ func TestVerify(t *testing.T) {
 	}{
 		needApprove: types.NewAddressByStr(admin2),
 		expected:    false,
-		err:         fmt.Errorf("ACCESS ERROR: Verify: fail by GetState"),
+		err:         errors.New("ACCESS ERROR: Verify: fail by GetState"),
 	}
 	verify, err := Verify(stateLedger, testcase.needApprove)
 	assert.Equal(t, testcase.err, err)
@@ -716,7 +712,7 @@ func TestVerify(t *testing.T) {
 				},
 			}},
 			expected: false,
-			err:      fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info"),
+			err:      errors.New("ACCESS ERROR: Verify: fail by checking kyc info"),
 		},
 		{
 			needApprove: types.NewAddressByStr(admin2),
@@ -730,7 +726,7 @@ func TestVerify(t *testing.T) {
 				},
 			}},
 			expected: false,
-			err:      fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info"),
+			err:      errors.New("ACCESS ERROR: Verify: fail by checking kyc info"),
 		},
 	}
 
@@ -783,7 +779,7 @@ func TestKycVerification_ErrorSubmit(t *testing.T) {
 					Expires: 0,
 				}},
 			},
-			err: fmt.Errorf("ACCESS ERROR: Submit: fail by checking kyc services"),
+			err: errors.New("ACCESS ERROR: Submit: fail by checking kyc services"),
 		},
 		{
 			from: types.NewAddressByStr(admin1).ETHAddress(),
@@ -838,7 +834,7 @@ func TestKycVerification_ErrorRemove(t *testing.T) {
 			args: &RemoveArgs{
 				Addresses: []*types.Address{types.NewAddressByStr(admin1)},
 			},
-			err: fmt.Errorf("ACCESS ERROR: Remove: check kyc service fail"),
+			err: errors.New("ACCESS ERROR: Remove: check kyc service fail"),
 		},
 		{
 			from: types.NewAddressByStr(admin1).ETHAddress(),

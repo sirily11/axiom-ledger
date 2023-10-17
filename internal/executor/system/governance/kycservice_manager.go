@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/samber/lo"
+
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	vm "github.com/axiomesh/eth-kit/evm"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/samber/lo"
 )
 
 const (
@@ -92,7 +93,7 @@ func (ac *KycServiceManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	case *VoteArgs:
 		return ac.vote(&msg.From, &KycVoteArgs{BaseVoteArgs: v.BaseVoteArgs})
 	default:
-		return nil, fmt.Errorf("unknown proposal args")
+		return nil, errors.New("unknown proposal args")
 	}
 }
 
@@ -116,7 +117,7 @@ func (ac *KycServiceManager) EstimateGas(callArgs *types.CallArgs) (uint64, erro
 }
 
 func (ac *KycServiceManager) checkAndUpdateState(lastHeight uint64) {
-	//TODO: need use CheckAndUpdate
+	// TODO: need use CheckAndUpdate
 }
 
 func (ac *KycServiceManager) vote(user *ethcommon.Address, voteArgs *KycVoteArgs) (*vm.ExecutionResult, error) {
@@ -138,7 +139,7 @@ func (ac *KycServiceManager) vote(user *ethcommon.Address, voteArgs *KycVoteArgs
 func (c *KycServiceManager) loadKycProposal(proposalID uint64) (*KycProposal, error) {
 	isExist, data := c.account.GetState([]byte(fmt.Sprintf("%s%d", KycProposalKey, proposalID)))
 	if !isExist {
-		return nil, fmt.Errorf("node proposal not found for the id")
+		return nil, errors.New("node proposal not found for the id")
 	}
 
 	proposal := &KycProposal{}
@@ -202,7 +203,7 @@ func (ac *KycServiceManager) getKycProposalArgs(args *ProposalArgs) (*KycProposa
 	}
 	serviceArgs := &access.KycServiceArgs{}
 	if err := json.Unmarshal(args.Extra, serviceArgs); err != nil {
-		return nil, fmt.Errorf("unmarshal node extra arguments error")
+		return nil, errors.New("unmarshal node extra arguments error")
 	}
 	kycArgs.KycServiceArgs = *serviceArgs
 	return kycArgs, nil
