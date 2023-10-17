@@ -185,11 +185,8 @@ func (l *ChainLedgerImpl) GetTransaction(hash *types.Hash) (*types.Transaction, 
 		if err != nil {
 			return nil, fmt.Errorf("get transactions with height %d from blockfile failed: %w", meta.BlockHeight, err)
 		}
-		txs, err = types.UnmarshalTransactions(txsBytes)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal txs bytes error: %w", err)
-		}
-		l.txCache.Add(meta.BlockHeight, txs)
+
+		return types.UnmarshalTransactionWithIndex(txsBytes, meta.Index)
 	}
 
 	return txs[meta.Index], nil
@@ -242,11 +239,7 @@ func (l *ChainLedgerImpl) GetReceipt(hash *types.Hash) (*types.Receipt, error) {
 			return nil, fmt.Errorf("get receipts with height %d from blockfile failed: %w", meta.BlockHeight, err)
 		}
 
-		rs, err = types.UnmarshalReceipts(rsBytes)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal receipt bytes error: %w", err)
-		}
-		l.receiptCache.Add(meta.BlockHeight, rs)
+		return types.UnmarshalReceiptWithIndex(rsBytes, meta.Index)
 	}
 
 	return rs[meta.Index], nil
