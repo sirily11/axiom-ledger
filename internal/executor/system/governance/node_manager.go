@@ -15,9 +15,6 @@ import (
 )
 
 const (
-	NodeManagementProposalGas uint64 = 30000
-	NodeManagementVoteGas     uint64 = 21600
-
 	// NodeProposalKey is key for NodeProposal storage
 	NodeProposalKey = "nodeProposalKey"
 
@@ -133,7 +130,9 @@ func (nm *NodeManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	default:
 		return nil, errors.New("unknown proposal args")
 	}
-
+	if result != nil {
+		result.UsedGas = common.CalculateDynamicGas(msg.Data)
+	}
 	return result, err
 }
 
@@ -166,9 +165,7 @@ func (nm *NodeManager) getUpgradeArgs(args *ProposalArgs) (*UpgradeProposalArgs,
 }
 
 func (nm *NodeManager) propose(addr ethcommon.Address, args *ProposalArgs) (*vm.ExecutionResult, error) {
-	result := &vm.ExecutionResult{
-		UsedGas: NodeManagementProposalGas,
-	}
+	result := &vm.ExecutionResult{}
 
 	if args.ProposalType == uint8(NodeUpgrade) {
 		upgradeArgs, err := nm.getUpgradeArgs(args)
@@ -282,7 +279,7 @@ func (nm *NodeManager) proposeUpgrade(addr ethcommon.Address, args *UpgradePropo
 
 // Vote a proposal, return vote status
 func (nm *NodeManager) vote(user ethcommon.Address, voteArgs *VoteArgs) (*vm.ExecutionResult, error) {
-	result := &vm.ExecutionResult{UsedGas: NodeManagementVoteGas}
+	result := &vm.ExecutionResult{}
 
 	// get proposal
 	proposal, err := nm.loadNodeProposal(voteArgs.ProposalId)
@@ -410,22 +407,12 @@ func (nm *NodeManager) loadNodeProposal(proposalID uint64) (*NodeProposal, error
 }
 
 func (nm *NodeManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
-	args, err := nm.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
+	_, err := nm.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
 	if err != nil {
 		return 0, err
 	}
 
-	var gas uint64
-	switch args.(type) {
-	case *ProposalArgs:
-		gas = NodeManagementProposalGas
-	case *VoteArgs:
-		gas = NodeManagementVoteGas
-	default:
-		return 0, errors.New("unknown proposal args")
-	}
-
-	return gas, nil
+	return common.CalculateDynamicGas(*callArgs.Data), nil
 }
 
 func (nm *NodeManager) CheckAndUpdateState(lastHeight uint64, stateLedger ledger.StateLedger) {
