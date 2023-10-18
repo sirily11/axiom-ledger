@@ -10,10 +10,8 @@ const (
 	syncBlockRequestPipe  = "sync_block_pipe_v1_request"
 	syncBlockResponsePipe = "sync_block_pipe_v1_response"
 
-	maxRetryCount       = 5
-	waitStateTimeout    = 2 * time.Minute
-	requestRetryTimeout = 30 * time.Second
-	requestInterval     = 500 * time.Millisecond
+	maxRetryCount   = 5
+	requestInterval = 500 * time.Millisecond
 )
 
 type syncMsgType int

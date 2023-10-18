@@ -6,6 +6,7 @@ import (
 
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-kit/types/pb"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +16,7 @@ func TestStartSync(t *testing.T) {
 	defer stopSyncs(syncs)
 
 	// store blocks expect node 0
-	prepareLedger(n, 100)
+	prepareLedger(n, 10)
 
 	// start sync model
 	for i := 0; i < n; i++ {
@@ -30,12 +31,23 @@ func TestStartSync(t *testing.T) {
 	quorumCkpt := &consensus.SignedCheckpoint{
 		Checkpoint: &consensus.Checkpoint{
 			ExecuteState: &consensus.Checkpoint_ExecuteState{
-				Height: 100,
+				Height: 10,
 				Digest: remoteBlockHash,
 			},
 		},
 	}
-	err := syncs[0].StartSync(peers, latestBlockHash, 2, 2, 100, quorumCkpt)
+
+	t.Run("test switch sync status err", func(t *testing.T) {
+		err := syncs[0].switchSyncStatus(true)
+		require.Nil(t, err)
+		err = syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt)
+		require.NotNil(t, err)
+		require.Contains(t, err.Error(), "status is already true")
+		err = syncs[0].switchSyncStatus(false)
+		require.Nil(t, err)
+	})
+
+	err := syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt)
 	require.Nil(t, err)
 	defer func() {
 		err = syncs[0].StopSync()
@@ -43,8 +55,47 @@ func TestStartSync(t *testing.T) {
 	}()
 
 	blocks := <-syncs[0].Commit()
-	require.Equal(t, 99, len(blocks))
-	require.Equal(t, uint64(100), blocks[len(blocks)-1].Height())
+	require.Equal(t, 9, len(blocks))
+	require.Equal(t, uint64(10), blocks[len(blocks)-1].Height())
+}
+
+func TestStartSyncWithRemoteSendBlockResponseError(t *testing.T) {
+	n := 4
+	syncs := newMockBlockSyncs(t, n, wrongTypeSendSyncBlockResponse, 0, 2)
+	defer stopSyncs(syncs)
+
+	// store blocks expect node 0
+	prepareLedger(n, 10)
+
+	// start sync model
+	for i := 0; i < n; i++ {
+		err := syncs[i].Start()
+		require.Nil(t, err)
+	}
+
+	// node0 start sync block
+	peers := []string{"1", "2", "3"}
+	latestBlockHash := getMockChainMeta(0).BlockHash.String()
+	remoteBlockHash := getMockChainMeta(1).BlockHash.String()
+	quorumCkpt := &consensus.SignedCheckpoint{
+		Checkpoint: &consensus.Checkpoint{
+			ExecuteState: &consensus.Checkpoint_ExecuteState{
+				Height: 10,
+				Digest: remoteBlockHash,
+			},
+		},
+	}
+
+	err := syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt)
+	require.Nil(t, err)
+	defer func() {
+		err = syncs[0].StopSync()
+		require.Nil(t, err)
+	}()
+
+	blocks := <-syncs[0].Commit()
+	require.Equal(t, 9, len(blocks))
+	require.Equal(t, uint64(10), blocks[len(blocks)-1].Height())
 }
 
 func TestMultiEpochSync(t *testing.T) {
@@ -324,7 +375,7 @@ func TestHandleTimeoutBlockMsg(t *testing.T) {
 func TestHandleSyncErrMsg(t *testing.T) {
 	n := 4
 	// mock syncs[0] which send sync request error
-	syncs := newMockBlockSyncs(t, n, 0, 1)
+	syncs := newMockBlockSyncs(t, n, wrongTypeSendSyncBlockRequest, 0, 1)
 	defer stopSyncs(syncs)
 
 	// store blocks expect node 0
@@ -358,4 +409,82 @@ func TestHandleSyncErrMsg(t *testing.T) {
 	require.Equal(t, 99, len(blocks))
 	require.Equal(t, uint64(100), blocks[len(blocks)-1].Height())
 
+}
+
+func TestSendSyncStateError(t *testing.T) {
+	n := 4
+	// mock syncs[0] which send sync state request error
+	syncs := newMockBlockSyncs(t, n, wrongTypeSendSyncState, 0, 1)
+	defer stopSyncs(syncs)
+
+	// store blocks expect node 0
+	prepareLedger(n, 100)
+
+	// start sync model
+	for i := 0; i < n; i++ {
+		err := syncs[i].Start()
+		require.Nil(t, err)
+	}
+	// node0 start sync block
+	peers := []string{"1", "2", "3"}
+	latestBlockHash := getMockChainMeta(0).BlockHash.String()
+	remoteBlockHash := getMockChainMeta(1).BlockHash.String()
+	quorumCkpt := &consensus.SignedCheckpoint{
+		Checkpoint: &consensus.Checkpoint{
+			ExecuteState: &consensus.Checkpoint_ExecuteState{
+				Height: 100,
+				Digest: remoteBlockHash,
+			},
+		},
+	}
+	err := syncs[0].StartSync(peers, latestBlockHash, 2, 2, 100, quorumCkpt)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "timeout send sync request")
+
+	err = syncs[0].StopSync()
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "status is already false")
+}
+
+func TestValidateChunk(t *testing.T) {
+	n := 4
+	syncs := newMockBlockSyncs(t, n)
+
+	syncs[0].latestCheckedState = &pb.CheckpointState{
+		Height: getMockChainMeta(0).Height,
+		Digest: getMockChainMeta(0).BlockHash.String(),
+	}
+	syncs[0].curHeight = 1
+	syncs[0].chunk = &chunk{
+		chunkSize: 1,
+	}
+
+	t.Run("get requester err: nil", func(t *testing.T) {
+		_, err := syncs[0].validateChunk()
+		require.NotNil(t, err)
+		require.Contains(t, err.Error(), "requester[height:1] is nil")
+	})
+
+	oldRequest := &requester{
+		peerID:      "1",
+		blockHeight: 1,
+		quitCh:      make(chan struct{}, 1),
+	}
+
+	syncs[0].increaseRequester(oldRequest, 1)
+
+	newRequest := &requester{
+		peerID:      "2",
+		blockHeight: 1,
+		quitCh:      make(chan struct{}, 1),
+	}
+
+	syncs[0].increaseRequester(newRequest, 1)
+	<-oldRequest.quitCh
+
+	t.Run("get requester block err: block is nil", func(t *testing.T) {
+		invalidMsgs, err := syncs[0].validateChunk()
+		require.Nil(t, err)
+		require.Equal(t, 1, len(invalidMsgs))
+	})
 }

@@ -425,7 +425,7 @@ func (bs *BlockSync) requestSyncState(height uint64, localHash string) error {
 	bs.stateTaskDone.Store(false)
 
 	// 1. start listen sync state response
-	stateCtx, stateCancel := context.WithTimeout(context.Background(), waitStateTimeout)
+	stateCtx, stateCancel := context.WithCancel(context.Background())
 	go bs.listenSyncStateResp(stateCtx, stateCancel, height, localHash)
 
 	wp := workerpool.New(len(bs.peers))
@@ -504,10 +504,7 @@ func (bs *BlockSync) requestSyncState(height uint64, localHash string) error {
 						return nil
 					}
 				}, strategy.Limit(10), strategy.Backoff(backoff.Fibonacci(500*time.Millisecond))); err != nil {
-					bs.logger.WithFields(logrus.Fields{
-						"peer": p.peerID,
-						"err":  err,
-					}).Error("Retry Send sync state request failed")
+					bs.logger.Errorf("Retry send sync state request failed: %s", err)
 					return
 				}
 				bs.logger.WithFields(logrus.Fields{
@@ -519,11 +516,20 @@ func (bs *BlockSync) requestSyncState(height uint64, localHash string) error {
 	})
 
 	// 3. waiting for quorum response
-	success := bs.waitState()
-	if !success {
-		return fmt.Errorf("receive invalid state response: height:%d", height)
+	ticker := time.NewTicker(bs.conf.WaitStateTimeout.ToDuration())
+	defer ticker.Stop()
+	for {
+		select {
+		case success := <-bs.quitStateCh:
+			if !success {
+				return fmt.Errorf("receive invalid state response: height:%d", height)
+			}
+			return nil
+
+		case <-ticker.C:
+			return fmt.Errorf("timeout send sync request: height:%d", height)
+		}
 	}
-	return nil
 }
 
 func (bs *BlockSync) isValidSyncResponse(msg *pb.Message, id string) error {
@@ -548,10 +554,7 @@ func (bs *BlockSync) listenSyncBlockRequest() {
 		}
 		req := &pb.SyncBlockRequest{}
 		if err := req.UnmarshalVT(msg.Data); err != nil {
-			bs.logger.WithFields(logrus.Fields{
-				"from": msg.From,
-				"err":  err,
-			}).Error("Unmarshal sync block request failed")
+			bs.logger.Errorf("Unmarshal sync block request failed: %s", err)
 			continue
 		}
 		block, err := bs.getBlockFunc(req.Height)
@@ -565,10 +568,7 @@ func (bs *BlockSync) listenSyncBlockRequest() {
 
 		blockBytes, err := block.Marshal()
 		if err != nil {
-			bs.logger.WithFields(logrus.Fields{
-				"from": msg.From,
-				"err":  err,
-			}).Error("Marshal block failed")
+			bs.logger.Errorf("Marshal block failed: %s", err)
 			continue
 		}
 		resp := &pb.Message{
@@ -577,10 +577,7 @@ func (bs *BlockSync) listenSyncBlockRequest() {
 		}
 		data, err := resp.MarshalVT()
 		if err != nil {
-			bs.logger.WithFields(logrus.Fields{
-				"from": msg.From,
-				"err":  err,
-			}).Error("Marshal sync block response failed")
+			bs.logger.Errorf("Marshal sync block response failed: %s", err)
 			continue
 		}
 		if err = retry.Retry(func(attempt uint) error {
@@ -598,10 +595,7 @@ func (bs *BlockSync) listenSyncBlockRequest() {
 			}).Debug("Send sync block response success")
 			return nil
 		}, strategy.Limit(maxRetryCount), strategy.Wait(500*time.Millisecond)); err != nil {
-			bs.logger.WithFields(logrus.Fields{
-				"from": msg.From,
-				"err":  err,
-			}).Error("Retry send sync block response failed")
+			bs.logger.Errorf("Retry send sync block response failed: %s", err)
 
 			continue
 		}
@@ -621,25 +615,16 @@ func (bs *BlockSync) listenSyncBlockResponse() {
 
 			p2pMsg := &pb.Message{}
 			if err := p2pMsg.UnmarshalVT(msg.Data); err != nil {
-				bs.logger.WithFields(logrus.Fields{
-					"from": msg.From,
-					"err":  err,
-				}).Error("Unmarshal sync block response failed")
+				bs.logger.Errorf("Unmarshal sync block response failed: %s", err)
 				continue
 			}
 			if p2pMsg.Type != pb.Message_SYNC_BLOCK_RESPONSE {
-				bs.logger.WithFields(logrus.Fields{
-					"from": msg.From,
-					"type": p2pMsg.Type,
-				}).Error("Receive invalid sync block response")
+				bs.logger.Errorf("Receive invalid sync block response type: %s", p2pMsg.Type)
 				continue
 			}
 			block := &types.Block{}
 			if err := block.Unmarshal(p2pMsg.Data); err != nil {
-				bs.logger.WithFields(logrus.Fields{
-					"from": msg.From,
-					"err":  err,
-				}).Error("Unmarshal sync block failed")
+				bs.logger.Errorf("Unmarshal block failed: %s", err)
 				continue
 			}
 
@@ -837,10 +822,6 @@ func (bs *BlockSync) resetBlockSize() {
 func (bs *BlockSync) quitState(success bool) {
 	bs.quitStateCh <- success
 	bs.stateTaskDone.Store(true)
-}
-
-func (bs *BlockSync) waitState() bool {
-	return <-bs.quitStateCh
 }
 
 // todo: add metrics

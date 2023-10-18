@@ -22,6 +22,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+const (
+	wrongTypeSendSyncState = iota
+	wrongTypeSendSyncBlockRequest
+	wrongTypeSendSyncBlockResponse
+	wrongTypeSendStream
+)
+
 var (
 	lock                  = &sync.RWMutex{}
 	mockBlockLedger       = make(map[int]map[uint64]*types.Block)
@@ -210,24 +217,37 @@ func newMockBlockRequestPipe(ctrl *gomock.Controller, localId string, wrongPipeI
 	return mockPipe
 }
 
-func newMockBlockResponsePipe(ctrl *gomock.Controller, localId string) network.Pipe {
+func newMockBlockResponsePipe(ctrl *gomock.Controller, localId string, wrongPid ...int) network.Pipe {
+	var wrongSendBlockResponse bool
+	if len(wrongPid) > 0 {
+		if len(wrongPid) != 2 {
+			panic("wrong pipe id must be 2, local id + remote id")
+		}
+		if strconv.Itoa(wrongPid[1]) == localId {
+			wrongSendBlockResponse = true
+		}
+	}
 	mockPipe := mock_network.NewMockPipe(ctrl)
-	mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, to string, data []byte) error {
-			msg := &pb.Message{}
-			if err := msg.UnmarshalVT(data); err != nil {
-				return fmt.Errorf("unmarshal message failed: %w", err)
-			}
-			if msg.Type != pb.Message_SYNC_BLOCK_RESPONSE {
-				return fmt.Errorf("invalid message type: %v", msg.Type)
-			}
-			ch, _ := mockBlockResponsePipe.Load(to)
-			ch.(chan *network.PipeMsg) <- &network.PipeMsg{
-				From: localId,
-				Data: data,
-			}
-			return nil
-		}).AnyTimes()
+	if wrongSendBlockResponse {
+		mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("send block response error")).AnyTimes()
+	} else {
+		mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, to string, data []byte) error {
+				msg := &pb.Message{}
+				if err := msg.UnmarshalVT(data); err != nil {
+					return fmt.Errorf("unmarshal message failed: %w", err)
+				}
+				if msg.Type != pb.Message_SYNC_BLOCK_RESPONSE {
+					return fmt.Errorf("invalid message type: %v", msg.Type)
+				}
+				ch, _ := mockBlockResponsePipe.Load(to)
+				ch.(chan *network.PipeMsg) <- &network.PipeMsg{
+					From: localId,
+					Data: data,
+				}
+				return nil
+			}).AnyTimes()
+	}
 
 	mockPipe.EXPECT().Receive(gomock.Any()).DoAndReturn(
 		func(ctx context.Context) *network.PipeMsg {
@@ -245,8 +265,36 @@ func newMockBlockResponsePipe(ctrl *gomock.Controller, localId string) network.P
 	return mockPipe
 }
 
-func newMockMiniNetwork(ctrl *gomock.Controller, localId string, wrongPipeId ...int) *mock_network.MockNetwork {
+func newMockMiniNetwork(ctrl *gomock.Controller, localId string, wrong ...int) *mock_network.MockNetwork {
 	mock := mock_network.NewMockNetwork(ctrl)
+	var (
+		wrongSendStream        bool
+		wrongSendStateRequest  bool
+		wrongSendBlockRequest  bool
+		wrongSendBlockResponse bool
+	)
+
+	if len(wrong) > 0 {
+		if len(wrong) != 3 {
+			panic("wrong pipe id must be 3, wrong type + local id + remote id")
+		}
+		switch wrong[0] {
+		case wrongTypeSendSyncState:
+			if strconv.Itoa(wrong[1]) == localId {
+				wrongSendStateRequest = true
+			}
+		case wrongTypeSendStream:
+			if strconv.Itoa(wrong[2]) == localId {
+				wrongSendStream = true
+			}
+		case wrongTypeSendSyncBlockRequest:
+			wrong = wrong[1:]
+			wrongSendBlockRequest = true
+		case wrongTypeSendSyncBlockResponse:
+			wrong = wrong[1:]
+			wrongSendBlockResponse = true
+		}
+	}
 
 	mock.EXPECT().RegisterMsgHandler(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
@@ -254,69 +302,73 @@ func newMockMiniNetwork(ctrl *gomock.Controller, localId string, wrongPipeId ...
 		func(ctx context.Context, pipeID string) (network.Pipe, error) {
 			switch pipeID {
 			case syncBlockRequestPipe:
-				return newMockBlockRequestPipe(ctrl, localId, wrongPipeId...), nil
+				if !wrongSendBlockRequest {
+					return newMockBlockRequestPipe(ctrl, localId), nil
+				}
+				return newMockBlockRequestPipe(ctrl, localId, wrong...), nil
 			case syncBlockResponsePipe:
-				return newMockBlockResponsePipe(ctrl, localId), nil
+				if !wrongSendBlockResponse {
+					return newMockBlockResponsePipe(ctrl, localId), nil
+				}
+				return newMockBlockResponsePipe(ctrl, localId, wrong...), nil
 			default:
 				return nil, fmt.Errorf("invalid pipe id: %s", pipeID)
 			}
 		}).AnyTimes()
 
-	mock.EXPECT().Send(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(to string, msg *pb.Message) (*pb.Message, error) {
-			req := &pb.SyncStateRequest{}
-			if err := req.UnmarshalVT(msg.Data); err != nil {
-				return nil, fmt.Errorf("unmarshal sync state request failed: %w", err)
-			}
-			remoteID, err := strconv.Atoi(to)
-			if err != nil {
-				return nil, fmt.Errorf("invalid remote id: %w", err)
-			}
-			block, err := getMockBlockLedger(req.Height, remoteID)
-			if err != nil {
-				return nil, fmt.Errorf("get block with height %d failed: %w", req.Height, err)
-			}
-
-			stateResp := &pb.SyncStateResponse{
-				CheckpointState: &pb.CheckpointState{
-					Height: block.Height(),
-					Digest: block.BlockHash.String(),
-				},
-			}
-
-			data, err := stateResp.MarshalVT()
-			if err != nil {
-				return nil, fmt.Errorf("marshal sync state response failed: %w", err)
-			}
-			resp := &pb.Message{From: to, Type: pb.Message_SYNC_STATE_RESPONSE, Data: data}
-
-			return resp, nil
-		}).AnyTimes()
-
 	mock.EXPECT().PeerID().Return(localId).AnyTimes()
 
-	if len(wrongPipeId) > 0 {
-		if len(wrongPipeId) != 2 {
-			panic("wrong pipe id must be 2, local id + remote id")
-		}
-		if strconv.Itoa(wrongPipeId[1]) == localId {
-			mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).Return(fmt.Errorf("send remote peer err: %d", wrongPipeId[0])).AnyTimes()
-			return mock
-		}
+	if wrongSendStateRequest {
+		mock.EXPECT().Send(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("send error")).AnyTimes()
+	} else {
+		mock.EXPECT().Send(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(to string, msg *pb.Message) (*pb.Message, error) {
+				req := &pb.SyncStateRequest{}
+				if err := req.UnmarshalVT(msg.Data); err != nil {
+					return nil, fmt.Errorf("unmarshal sync state request failed: %w", err)
+				}
+				remoteID, err := strconv.Atoi(to)
+				if err != nil {
+					return nil, fmt.Errorf("invalid remote id: %w", err)
+				}
+				block, err := getMockBlockLedger(req.Height, remoteID)
+				if err != nil {
+					return nil, fmt.Errorf("get block with height %d failed: %w", req.Height, err)
+				}
+
+				stateResp := &pb.SyncStateResponse{
+					CheckpointState: &pb.CheckpointState{
+						Height: block.Height(),
+						Digest: block.BlockHash.String(),
+					},
+				}
+
+				data, err := stateResp.MarshalVT()
+				if err != nil {
+					return nil, fmt.Errorf("marshal sync state response failed: %w", err)
+				}
+				resp := &pb.Message{From: to, Type: pb.Message_SYNC_STATE_RESPONSE, Data: data}
+
+				return resp, nil
+			}).AnyTimes()
 	}
 
-	mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(s network.Stream, msg *pb.Message) error {
-			resp := &pb.SyncStateResponse{}
-			if err := resp.UnmarshalVT(msg.Data); err != nil {
-				return fmt.Errorf("unmarshal sync state response failed: %w", err)
-			}
-			if _, ok := mockStateResponseM[localId]; !ok {
-				mockStateResponseM[localId] = make(map[uint64]*pb.Message)
-			}
-			mockStateResponseM[localId][resp.CheckpointState.Height] = msg
-			return nil
-		}).AnyTimes()
+	if wrongSendStream {
+		mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).Return(fmt.Errorf("send stream error")).AnyTimes()
+	} else {
+		mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(s network.Stream, msg *pb.Message) error {
+				resp := &pb.SyncStateResponse{}
+				if err := resp.UnmarshalVT(msg.Data); err != nil {
+					return fmt.Errorf("unmarshal sync state response failed: %w", err)
+				}
+				if _, ok := mockStateResponseM[localId]; !ok {
+					mockStateResponseM[localId] = make(map[uint64]*pb.Message)
+				}
+				mockStateResponseM[localId][resp.CheckpointState.Height] = msg
+				return nil
+			}).AnyTimes()
+	}
 
 	return mock
 }
@@ -365,7 +417,8 @@ func newMockBlockSyncs(t *testing.T, n int, wrongPipeId ...int) []*BlockSync {
 		}
 
 		conf := repo.Sync{
-			RequesterRetryTimeout: repo.Duration(2 * time.Second),
+			WaitStateTimeout:      repo.Duration(2 * time.Second),
+			RequesterRetryTimeout: repo.Duration(1 * time.Second),
 			TimeoutCountLimit:     5,
 			ConcurrencyLimit:      100,
 		}

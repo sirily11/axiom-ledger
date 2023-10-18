@@ -10,7 +10,7 @@ import (
 
 func TestHandleSyncState(t *testing.T) {
 	n := 4
-	syncs := newMockBlockSyncs(t, n, 0, 2)
+	syncs := newMockBlockSyncs(t, n, wrongTypeSendStream, 0, 2)
 	err := syncs[0].Start()
 	require.Nil(t, err)
 
