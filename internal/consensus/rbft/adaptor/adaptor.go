@@ -3,16 +3,15 @@ package adaptor
 import (
 	"context"
 	"crypto/ecdsa"
-	"strconv"
 	"sync"
 
+	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/types"
-	"github.com/axiomesh/axiom-kit/types/pb"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/network"
 	"github.com/axiomesh/axiom-ledger/internal/storagemgr"
@@ -46,10 +45,11 @@ type RBFTAdaptor struct {
 	Cancel            context.CancelFunc
 	config            *common.Config
 	EpochInfo         *rbft.EpochInfo
-	broadcastNodes    []string
-	closed            bool
 
-	ctx context.Context
+	sync           block_sync.Sync
+	quitSync       chan struct{}
+	broadcastNodes []string
+	ctx            context.Context
 
 	lock sync.Mutex
 }
@@ -81,10 +81,13 @@ func NewRBFTAdaptor(config *common.Config) (*RBFTAdaptor, error) {
 		network:          config.Network,
 		ReadyC:           make(chan *Ready, 1024),
 		BlockC:           make(chan *common.CommitEvent, 1024),
+		quitSync:         make(chan struct{}, 1),
 		logger:           config.Logger,
 		getChainMetaFunc: config.GetChainMetaFunc,
 		getBlockFunc:     config.GetBlockFunc,
 		config:           config,
+
+		sync: config.BlockSync,
 
 		ctx:    ctx,
 		Cancel: cancel,
@@ -108,23 +111,4 @@ func (a *RBFTAdaptor) UpdateEpoch() error {
 func (a *RBFTAdaptor) SetMsgPipes(msgPipes map[int32]p2p.Pipe, globalMsgPipe p2p.Pipe) {
 	a.msgPipes = msgPipes
 	a.globalMsgPipe = globalMsgPipe
-}
-
-func (a *RBFTAdaptor) getBlock(id string, i int) (*types.Block, error) {
-	m := &pb.Message{
-		Type: pb.Message_GET_BLOCK,
-		Data: []byte(strconv.Itoa(i)),
-	}
-
-	res, err := a.network.Send(id, m)
-	if err != nil {
-		return nil, err
-	}
-
-	block := &types.Block{}
-	if err := block.Unmarshal(res.Data); err != nil {
-		return nil, err
-	}
-
-	return block, nil
 }

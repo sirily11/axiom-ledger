@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -87,14 +86,11 @@ func TestNewNode(t *testing.T) {
 	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb)
 	assert.Nil(t, err)
 
-	mockNetwork := testutil.MockMiniNetwork(ctrl)
-	mockNetwork.EXPECT().Peers().Return([]peer.AddrInfo{}).AnyTimes()
-
 	r, err := repo.Load(t.TempDir())
 	assert.Nil(t, err)
 	s, err := types.GenerateSigner()
 	assert.Nil(t, err)
-	_, err = NewNode(&common.Config{
+	cnf := &common.Config{
 		RepoRoot: r.RepoRoot,
 		EVMConfig: repo.EVM{
 			DisableMaxCodeSizeLimit: true,
@@ -105,7 +101,6 @@ func TestNewNode(t *testing.T) {
 		PrivKey:            s.Sk,
 		SelfAccountAddress: s.Addr.String(),
 		GenesisEpochInfo:   r.Config.Genesis.EpochInfo,
-		Network:            mockNetwork,
 		Applied:            100,
 		Digest:             "0xbc6345850f22122cd8ece82f29b88cb2dee49af1ae854891e30d121e788524b7",
 		GenesisDigest:      "0xf06a8e2fa138335436c66b7d332338b8d402fc5708604aec6959324ef6c5c1ac",
@@ -129,7 +124,11 @@ func TestNewNode(t *testing.T) {
 		},
 		GetAccountBalance: nil,
 		GetAccountNonce:   nil,
-	})
+	}
+	mockNetwork := testutil.MockMiniNetwork(ctrl, cnf.SelfAccountAddress)
+	cnf.Network = mockNetwork
+	_, err = NewNode(cnf)
+
 	assert.Nil(t, err)
 }
 
