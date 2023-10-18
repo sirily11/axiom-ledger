@@ -9,16 +9,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/axiomesh/axiom-kit/types"
-	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
-	"github.com/axiomesh/axiom-ledger/internal/ledger"
-	"github.com/axiomesh/axiom-ledger/pkg/loggers"
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+
+	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
+	"github.com/axiomesh/axiom-ledger/internal/ledger"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 const (
@@ -151,7 +152,7 @@ func (c *KycVerification) EstimateGas(callArgs *types.CallArgs) (uint64, error) 
 	case *RemoveArgs:
 		gas = KycRemoveGas
 	default:
-		return 0, fmt.Errorf("ACCESS ERROR: unknown access args")
+		return 0, errors.New("ACCESS ERROR: unknown access args")
 	}
 	return gas, nil
 }
@@ -170,7 +171,7 @@ func (c *KycVerification) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 	case *RemoveArgs:
 		result, err = c.Remove(&msg.From, v)
 	default:
-		return nil, fmt.Errorf("ACCESS ERROR: Run: unknown access args")
+		return nil, errors.New("ACCESS ERROR: Run: unknown access args")
 	}
 	return result, err
 }
@@ -206,7 +207,7 @@ func (c *KycVerification) getArgs(msg *vm.Message) (any, error) {
 		}
 		return removeArgs, nil
 	default:
-		return nil, fmt.Errorf("ACCESS ERROR: getArgs: wrong method name")
+		return nil, errors.New("ACCESS ERROR: getArgs: wrong method name")
 	}
 }
 
@@ -242,13 +243,13 @@ func (c *KycVerification) getMethodName(data []byte) (string, error) {
 			return methodName, nil
 		}
 	}
-	return "", fmt.Errorf("ACCESS ERROR: getMethodName")
+	return "", errors.New("ACCESS ERROR: getMethodName")
 }
 
 func (c *KycVerification) Submit(from *ethcommon.Address, args *SubmitArgs) (*vm.ExecutionResult, error) {
 	success := CheckInServices(c.account, from.String())
 	if !success {
-		return nil, fmt.Errorf("ACCESS ERROR: Submit: fail by checking kyc services")
+		return nil, errors.New("ACCESS ERROR: Submit: fail by checking kyc services")
 	}
 	for _, info := range args.KycInfos {
 		err := c.checkSubmitInfo(from, info)
@@ -275,7 +276,7 @@ func (c *KycVerification) Submit(from *ethcommon.Address, args *SubmitArgs) (*vm
 func (c *KycVerification) Remove(from *ethcommon.Address, args *RemoveArgs) (*vm.ExecutionResult, error) {
 	success := CheckInServices(c.account, from.String())
 	if !success {
-		return nil, fmt.Errorf("ACCESS ERROR: Remove: check kyc service fail")
+		return nil, errors.New("ACCESS ERROR: Remove: check kyc service fail")
 	}
 	for _, addr := range args.Addresses {
 		err := c.removeKycInfo(addr.String())
@@ -298,18 +299,18 @@ func Verify(lg ledger.StateLedger, needApprove *types.Address) (bool, error) {
 	account := lg.GetOrCreateAccount(types.NewAddressByStr(common.KycVerifyContractAddr))
 	state, bytes := account.GetState([]byte(KycInfoKey + needApprove.String()))
 	if !state {
-		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by GetState")
+		return false, errors.New("ACCESS ERROR: Verify: fail by GetState")
 	}
 	info := &KycInfo{}
 	if err := json.Unmarshal(bytes, &info); err != nil {
-		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by json.Unmarshal")
+		return false, errors.New("ACCESS ERROR: Verify: fail by json.Unmarshal")
 	}
 	// long-term validity
 	if info.Expires == -1 && info.KycFlag == 1 {
 		return true, nil
 	}
 	if time.Now().Unix() > info.Expires || info.KycFlag != 1 {
-		return false, fmt.Errorf("ACCESS ERROR: Verify: fail by checking kyc info")
+		return false, errors.New("ACCESS ERROR: Verify: fail by checking kyc info")
 	}
 	return true, nil
 }
@@ -383,7 +384,7 @@ func AddAndRemoveKycService(lg ledger.StateLedger, modifyType ModifyType, inputS
 		})
 		existServices = filteredMembers
 	} else if modifyType == RemoveKycService && len(existServices) <= 0 {
-		return fmt.Errorf("ACCESS ERROR: remove kyc services from an empty list")
+		return errors.New("ACCESS ERROR: remove kyc services from an empty list")
 	}
 	return SetKycService(lg, existServices)
 }

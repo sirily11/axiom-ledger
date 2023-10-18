@@ -531,7 +531,7 @@ func TestBlockExecutor_ApplyReadonlyTransactionsWithError(t *testing.T) {
 	stateLedger.EXPECT().RevertToSnapshot(1).AnyTimes()
 	stateLedger.EXPECT().SetTxContext(gomock.Any(), gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	chainLedger.EXPECT().GetBlock(gomock.Any()).Return(nil, fmt.Errorf("block not found")).AnyTimes()
+	chainLedger.EXPECT().GetBlock(gomock.Any()).Return(nil, errors.New("block not found")).AnyTimes()
 	stateLedger.EXPECT().PrepareEVM(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().PrepareBlock(gomock.Any(), gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -606,7 +606,6 @@ func TestBlockExecutor_ApplyReadonlyTransactionsWithError(t *testing.T) {
 
 	txs3 = append(txs3, tx4, tx5, tx6)
 	exec.ApplyReadonlyTransactions(txs3)
-
 }
 
 func generateNodeAddProposeData(t *testing.T, extraArgs NodeExtraArgs) []byte {

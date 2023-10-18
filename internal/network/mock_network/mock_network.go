@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_network/mock_network.go -package mock_network -source network.go -typed
 //
+
 // Package mock_network is a generated GoMock package.
 package mock_network
 

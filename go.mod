@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/Rican7/retry v0.3.1
-	github.com/axiomesh/axiom-bft v0.0.3-0.20231016024042-d593ac6015a6
+	github.com/axiomesh/axiom-bft v0.0.3-0.20231017092625-37bc14965834
 	github.com/axiomesh/axiom-kit v0.0.3-0.20231017090805-fe1731195c9b
 	github.com/axiomesh/axiom-p2p v0.0.3-0.20231011042444-dbec9ddc0bae
 	github.com/axiomesh/eth-kit v0.0.3-0.20231009042227-264fda908a53
@@ -28,7 +28,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/urfave/cli/v2 v2.25.7
 	go.opentelemetry.io/otel/trace v1.16.0
 	go.uber.org/atomic v1.11.0
@@ -169,6 +168,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect

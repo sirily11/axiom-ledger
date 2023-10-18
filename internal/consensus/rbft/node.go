@@ -57,15 +57,16 @@ type Node struct {
 }
 
 func NewNode(config *common.Config) (*Node, error) {
-	node, err := newNode(config)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
-
-func newNode(config *common.Config) (*Node, error) {
 	rbftConfig, txpoolConfig := generateRbftConfig(config)
+
+	lastCheckpointBlockNumber := rbftConfig.Applied / rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod * rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod
+	if lastCheckpointBlockNumber != 0 {
+		lastCheckpointBlock, err := config.GetBlockFunc(lastCheckpointBlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		rbftConfig.LastCheckpointBlockDigest = lastCheckpointBlock.BlockHash.String()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	rbftAdaptor, err := adaptor.NewRBFTAdaptor(config)
@@ -380,7 +381,7 @@ func (n *Node) Commit() chan *common.CommitEvent {
 
 func (n *Node) Step(msg []byte) error {
 	m := &consensus.ConsensusMessage{}
-	if err := m.Unmarshal(msg); err != nil {
+	if err := m.UnmarshalVT(msg); err != nil {
 		return err
 	}
 	n.n.Step(context.Background(), m)
