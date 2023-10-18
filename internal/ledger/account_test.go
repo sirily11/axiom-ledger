@@ -100,6 +100,11 @@ func TestAccount_GetState(t *testing.T) {
 			assert.False(t, ok)
 			assert.Nil(t, v)
 			account.GetCommittedState([]byte("a"))
+
+			account.Finalise()
+			ok, v = account.GetState([]byte("a"))
+			assert.False(t, ok)
+			assert.Nil(t, v)
 		})
 	}
 }

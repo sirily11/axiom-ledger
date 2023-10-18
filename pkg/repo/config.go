@@ -209,6 +209,7 @@ type Storage struct {
 }
 
 type Ledger struct {
+	ChainLedgerCacheSize int `mapstructure:"chain_ledger_cache_size" toml:"chain_ledger_cache_size"`
 }
 
 type EVM struct {
@@ -335,7 +336,9 @@ func DefaultConfig(epochEnable bool) *Config {
 		Storage: Storage{
 			KvType: KVStorageTypeLeveldb,
 		},
-		Ledger: Ledger{},
+		Ledger: Ledger{
+			ChainLedgerCacheSize: 100,
+		},
 		Executor: Executor{
 			Type:            ExecTypeNative,
 			DisableRollback: false,

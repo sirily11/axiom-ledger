@@ -71,7 +71,9 @@ func AriesConfig() *Config {
 		Storage: Storage{
 			KvType: KVStorageTypeLeveldb,
 		},
-		Ledger: Ledger{},
+		Ledger: Ledger{
+			ChainLedgerCacheSize: 100,
+		},
 		Executor: Executor{
 			Type:            ExecTypeNative,
 			DisableRollback: false,
