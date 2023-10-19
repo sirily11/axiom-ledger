@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,8 @@ type SimpleAccount struct {
 
 	changer  *stateChanger
 	suicided bool
+
+	enableExpensiveMetric bool
 }
 
 func NewAccount(ldb storage.Storage, cache *AccountCache, addr *types.Address, changer *stateChanger) *SimpleAccount {
@@ -65,6 +68,10 @@ func NewAccount(ldb storage.Storage, cache *AccountCache, addr *types.Address, c
 		changer:      changer,
 		suicided:     false,
 	}
+}
+
+func (o *SimpleAccount) SetEnableExpensiveMetric(enable bool) {
+	o.enableExpensiveMetric = enable
 }
 
 func (o *SimpleAccount) String() string {
@@ -94,7 +101,11 @@ func (o *SimpleAccount) GetState(key []byte) (bool, []byte) {
 
 	val, ok := o.cache.getState(o.Addr, string(key))
 	if !ok {
+		start := time.Now()
 		val = o.ldb.Get(composeStateKey(o.Addr, key))
+		if o.enableExpensiveMetric {
+			stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+		}
 		o.logger.Debugf("[GetState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
 	} else {
 		o.logger.Debugf("[GetState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
@@ -126,7 +137,11 @@ func (o *SimpleAccount) GetCommittedState(key []byte) []byte {
 
 	val, ok := o.cache.getState(o.Addr, string(key))
 	if !ok {
+		start := time.Now()
 		val = o.ldb.Get(composeStateKey(o.Addr, key))
+		if o.enableExpensiveMetric {
+			stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+		}
 		o.logger.Debugf("[GetCommittedState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
 	} else {
 		o.logger.Debugf("[GetCommittedState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
@@ -196,7 +211,11 @@ func (o *SimpleAccount) Code() []byte {
 
 	code, ok := o.cache.getCode(o.Addr)
 	if !ok {
+		start := time.Now()
 		code = o.ldb.Get(compositeKey(codeKey, o.Addr))
+		if o.enableExpensiveMetric {
+			codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+		}
 	}
 
 	o.originCode = code

@@ -977,6 +977,7 @@ func initLedger(t *testing.T, repoRoot string, kv string) (*Ledger, string) {
 
 	err := storagemgr.Initialize(kv)
 	require.Nil(t, err)
+	rep.Config.Monitor.EnableExpensive = true
 	l, err := NewLedger(rep)
 	require.Nil(t, err)
 
