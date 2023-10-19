@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/sirupsen/logrus"
 
 	rbft "github.com/axiomesh/axiom-bft"
@@ -24,6 +25,7 @@ type Config struct {
 	SelfAccountAddress                          string
 	GenesisEpochInfo                            *rbft.EpochInfo
 	Network                                     network.Network
+	BlockSync                                   block_sync.Sync
 	Applied                                     uint64
 	Digest                                      string
 	GenesisDigest                               string
@@ -59,6 +61,12 @@ func WithConsensusType(typ string) Option {
 func WithNetwork(net network.Network) Option {
 	return func(config *Config) {
 		config.Network = net
+	}
+}
+
+func WithBlockSync(blockSync block_sync.Sync) Option {
+	return func(config *Config) {
+		config.BlockSync = blockSync
 	}
 }
 

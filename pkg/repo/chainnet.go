@@ -65,6 +65,12 @@ func AriesConfig() *Config {
 				},
 			},
 		},
+		Sync: Sync{
+			WaitStateTimeout:      Duration(2 * time.Minute),
+			RequesterRetryTimeout: Duration(30 * time.Second),
+			TimeoutCountLimit:     uint64(10),
+			ConcurrencyLimit:      1000,
+		},
 		Consensus: Consensus{
 			Type: ConsensusTypeRbft,
 		},
@@ -191,6 +197,8 @@ func AriesConfig() *Config {
 				Storage:    "info",
 				Profile:    "info",
 				Finance:    "error",
+				BlockSync:  "info",
+				APP:        "info",
 				Access:     "info",
 			},
 		},
@@ -207,10 +215,6 @@ func AriesConsensusConfig() *ConsensusConfig {
 			Enable: false,
 			Limit:  10000,
 			Burst:  10000,
-		},
-		Sync: ConsensusSync{
-			FetchConcurrencyLimit: 50,
-			FetchSizeLimit:        1000,
 		},
 		TxPool: TxPool{
 			PoolSize:            50000,

@@ -65,6 +65,7 @@ type Config struct {
 	Port      Port      `mapstructure:"port" toml:"port"`
 	JsonRPC   JsonRPC   `mapstructure:"jsonrpc" toml:"jsonrpc"`
 	P2P       P2P       `mapstructure:"p2p" toml:"p2p"`
+	Sync      Sync      `mapstructure:"sync" toml:"sync"`
 	Consensus Consensus `mapstructure:"consensus" toml:"consensus"`
 	Storage   Storage   `mapstructure:"storage" toml:"storage"`
 	Ledger    Ledger    `mapstructure:"ledger" toml:"ledger"`
@@ -168,12 +169,14 @@ type LogModule struct {
 	Executor   string `mapstructure:"executor" toml:"executor"`
 	Governance string `mapstructure:"governance" toml:"governance"`
 	API        string `mapstructure:"api" toml:"api"`
+	APP        string `mapstructure:"app" toml:"app"`
 	CoreAPI    string `mapstructure:"coreapi" toml:"coreapi"`
 	Storage    string `mapstructure:"storage" toml:"storage"`
 	Profile    string `mapstructure:"profile" toml:"profile"`
 	Finance    string `mapstructure:"finance" toml:"finance"`
 	TxPool     string `mapstructure:"txpool" toml:"txpool"`
 	Access     string `mapstructure:"access" toml:"access"`
+	BlockSync  string `mapstructure:"blocksync" toml:"blocksync"`
 }
 
 type Genesis struct {
@@ -198,6 +201,13 @@ type Admin struct {
 	Address string `mapstructure:"address" toml:"address"`
 	Weight  uint64 `mapstructure:"weight" toml:"weight"`
 	Name    string `mapstructure:"name" toml:"name"`
+}
+
+type Sync struct {
+	RequesterRetryTimeout Duration `mapstructure:"requester_retry_timeout" toml:"requester_retry_timeout"`
+	WaitStateTimeout      Duration `mapstructure:"wait_state_timeout" toml:"wait_state_timeout"`
+	TimeoutCountLimit     uint64   `mapstructure:"timeout_count_limit" toml:"timeout_count_limit"`
+	ConcurrencyLimit      uint64   `mapstructure:"concurrency_limit" toml:"concurrency_limit"`
 }
 
 type Consensus struct {
@@ -330,6 +340,12 @@ func DefaultConfig(epochEnable bool) *Config {
 				},
 			},
 		},
+		Sync: Sync{
+			WaitStateTimeout:      Duration(2 * time.Minute),
+			RequesterRetryTimeout: Duration(30 * time.Second),
+			TimeoutCountLimit:     uint64(10),
+			ConcurrencyLimit:      1000,
+		},
 		Consensus: Consensus{
 			Type: ConsensusTypeRbft,
 		},
@@ -415,6 +431,8 @@ func DefaultConfig(epochEnable bool) *Config {
 				Storage:    "info",
 				Profile:    "info",
 				Finance:    "info",
+				BlockSync:  "info",
+				APP:        "info",
 				Access:     "info",
 			},
 		},
