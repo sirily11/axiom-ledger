@@ -33,6 +33,7 @@ type BlockExecutor struct {
 	logger             logrus.FieldLogger
 	blockC             chan *common.CommitEvent
 	gas                *finance.Gas
+	cumulativeGasUsed  uint64
 	currentHeight      uint64
 	currentBlockHash   *types.Hash
 	blockFeed          event.Feed
@@ -53,18 +54,19 @@ func New(rep *repo.Repo, ledger *ledger.Ledger) (*BlockExecutor, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	blockExecutor := &BlockExecutor{
-		ledger:           ledger,
-		logger:           loggers.Logger(loggers.Executor),
-		ctx:              ctx,
-		cancel:           cancel,
-		blockC:           make(chan *common.CommitEvent, blockChanNumber),
-		gas:              finance.NewGas(rep),
-		currentHeight:    ledger.ChainLedger.GetChainMeta().Height,
-		currentBlockHash: ledger.ChainLedger.GetChainMeta().BlockHash,
-		evmChainCfg:      newEVMChainCfg(rep.Config),
-		rep:              rep,
-		gasLimit:         rep.Config.Genesis.GasLimit,
-		lock:             &sync.Mutex{},
+		ledger:            ledger,
+		logger:            loggers.Logger(loggers.Executor),
+		ctx:               ctx,
+		cancel:            cancel,
+		blockC:            make(chan *common.CommitEvent, blockChanNumber),
+		gas:               finance.NewGas(rep),
+		cumulativeGasUsed: 0,
+		currentHeight:     ledger.ChainLedger.GetChainMeta().Height,
+		currentBlockHash:  ledger.ChainLedger.GetChainMeta().BlockHash,
+		evmChainCfg:       newEVMChainCfg(rep.Config),
+		rep:               rep,
+		gasLimit:          rep.Config.Genesis.GasLimit,
+		lock:              &sync.Mutex{},
 	}
 
 	blockExecutor.evm = newEvm(rep.Config.Executor.EVM, 1, uint64(0), blockExecutor.evmChainCfg, blockExecutor.ledger.StateLedger, blockExecutor.ledger.ChainLedger, "")
