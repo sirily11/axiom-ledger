@@ -124,7 +124,8 @@ type P2P struct {
 }
 
 type Monitor struct {
-	Enable bool `mapstructure:"enable" toml:"enable"`
+	Enable          bool `mapstructure:"enable" toml:"enable"`
+	EnableExpensive bool `mapstructure:"enable_expensive" toml:"enable_expensive"`
 }
 
 type PProf struct {
@@ -409,7 +410,8 @@ func DefaultConfig(epochEnable bool) *Config {
 			Duration: Duration(30 * time.Second),
 		},
 		Monitor: Monitor{
-			Enable: true,
+			Enable:          true,
+			EnableExpensive: false,
 		},
 		Log: Log{
 			Level:            "info",
