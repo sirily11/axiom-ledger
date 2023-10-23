@@ -6,7 +6,7 @@ require (
 	github.com/Rican7/retry v0.3.1
 	github.com/axiomesh/axiom-bft v0.0.3-0.20231018065520-f63a62e0aac1
 	github.com/axiomesh/axiom-kit v0.0.3-0.20231007094145-952ce061d4d6
-	github.com/axiomesh/axiom-p2p v0.0.3-0.20231011042444-dbec9ddc0bae
+	github.com/axiomesh/axiom-p2p v0.0.3-0.20231021124622-1a43df52dc25
 	github.com/axiomesh/eth-kit v0.0.3-0.20231009042227-264fda908a53
 	github.com/cbergoon/merkletree v0.2.0
 	github.com/common-nighthawk/go-figure v0.0.0-20190529165535-67e0ed34491a

@@ -136,8 +136,6 @@ func (swarm *networkImpl) init() error {
 			SimpleBroadcast: network.PipeSimpleConfig{
 				WorkerCacheSize:        swarm.repo.Config.P2P.Pipe.SimpleBroadcast.WorkerCacheSize,
 				WorkerConcurrencyLimit: swarm.repo.Config.P2P.Pipe.SimpleBroadcast.WorkerConcurrencyLimit,
-				RetryNumber:            swarm.repo.Config.P2P.Pipe.SimpleBroadcast.RetryNumber,
-				RetryBaseTime:          swarm.repo.Config.P2P.Pipe.SimpleBroadcast.RetryBaseTime.ToDuration(),
 			},
 			Gossipsub: network.PipeGossipsubConfig{
 				SubBufferSize:          swarm.repo.Config.P2P.Pipe.Gossipsub.SubBufferSize,
@@ -145,6 +143,11 @@ func (swarm *networkImpl) init() error {
 				ValidateBufferSize:     swarm.repo.Config.P2P.Pipe.Gossipsub.ValidateBufferSize,
 				SeenMessagesTTL:        swarm.repo.Config.P2P.Pipe.Gossipsub.SeenMessagesTTL.ToDuration(),
 			},
+			UnicastReadTimeout:       swarm.repo.Config.P2P.Pipe.UnicastReadTimeout.ToDuration(),
+			UnicastSendRetryNumber:   swarm.repo.Config.P2P.Pipe.UnicastSendRetryNumber,
+			UnicastSendRetryBaseTime: swarm.repo.Config.P2P.Pipe.UnicastSendRetryBaseTime.ToDuration(),
+			FindPeerTimeout:          swarm.repo.Config.P2P.Pipe.FindPeerTimeout.ToDuration(),
+			ConnectTimeout:           swarm.repo.Config.P2P.Pipe.ConnectTimeout.ToDuration(),
 		}),
 		network.WithBootstrap(bootstrap),
 		network.WithConnectionGater(gater),
