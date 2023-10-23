@@ -701,6 +701,109 @@ func TestNodeManager_EstimateGas(t *testing.T) {
 	assert.Equal(t, NodeManagementVoteGas, gas)
 }
 
+func TestNodeManager_GetProposal(t *testing.T) {
+	nm := NewNodeManager(&common.SystemContractConfig{
+		Logger: logrus.New(),
+	})
+
+	mockCtl := gomock.NewController(t)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
+
+	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+		{
+			Address: admin1,
+			Weight:  1,
+			Name:    "111",
+		},
+		{
+			Address: admin2,
+			Weight:  1,
+			Name:    "222",
+		},
+		{
+			Address: admin3,
+			Weight:  1,
+			Name:    "333",
+		},
+		{
+			Address: admin4,
+			Weight:  1,
+			Name:    "444",
+		},
+	}, "10")
+	assert.Nil(t, err)
+	err = InitNodeMembers(stateLedger, []*NodeMember{
+		{
+			NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
+		},
+	})
+	assert.Nil(t, err)
+
+	// propose
+	nm.Reset(1, stateLedger)
+	_, err = nm.Run(&vm.Message{
+		From: types.NewAddressByStr(admin1).ETHAddress(),
+		Data: generateNodeUpgradeProposeData(t, NodeExtraArgs{
+			Nodes: []*NodeMember{
+				{
+					NodeId: "16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF",
+				},
+			},
+		}),
+	})
+	assert.Nil(t, err)
+
+	execResult, err := nm.Run(&vm.Message{
+		From: types.NewAddressByStr(admin1).ETHAddress(),
+		Data: generateProposalData(t, 1),
+	})
+	assert.Nil(t, err)
+	ret, err := nm.gov.UnpackOutputArgs(ProposalMethod, execResult.ReturnData)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, len(ret))
+
+	proposal := &NodeProposal{}
+	err = json.Unmarshal(ret[0].([]byte), proposal)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, proposal.ID)
+	assert.Equal(t, "desc", proposal.Desc)
+	assert.EqualValues(t, 1, len(proposal.PassVotes))
+	assert.EqualValues(t, 0, len(proposal.RejectVotes))
+
+	_, err = nm.vote(types.NewAddressByStr(admin2).ETHAddress(), &VoteArgs{
+		BaseVoteArgs: BaseVoteArgs{
+			ProposalId: 1,
+			VoteResult: uint8(Pass),
+		},
+	})
+	assert.Nil(t, err)
+	execResult, err = nm.Run(&vm.Message{
+		From: types.NewAddressByStr(admin1).ETHAddress(),
+		Data: generateProposalData(t, 1),
+	})
+	assert.Nil(t, err)
+	ret, err = nm.gov.UnpackOutputArgs(ProposalMethod, execResult.ReturnData)
+	assert.Nil(t, err)
+
+	proposal = &NodeProposal{}
+	err = json.Unmarshal(ret[0].([]byte), proposal)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, proposal.ID)
+	assert.EqualValues(t, 2, len(proposal.PassVotes))
+	assert.EqualValues(t, 0, len(proposal.RejectVotes))
+}
+
 func generateNodeAddProposeData(t *testing.T, extraArgs NodeExtraArgs) []byte {
 	gabi, err := GetABI()
 	assert.Nil(t, err)

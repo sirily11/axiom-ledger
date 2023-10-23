@@ -15,6 +15,10 @@ import (
 	vm "github.com/axiomesh/eth-kit/evm"
 )
 
+var (
+	ErrNotFoundProposal = errors.New("not found this proposal")
+)
+
 const (
 	KycProposalGas uint64 = 30000
 	KycVoteGas     uint64 = 30000
@@ -45,6 +49,7 @@ type KycServiceManager struct {
 	stateLedger    ledger.StateLedger
 	currentLog     *common.Log
 	proposalID     *ProposalID
+	lastHeight     uint64
 }
 
 func (ac *KycServiceManager) Reset(lastHeight uint64, stateLedger ledger.StateLedger) {
@@ -60,6 +65,7 @@ func (ac *KycServiceManager) Reset(lastHeight uint64, stateLedger ledger.StateLe
 	ac.councilAccount = stateLedger.GetOrCreateAccount(councilAddr)
 
 	ac.checkAndUpdateState(lastHeight)
+	ac.lastHeight = lastHeight
 }
 
 // NewKycServiceManager constructs a new NewKycServiceManager
@@ -92,6 +98,8 @@ func (ac *KycServiceManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 		return ac.propose(&msg.From, proposalArgs)
 	case *VoteArgs:
 		return ac.vote(&msg.From, &KycVoteArgs{BaseVoteArgs: v.BaseVoteArgs})
+	case *GetProposalArgs:
+		return ac.getProposal(v.ProposalID)
 	default:
 		return nil, errors.New("unknown proposal args")
 	}
@@ -182,7 +190,8 @@ func (ac *KycServiceManager) voteServicesAddRemove(user *ethcommon.Address, prop
 	}
 	// record log
 	ac.gov.RecordLog(ac.currentLog, VoteMethod, &proposal.BaseProposal, b)
-	return b, nil
+	// vote not return value
+	return nil, nil
 }
 
 func (ac *KycServiceManager) propose(addr *ethcommon.Address, args *KycProposalArgs) (*vm.ExecutionResult, error) {
@@ -209,8 +218,24 @@ func (ac *KycServiceManager) getKycProposalArgs(args *ProposalArgs) (*KycProposa
 	return kycArgs, nil
 }
 
+// getProposal view proposal details
+func (ac *KycServiceManager) getProposal(proposalID uint64) (*vm.ExecutionResult, error) {
+	result := &vm.ExecutionResult{}
+
+	isExist, b := ac.account.GetState([]byte(fmt.Sprintf("%s%d", KycProposalKey, proposalID)))
+	if isExist {
+		packed, err := ac.gov.PackOutputArgs(ProposalMethod, b)
+		if err != nil {
+			return nil, err
+		}
+		result.ReturnData = packed
+		return result, nil
+	}
+	return nil, ErrNotFoundProposal
+}
+
 func (ac *KycServiceManager) proposeServicesAddRemove(addr *ethcommon.Address, args *KycProposalArgs) ([]byte, error) {
-	baseProposal, err := ac.gov.Propose(addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber)
+	baseProposal, err := ac.gov.Propose(addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber, ac.lastHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -234,9 +259,14 @@ func (ac *KycServiceManager) proposeServicesAddRemove(addr *ethcommon.Address, a
 	if err != nil {
 		return nil, err
 	}
+	returnData, err := ac.gov.PackOutputArgs(ProposeMethod, id)
+	if err != nil {
+		return nil, err
+	}
 	// record log
 	ac.gov.RecordLog(ac.currentLog, ProposeMethod, &proposal.BaseProposal, b)
-	return b, nil
+	// propose return id
+	return returnData, nil
 }
 
 func (ac *KycServiceManager) saveKycProposal(proposal *KycProposal) ([]byte, error) {

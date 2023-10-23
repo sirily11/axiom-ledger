@@ -3,7 +3,6 @@ package governance
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -115,24 +114,8 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 				},
 			}),
 			Expected: vm.ExecutionResult{
-				UsedGas: KycProposalGas,
-				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
-					ID:          1,
-					Type:        KycServiceAdd,
-					Proposer:    admin1,
-					TotalVotes:  4,
-					PassVotes:   []string{admin1},
-					RejectVotes: nil,
-					Status:      Voting,
-					Services: []*access.KycService{
-						{
-							KycAddr: *types.NewAddressByStr(KycService1),
-						},
-						{
-							KycAddr: *types.NewAddressByStr(KycService2),
-						},
-					},
-				}),
+				UsedGas:    KycProposalGas,
+				ReturnData: generateKycReturnData(t, ks.gov, 1),
 			},
 			Err: nil,
 		},
@@ -161,17 +144,7 @@ func TestKycServiceManager_RunForPropose(t *testing.T) {
 			assert.Equal(t, test.Expected.Err, result.Err)
 			assert.Equal(t, test.Expected.UsedGas, result.UsedGas)
 
-			expectedProposal := &KycProposal{}
-			err = json.Unmarshal(test.Expected.ReturnData, expectedProposal)
-			assert.Nil(t, err)
-
-			actualProposal := &KycProposal{}
-			err = json.Unmarshal(result.ReturnData, actualProposal)
-			assert.Nil(t, err)
-			assert.Equal(t, *expectedProposal, *actualProposal)
-
-			state, _ := account.GetState([]byte(fmt.Sprintf("%s%d", KycProposalKey, actualProposal.ID)))
-			assert.Equal(t, true, state)
+			assert.EqualValues(t, test.Expected.ReturnData, result.ReturnData)
 		}
 	}
 }
@@ -253,23 +226,6 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
 				UsedGas: KycVoteGas,
-				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
-					ID:          1,
-					Type:        KycServiceAdd,
-					Proposer:    admin1,
-					TotalVotes:  4,
-					PassVotes:   []string{admin1, admin2},
-					RejectVotes: nil,
-					Status:      Voting,
-					Services: []*access.KycService{
-						{
-							KycAddr: *types.NewAddressByStr(KycService1),
-						},
-						{
-							KycAddr: *types.NewAddressByStr(KycService2),
-						},
-					},
-				}),
 			},
 			Err: nil,
 		},
@@ -278,23 +234,6 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
 				UsedGas: KycVoteGas,
-				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
-					ID:          1,
-					Type:        KycServiceAdd,
-					Proposer:    admin1,
-					TotalVotes:  4,
-					PassVotes:   []string{admin1, admin2, admin3},
-					RejectVotes: nil,
-					Status:      Approved,
-					Services: []*access.KycService{
-						{
-							KycAddr: *types.NewAddressByStr(KycService1),
-						},
-						{
-							KycAddr: *types.NewAddressByStr(KycService2),
-						},
-					},
-				}),
 			},
 			Err: nil,
 		},
@@ -321,15 +260,6 @@ func TestKycServiceManager_RunForVoteAdd(t *testing.T) {
 		if result != nil {
 			assert.Equal(t, nil, result.Err)
 			assert.Equal(t, test.Expected.UsedGas, result.UsedGas)
-
-			expectedProposal := &KycProposal{}
-			err = json.Unmarshal(test.Expected.ReturnData, expectedProposal)
-			assert.Nil(t, err)
-
-			actualProposal := &KycProposal{}
-			err = json.Unmarshal(result.ReturnData, actualProposal)
-			assert.Nil(t, err)
-			assert.Equal(t, *expectedProposal, *actualProposal)
 		}
 	}
 }
@@ -411,23 +341,6 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
 				UsedGas: KycVoteGas,
-				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
-					ID:          1,
-					Type:        KycServiceRemove,
-					Proposer:    admin1,
-					TotalVotes:  4,
-					PassVotes:   []string{admin1, admin2},
-					RejectVotes: nil,
-					Status:      Voting,
-					Services: []*access.KycService{
-						{
-							KycAddr: *types.NewAddressByStr(KycService1),
-						},
-						{
-							KycAddr: *types.NewAddressByStr(KycService2),
-						},
-					},
-				}),
 			},
 			Err: nil,
 		},
@@ -436,23 +349,6 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 			Data:   generateKycVoteData(t, ks.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
 				UsedGas: KycVoteGas,
-				ReturnData: generateKycReturnData(t, &TestKycServiceProposal{
-					ID:          1,
-					Type:        KycServiceRemove,
-					Proposer:    admin1,
-					TotalVotes:  4,
-					PassVotes:   []string{admin1, admin2, admin3},
-					RejectVotes: nil,
-					Status:      Approved,
-					Services: []*access.KycService{
-						{
-							KycAddr: *types.NewAddressByStr(KycService1),
-						},
-						{
-							KycAddr: *types.NewAddressByStr(KycService2),
-						},
-					},
-				}),
 			},
 			Err: errors.New("ACCESS ERROR: remove kyc services from an empty list"),
 		},
@@ -470,17 +366,115 @@ func TestKycServiceManager_RunForVoteRemove(t *testing.T) {
 		if result != nil {
 			assert.Equal(t, nil, result.Err)
 			assert.Equal(t, test.Expected.UsedGas, result.UsedGas)
-
-			expectedProposal := &KycProposal{}
-			err = json.Unmarshal(test.Expected.ReturnData, expectedProposal)
-			assert.Nil(t, err)
-
-			actualProposal := &KycProposal{}
-			err = json.Unmarshal(result.ReturnData, actualProposal)
-			assert.Nil(t, err)
-			assert.Equal(t, *expectedProposal, *actualProposal)
 		}
 	}
+}
+
+func TestKycServiceManager_GetProposal(t *testing.T) {
+	ks := NewKycServiceManager(&common.SystemContractConfig{
+		Logger: logrus.New(),
+	})
+
+	mockCtl := gomock.NewController(t)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	assert.Nil(t, err)
+	ld, err := leveldb.New(filepath.Join(repoRoot, "kycservice_manager"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.KycServiceContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
+	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
+
+	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+		{
+			Address: admin1,
+			Weight:  1,
+			Name:    "111",
+		},
+		{
+			Address: admin2,
+			Weight:  1,
+			Name:    "222",
+		},
+		{
+			Address: admin3,
+			Weight:  1,
+			Name:    "333",
+		},
+		{
+			Address: admin4,
+			Weight:  1,
+			Name:    "444",
+		},
+	}, "10000000")
+	assert.Nil(t, err)
+
+	ks.Reset(1, stateLedger)
+
+	addr := types.NewAddressByStr(admin1).ETHAddress()
+	ks.propose(&addr, &KycProposalArgs{
+		BaseProposalArgs: BaseProposalArgs{
+			ProposalType: uint8(KycServiceRemove),
+			Title:        "title",
+			Desc:         "desc",
+			BlockNumber:  1000,
+		},
+		KycServiceArgs: access.KycServiceArgs{
+			Services: []*access.KycService{
+				{
+					KycAddr: *types.NewAddressByStr(KycService1),
+				},
+				{
+					KycAddr: *types.NewAddressByStr(KycService2),
+				},
+			},
+		},
+	})
+
+	execResult, err := ks.Run(&vm.Message{
+		From: types.NewAddressByStr(admin1).ETHAddress(),
+		Data: generateProposalData(t, 1),
+	})
+	assert.Nil(t, err)
+	ret, err := ks.gov.UnpackOutputArgs(ProposalMethod, execResult.ReturnData)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, len(ret))
+
+	proposal := &KycProposal{}
+	err = json.Unmarshal(ret[0].([]byte), proposal)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, proposal.ID)
+	assert.Equal(t, "desc", proposal.Desc)
+	assert.EqualValues(t, 1, len(proposal.PassVotes))
+	assert.EqualValues(t, 0, len(proposal.RejectVotes))
+
+	tempaddr := types.NewAddressByStr(admin2).ETHAddress()
+	_, err = ks.vote(&tempaddr, &KycVoteArgs{
+		BaseVoteArgs: BaseVoteArgs{
+			ProposalId: 1,
+			VoteResult: uint8(Pass),
+		},
+	})
+	assert.Nil(t, err)
+	execResult, err = ks.Run(&vm.Message{
+		From: types.NewAddressByStr(admin1).ETHAddress(),
+		Data: generateProposalData(t, 1),
+	})
+	assert.Nil(t, err)
+	ret, err = ks.gov.UnpackOutputArgs(ProposalMethod, execResult.ReturnData)
+	assert.Nil(t, err)
+
+	proposal = &KycProposal{}
+	err = json.Unmarshal(ret[0].([]byte), proposal)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, proposal.ID)
+	assert.EqualValues(t, 2, len(proposal.PassVotes))
+	assert.EqualValues(t, 0, len(proposal.RejectVotes))
 }
 
 func TestKycServiceManager_EstimateGas(t *testing.T) {
@@ -553,27 +547,8 @@ func generateKycVoteData(t *testing.T, proposalID uint64, voteResult VoteResult)
 	return data
 }
 
-func generateKycReturnData(t *testing.T, testProposal *TestKycServiceProposal) []byte {
-	proposal := &KycProposal{
-		BaseProposal: BaseProposal{
-			ID:          testProposal.ID,
-			Type:        testProposal.Type,
-			Strategy:    NowProposalStrategy,
-			Proposer:    testProposal.Proposer,
-			Title:       "title",
-			Desc:        "desc",
-			BlockNumber: uint64(1000),
-			TotalVotes:  testProposal.TotalVotes,
-			PassVotes:   testProposal.PassVotes,
-			RejectVotes: testProposal.RejectVotes,
-			Status:      testProposal.Status,
-		},
-		KycServiceArgs: access.KycServiceArgs{
-			Services: testProposal.Services,
-		},
-	}
-
-	b, err := json.Marshal(proposal)
+func generateKycReturnData(t *testing.T, gov *Governance, id uint64) []byte {
+	b, err := gov.PackOutputArgs(ProposeMethod, id)
 	assert.Nil(t, err)
 
 	return b

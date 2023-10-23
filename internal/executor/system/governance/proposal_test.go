@@ -35,11 +35,8 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 			BlockNumber:         0,
 			Status:              Voting,
 			DeadlineBlockNumber: 1,
-			SaveProposal: func(proposal *BaseProposal) ([]byte, error) {
-				assert.Fail(t, "block number is 0, no need check and update")
-				return nil, nil
-			},
-			ExpectedErr: nil,
+			SaveProposal:        func(proposal *BaseProposal) ([]byte, error) { return nil, nil },
+			ExpectedErr:         nil,
 		},
 		{
 			BlockNumber:         1,

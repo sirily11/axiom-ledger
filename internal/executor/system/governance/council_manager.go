@@ -89,6 +89,7 @@ type CouncilManager struct {
 	currentLog      *common.Log
 	proposalID      *ProposalID
 	addr2NameSystem *Addr2NameSystem
+	lastHeight      uint64
 }
 
 func NewCouncilManager(cfg *common.SystemContractConfig) *CouncilManager {
@@ -114,6 +115,7 @@ func (cm *CouncilManager) Reset(lastHeight uint64, stateLedger ledger.StateLedge
 
 	// check and update
 	cm.checkAndUpdateState(lastHeight)
+	cm.lastHeight = lastHeight
 }
 
 func (cm *CouncilManager) Run(msg *vm.Message) (result *vm.ExecutionResult, err error) {
@@ -145,6 +147,8 @@ func (cm *CouncilManager) Run(msg *vm.Message) (result *vm.ExecutionResult, err 
 		}
 
 		result, err = cm.vote(msg.From, voteArgs)
+	case *GetProposalArgs:
+		result, err = cm.getProposal(v.ProposalID)
 	default:
 		return nil, errors.New("unknown proposal args")
 	}
@@ -157,7 +161,7 @@ func (cm *CouncilManager) propose(addr ethcommon.Address, args *CouncilProposalA
 	for i, candidate := range args.Candidates {
 		cm.gov.logger.Debugf("candidate %d: %+v", i, *candidate)
 	}
-	baseProposal, err := cm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber)
+	baseProposal, err := cm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber, cm.lastHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -204,13 +208,18 @@ func (cm *CouncilManager) propose(addr ethcommon.Address, args *CouncilProposalA
 	proposal.Candidates = args.Candidates
 
 	b, err := cm.saveProposal(proposal)
+	if err != nil {
+		return nil, err
+	}
+
+	returnData, err := cm.gov.PackOutputArgs(ProposeMethod, id)
 
 	// record log
 	cm.gov.RecordLog(cm.currentLog, ProposeMethod, &proposal.BaseProposal, b)
 
 	return &vm.ExecutionResult{
 		UsedGas:    CouncilProposalGas,
-		ReturnData: b,
+		ReturnData: returnData,
 		Err:        err,
 	}, nil
 }
@@ -274,8 +283,6 @@ func (cm *CouncilManager) vote(user ethcommon.Address, voteArgs *CouncilVoteArgs
 
 	cm.gov.RecordLog(cm.currentLog, VoteMethod, &proposal.BaseProposal, b)
 
-	// return updated proposal
-	result.ReturnData = b
 	return result, nil
 }
 
@@ -288,6 +295,22 @@ func (cm *CouncilManager) saveProposal(proposal *CouncilProposal) ([]byte, error
 	cm.account.SetState([]byte(fmt.Sprintf("%s%d", CouncilProposalKey, proposal.ID)), b)
 
 	return b, nil
+}
+
+// getProposal view proposal details
+func (cm *CouncilManager) getProposal(proposalID uint64) (*vm.ExecutionResult, error) {
+	result := &vm.ExecutionResult{}
+
+	isExist, b := cm.account.GetState([]byte(fmt.Sprintf("%s%d", CouncilProposalKey, proposalID)))
+	if isExist {
+		packed, err := cm.gov.PackOutputArgs(ProposalMethod, b)
+		if err != nil {
+			return nil, err
+		}
+		result.ReturnData = packed
+		return result, nil
+	}
+	return nil, ErrNotFoundCouncilProposal
 }
 
 func (cm *CouncilManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
