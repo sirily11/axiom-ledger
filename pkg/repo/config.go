@@ -272,7 +272,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 		Epoch:       1,
 		EpochPeriod: epochPeriod,
 		StartBlock:  1,
-		P2PBootstrapNodeAddresses: lo.Map(defaultNodeIDs, func(item string, idx int) string {
+		P2PBootstrapNodeAddresses: lo.Map(defaultNodeIDs[0:4], func(item string, idx int) string {
 			return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", 4001+idx, item)
 		}),
 		ConsensusParams: &rbft.ConsensusParams{
@@ -285,8 +285,16 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			ExcludeView:                   100,
 			ProposerElectionType:          proposerElectionType,
 		},
-		CandidateSet: []*rbft.NodeInfo{},
-		ValidatorSet: lo.Map(DefaultNodeAddrs, func(item string, idx int) *rbft.NodeInfo {
+		CandidateSet: lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) *rbft.NodeInfo {
+			idx += 4
+			return &rbft.NodeInfo{
+				ID:                   uint64(idx + 1),
+				AccountAddress:       DefaultNodeAddrs[idx],
+				P2PNodeID:            defaultNodeIDs[idx],
+				ConsensusVotingPower: 0,
+			}
+		}),
+		ValidatorSet: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
 			return &rbft.NodeInfo{
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
@@ -379,7 +387,7 @@ func DefaultConfig(epochEnable bool) *Config {
 			MinGasPrice:   1000000000000,
 			GasChangeRate: 0.125,
 			Balance:       "1000000000000000000000000000",
-			Admins: lo.Map(DefaultNodeAddrs, func(item string, idx int) *Admin {
+			Admins: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *Admin {
 				return &Admin{
 					Address: item,
 					Weight:  1,
