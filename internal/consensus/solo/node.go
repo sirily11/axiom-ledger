@@ -318,6 +318,18 @@ func (n *Node) processBatchTimeout(e batchTimeoutEvent) error {
 		n.logger.Debug("Batch timer expired, try to create a batch")
 		if n.txpool.HasPendingRequestInPool() {
 			if batches := n.txpool.GenerateRequestBatch(); batches != nil {
+				now := time.Now().UnixNano()
+				if n.batchMgr.lastBatchTime != 0 {
+					interval := time.Duration(now - n.batchMgr.lastBatchTime).Seconds()
+					batchInterval.WithLabelValues("timeout").Observe(interval)
+					if n.batchMgr.minTimeoutBatchTime == 0 || interval < n.batchMgr.minTimeoutBatchTime {
+						n.logger.Debugf("update min timeoutBatch Time[height:%d, interval:%f, lastBatchTime:%v]",
+							n.lastExec+1, interval, time.Unix(0, n.batchMgr.lastBatchTime))
+						minBatchIntervalDuration.WithLabelValues("timeout").Set(interval)
+						n.batchMgr.minTimeoutBatchTime = interval
+					}
+				}
+				n.batchMgr.lastBatchTime = now
 				for _, batch := range batches {
 					n.postProposal(batch)
 				}
@@ -347,6 +359,20 @@ func (n *Node) processBatchTimeout(e batchTimeoutEvent) error {
 			if len(batches) != 1 {
 				return fmt.Errorf("create empty block failed, the expect length of batches is 1, but actual is %d", len(batches))
 			}
+
+			now := time.Now().UnixNano()
+			if n.batchMgr.lastBatchTime != 0 {
+				interval := time.Duration(now - n.batchMgr.lastBatchTime).Seconds()
+				batchInterval.WithLabelValues("timeout_no_tx").Observe(interval)
+				if n.batchMgr.minNoTxTimeoutBatchTime == 0 || interval < n.batchMgr.minNoTxTimeoutBatchTime {
+					n.logger.Debugf("update min noTxTimeoutBatch Time[height:%d, interval:%f, lastBatchTime:%v]",
+						n.lastExec+1, interval, time.Unix(0, n.batchMgr.lastBatchTime))
+					minBatchIntervalDuration.WithLabelValues("timeout_no_tx").Set(interval)
+					n.batchMgr.minNoTxTimeoutBatchTime = interval
+				}
+			}
+			n.batchMgr.lastBatchTime = now
+
 			n.postProposal(batches[0])
 			if !n.batchMgr.isTimerActive(NoTxBatch) {
 				n.batchMgr.startTimer(NoTxBatch)
