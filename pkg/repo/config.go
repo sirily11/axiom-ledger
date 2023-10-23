@@ -101,17 +101,20 @@ type P2PPipeGossipsub struct {
 }
 
 type P2PPipeSimpleBroadcast struct {
-	WorkerCacheSize        int      `mapstructure:"worker_cache_size" toml:"worker_cache_size"`
-	WorkerConcurrencyLimit int      `mapstructure:"worker_concurrency_limit" toml:"worker_concurrency_limit"`
-	RetryNumber            int      `mapstructure:"retry_number" toml:"retry_number"`
-	RetryBaseTime          Duration `mapstructure:"retry_base_time" toml:"retry_base_time"`
+	WorkerCacheSize        int `mapstructure:"worker_cache_size" toml:"worker_cache_size"`
+	WorkerConcurrencyLimit int `mapstructure:"worker_concurrency_limit" toml:"worker_concurrency_limit"`
 }
 
 type P2PPipe struct {
-	ReceiveMsgCacheSize int                    `mapstructure:"receive_msg_cache_size" toml:"receive_msg_cache_size"`
-	BroadcastType       string                 `mapstructure:"broadcast_type" toml:"broadcast_type"`
-	SimpleBroadcast     P2PPipeSimpleBroadcast `mapstructure:"simple_broadcast" toml:"simple_broadcast"`
-	Gossipsub           P2PPipeGossipsub       `mapstructure:"gossipsub" toml:"gossipsub"`
+	ReceiveMsgCacheSize      int                    `mapstructure:"receive_msg_cache_size" toml:"receive_msg_cache_size"`
+	BroadcastType            string                 `mapstructure:"broadcast_type" toml:"broadcast_type"`
+	SimpleBroadcast          P2PPipeSimpleBroadcast `mapstructure:"simple_broadcast" toml:"simple_broadcast"`
+	Gossipsub                P2PPipeGossipsub       `mapstructure:"gossipsub" toml:"gossipsub"`
+	UnicastReadTimeout       Duration               `mapstructure:"unicast_read_timeout" toml:"unicast_read_timeout"`
+	UnicastSendRetryNumber   int                    `mapstructure:"unicast_send_retry_number" toml:"unicast_send_retry_number"`
+	UnicastSendRetryBaseTime Duration               `mapstructure:"unicast_send_retry_base_time" toml:"unicast_send_retry_base_time"`
+	FindPeerTimeout          Duration               `mapstructure:"find_peer_timeout" toml:"find_peer_timeout"`
+	ConnectTimeout           Duration               `mapstructure:"connect_timeout" toml:"connect_timeout"`
 }
 
 type P2P struct {
@@ -330,8 +333,6 @@ func DefaultConfig(epochEnable bool) *Config {
 				SimpleBroadcast: P2PPipeSimpleBroadcast{
 					WorkerCacheSize:        1024,
 					WorkerConcurrencyLimit: 20,
-					RetryNumber:            5,
-					RetryBaseTime:          Duration(100 * time.Millisecond),
 				},
 				Gossipsub: P2PPipeGossipsub{
 					SubBufferSize:          1024,
@@ -339,6 +340,11 @@ func DefaultConfig(epochEnable bool) *Config {
 					ValidateBufferSize:     1024,
 					SeenMessagesTTL:        Duration(120 * time.Second),
 				},
+				UnicastReadTimeout:       Duration(5 * time.Second),
+				UnicastSendRetryNumber:   5,
+				UnicastSendRetryBaseTime: Duration(100 * time.Millisecond),
+				FindPeerTimeout:          Duration(10 * time.Second),
+				ConnectTimeout:           Duration(1 * time.Second),
 			},
 		},
 		Sync: Sync{
