@@ -54,8 +54,6 @@ func AriesConfig() *Config {
 				SimpleBroadcast: P2PPipeSimpleBroadcast{
 					WorkerCacheSize:        1024,
 					WorkerConcurrencyLimit: 20,
-					RetryNumber:            5,
-					RetryBaseTime:          Duration(100 * time.Millisecond),
 				},
 				Gossipsub: P2PPipeGossipsub{
 					SubBufferSize:          1024,
@@ -63,6 +61,11 @@ func AriesConfig() *Config {
 					ValidateBufferSize:     1024,
 					SeenMessagesTTL:        Duration(120 * time.Second),
 				},
+				UnicastReadTimeout:       Duration(5 * time.Second),
+				UnicastSendRetryNumber:   5,
+				UnicastSendRetryBaseTime: Duration(100 * time.Millisecond),
+				FindPeerTimeout:          Duration(10 * time.Second),
+				ConnectTimeout:           Duration(1 * time.Second),
 			},
 		},
 		Sync: Sync{
