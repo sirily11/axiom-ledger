@@ -176,7 +176,7 @@ func CheckAndUpdateState[T any, Contraint ProposalObjectConstraint[T]](lastHeigh
 				continue
 			}
 
-			if Contraint(&proposal).GetBlockNumber() != 0 && Contraint(&proposal).GetBlockNumber() <= lastHeight {
+			if Contraint(&proposal).GetBlockNumber() <= lastHeight {
 				// means proposal is out of deadline,status change to rejected
 				Contraint(&proposal).SetStatus(Rejected)
 

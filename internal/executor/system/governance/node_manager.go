@@ -89,6 +89,7 @@ type NodeManager struct {
 	stateLedger    ledger.StateLedger
 	currentLog     *common.Log
 	proposalID     *ProposalID
+	lastHeight     uint64
 }
 
 func NewNodeManager(cfg *common.SystemContractConfig) *NodeManager {
@@ -116,6 +117,7 @@ func (nm *NodeManager) Reset(lastHeight uint64, stateLedger ledger.StateLedger) 
 
 	// check and update
 	nm.checkAndUpdateState(lastHeight)
+	nm.lastHeight = lastHeight
 }
 
 func (nm *NodeManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
@@ -133,6 +135,8 @@ func (nm *NodeManager) Run(msg *vm.Message) (*vm.ExecutionResult, error) {
 		result, err = nm.propose(msg.From, v)
 	case *VoteArgs:
 		result, err = nm.vote(msg.From, v)
+	case *GetProposalArgs:
+		result, err = nm.getProposal(v.ProposalID)
 	default:
 		return nil, errors.New("unknown proposal args")
 	}
@@ -195,7 +199,7 @@ func (nm *NodeManager) propose(addr ethcommon.Address, args *ProposalArgs) (*vm.
 }
 
 func (nm *NodeManager) proposeNodeAddRemove(addr ethcommon.Address, args *NodeProposalArgs) ([]byte, error) {
-	baseProposal, err := nm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber)
+	baseProposal, err := nm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber, nm.lastHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -232,15 +236,19 @@ func (nm *NodeManager) proposeNodeAddRemove(addr ethcommon.Address, args *NodePr
 	if err != nil {
 		return nil, err
 	}
+	returnData, err := nm.gov.PackOutputArgs(ProposeMethod, id)
+	if err != nil {
+		return nil, err
+	}
 
 	// record log
 	nm.gov.RecordLog(nm.currentLog, ProposeMethod, &proposal.BaseProposal, b)
 
-	return b, nil
+	return returnData, nil
 }
 
 func (nm *NodeManager) proposeUpgrade(addr ethcommon.Address, args *UpgradeProposalArgs) ([]byte, error) {
-	baseProposal, err := nm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber)
+	baseProposal, err := nm.gov.Propose(&addr, ProposalType(args.ProposalType), args.Title, args.Desc, args.BlockNumber, nm.lastHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -277,10 +285,15 @@ func (nm *NodeManager) proposeUpgrade(addr ethcommon.Address, args *UpgradePropo
 		return nil, err
 	}
 
+	returnData, err := nm.gov.PackOutputArgs(ProposeMethod, id)
+	if err != nil {
+		return nil, err
+	}
+
 	// record log
 	nm.gov.RecordLog(nm.currentLog, ProposeMethod, &proposal.BaseProposal, b)
 
-	return b, nil
+	return returnData, nil
 }
 
 // Vote a proposal, return vote status
@@ -358,7 +371,8 @@ func (nm *NodeManager) voteNodeAddRemove(user ethcommon.Address, proposal *NodeP
 	// record log
 	nm.gov.RecordLog(nm.currentLog, VoteMethod, &proposal.BaseProposal, b)
 
-	return b, nil
+	// vote not return value
+	return nil, nil
 }
 
 func (nm *NodeManager) voteUpgrade(user ethcommon.Address, proposal *NodeProposal, voteArgs *NodeVoteArgs) ([]byte, error) {
@@ -384,7 +398,8 @@ func (nm *NodeManager) voteUpgrade(user ethcommon.Address, proposal *NodeProposa
 	// if approved, guardian sync log, then update node and restart
 	nm.gov.RecordLog(nm.currentLog, VoteMethod, &proposal.BaseProposal, b)
 
-	return b, nil
+	// vote not return value
+	return nil, nil
 }
 
 func (nm *NodeManager) saveNodeProposal(proposal *NodeProposal) ([]byte, error) {
@@ -412,6 +427,22 @@ func (nm *NodeManager) loadNodeProposal(proposalID uint64) (*NodeProposal, error
 	return proposal, nil
 }
 
+// getProposal view proposal details
+func (nm *NodeManager) getProposal(proposalID uint64) (*vm.ExecutionResult, error) {
+	result := &vm.ExecutionResult{}
+
+	isExist, b := nm.account.GetState([]byte(fmt.Sprintf("%s%d", NodeProposalKey, proposalID)))
+	if isExist {
+		packed, err := nm.gov.PackOutputArgs(ProposalMethod, b)
+		if err != nil {
+			return nil, err
+		}
+		result.ReturnData = packed
+		return result, nil
+	}
+	return nil, ErrNotFoundNodeProposal
+}
+
 func (nm *NodeManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
 	args, err := nm.gov.GetArgs(&vm.Message{Data: *callArgs.Data})
 	if err != nil {
@@ -432,16 +463,7 @@ func (nm *NodeManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
 }
 
 func (nm *NodeManager) checkAndUpdateState(lastHeight uint64) {
-	save := func(proposal *NodeProposal) ([]byte, error) {
-		// remove node is special, proposal should be auto approved when out of deadline
-		if proposal.Type == NodeRemove {
-			proposal.Status = Approved
-		}
-
-		return nm.saveNodeProposal(proposal)
-	}
-
-	if err := CheckAndUpdateState[NodeProposal](lastHeight, nm.account, NodeProposalKey, save); err != nil {
+	if err := CheckAndUpdateState[NodeProposal](lastHeight, nm.account, NodeProposalKey, nm.saveNodeProposal); err != nil {
 		nm.gov.logger.Errorf("check and update state error: %s", err)
 	}
 }
