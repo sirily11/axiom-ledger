@@ -61,6 +61,9 @@ func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
 	if readConfig.TxPool.ToleranceRemoveTime > 0 {
 		defaultConfig.CheckPoolRemoveTimeout = readConfig.TxPool.ToleranceRemoveTime.ToDuration()
 	}
+	if readConfig.TxPool.ToleranceTime > 0 {
+		defaultConfig.CheckPoolTimeout = readConfig.TxPool.ToleranceTime.ToDuration()
+	}
 	if readConfig.TxCache.SetSize > 0 {
 		defaultConfig.SetSize = readConfig.TxCache.SetSize
 	}

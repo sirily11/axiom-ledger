@@ -74,7 +74,7 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 		assert.Nil(t, err)
 		account.SetState([]byte("/proposalkey"), b)
 
-		err = CheckAndUpdateState[BaseProposal](testcase.DeadlineBlockNumber, account, "/proposalkey", testcase.SaveProposal)
+		err = CheckAndUpdateState[BaseProposal, *BaseProposal](testcase.DeadlineBlockNumber, account, "/proposalkey", testcase.SaveProposal)
 		assert.Equal(t, testcase.ExpectedErr, err)
 
 		account.SetState([]byte("/proposalkey"), nil)

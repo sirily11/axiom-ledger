@@ -333,7 +333,7 @@ func (cm *CouncilManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) 
 }
 
 func (cm *CouncilManager) checkAndUpdateState(lastHeight uint64) {
-	if err := CheckAndUpdateState[CouncilProposal](lastHeight, cm.account, CouncilProposalKey, cm.saveProposal); err != nil {
+	if err := CheckAndUpdateState[CouncilProposal, *CouncilProposal](lastHeight, cm.account, CouncilProposalKey, cm.saveProposal); err != nil {
 		cm.gov.logger.Errorf("check and update state error: %s", err)
 	}
 }

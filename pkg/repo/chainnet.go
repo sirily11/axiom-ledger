@@ -203,6 +203,7 @@ func AriesConfig() *Config {
 				BlockSync:  "info",
 				APP:        "info",
 				Access:     "info",
+				TxPool:     "info",
 			},
 		},
 	}
