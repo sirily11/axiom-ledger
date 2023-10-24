@@ -141,9 +141,15 @@ func TestTimedBlock(t *testing.T) {
 	ast.Nil(err)
 	defer node.Stop()
 
-	event := <-node.commitC
-	ast.NotNil(event)
-	ast.Equal(len(event.Block.Transactions), 0)
+	event1 := <-node.commitC
+	ast.NotNil(event1)
+	ast.Equal(len(event1.Block.Transactions), 0)
+	ast.Equal(event1.Block.BlockHeader.Number, uint64(1))
+
+	event2 := <-node.commitC
+	ast.NotNil(event2)
+	ast.Equal(len(event2.Block.Transactions), 0)
+	ast.Equal(event2.Block.BlockHeader.Number, uint64(2))
 }
 
 func TestNode_ReportState(t *testing.T) {

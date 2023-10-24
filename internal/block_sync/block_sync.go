@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -113,6 +114,8 @@ func NewBlockSync(logger logrus.FieldLogger, fn func(height uint64) (*types.Bloc
 func (bs *BlockSync) StartSync(peers []string, latestBlockHash string, quorum, curHeight, targetHeight uint64,
 	quorumCheckpoint *consensus.SignedCheckpoint, epc ...*consensus.EpochChange) error {
 
+	now := time.Now()
+	syncCount := targetHeight - curHeight + 1
 	syncCtx, syncCancel := context.WithCancel(context.Background())
 	bs.syncCtx = syncCtx
 	bs.syncCancel = syncCancel
@@ -235,8 +238,11 @@ func (bs *BlockSync) StartSync(peers []string, latestBlockHash string, quorum, c
 				if bs.curHeight+bs.chunk.chunkSize-1 == bs.targetHeight {
 					bs.syncTaskDone.Store(true)
 					bs.logger.WithFields(logrus.Fields{
+						"count":  syncCount,
 						"target": bs.targetHeight,
+						"elapse": time.Since(now).Seconds(),
 					}).Info("Block sync done")
+					blockSyncDuration.WithLabelValues(strconv.Itoa(int(syncCount))).Observe(time.Since(now).Seconds())
 				} else {
 					// update chunkSize and curHeight
 					bs.updateStatus()
@@ -784,6 +790,7 @@ func (bs *BlockSync) increaseRequester(r *requester, height uint64) {
 	oldR, loaded := bs.requesters.LoadOrStore(height, r)
 	if !loaded {
 		bs.requesterLen.Add(1)
+		requesterNumber.Inc()
 	} else {
 		bs.logger.WithFields(logrus.Fields{
 			"height": height,
@@ -806,10 +813,12 @@ func (bs *BlockSync) updateStatus() {
 // todo: add metrics
 func (bs *BlockSync) increaseBlockSize() {
 	bs.recvBlockSize.Add(1)
+	recvBlockNumber.WithLabelValues(strconv.Itoa(int(bs.chunk.chunkSize))).Inc()
 }
 
 func (bs *BlockSync) decreaseBlockSize() {
 	bs.recvBlockSize.Add(-1)
+	recvBlockNumber.WithLabelValues(strconv.Itoa(int(bs.chunk.chunkSize))).Dec()
 }
 
 func (bs *BlockSync) resetBlockSize() {
@@ -817,6 +826,7 @@ func (bs *BlockSync) resetBlockSize() {
 	bs.logger.WithFields(logrus.Fields{
 		"blockSize": bs.recvBlockSize.Load(),
 	}).Debug("Reset block size")
+	recvBlockNumber.WithLabelValues(strconv.Itoa(int(bs.chunk.chunkSize))).Set(0)
 }
 
 func (bs *BlockSync) quitState(success bool) {
@@ -824,7 +834,6 @@ func (bs *BlockSync) quitState(success bool) {
 	bs.stateTaskDone.Store(true)
 }
 
-// todo: add metrics
 func (bs *BlockSync) releaseRequester(height uint64) {
 	r, loaded := bs.requesters.LoadAndDelete(height)
 	if !loaded {
@@ -833,6 +842,7 @@ func (bs *BlockSync) releaseRequester(height uint64) {
 		}).Warn("Release requester Error, requester is nil")
 	} else {
 		bs.requesterLen.Add(-1)
+		requesterNumber.Dec()
 	}
 	r.(*requester).quitCh <- struct{}{}
 }
@@ -852,6 +862,7 @@ func (bs *BlockSync) handleInvalidRequest(msg *invalidMsg) {
 			"err":    msg.errMsg,
 		}).Warn("Handle error msg Block")
 
+		invalidBlockNumber.WithLabelValues("send_request_err").Inc()
 		newPeer, err := bs.pickRandomPeer(msg.nodeID)
 		if err != nil {
 			panic(err)
@@ -864,6 +875,8 @@ func (bs *BlockSync) handleInvalidRequest(msg *invalidMsg) {
 			"height": msg.height,
 			"peer":   msg.nodeID,
 		}).Warn("Handle invalid block")
+
+		invalidBlockNumber.WithLabelValues("invalid_block").Inc()
 
 		r.clearBlock()
 		bs.decreaseBlockSize()
@@ -878,6 +891,8 @@ func (bs *BlockSync) handleInvalidRequest(msg *invalidMsg) {
 			"height": msg.height,
 			"peer":   msg.nodeID,
 		}).Warn("Handle timeout block")
+
+		invalidBlockNumber.WithLabelValues("timeout_response").Inc()
 
 		if err := bs.addPeerTimeoutCount(msg.nodeID); err != nil {
 			panic(err)
