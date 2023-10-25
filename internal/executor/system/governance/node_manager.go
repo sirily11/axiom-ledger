@@ -463,7 +463,7 @@ func (nm *NodeManager) EstimateGas(callArgs *types.CallArgs) (uint64, error) {
 }
 
 func (nm *NodeManager) checkAndUpdateState(lastHeight uint64) {
-	if err := CheckAndUpdateState[NodeProposal](lastHeight, nm.account, NodeProposalKey, nm.saveNodeProposal); err != nil {
+	if err := CheckAndUpdateState[NodeProposal, *NodeProposal](lastHeight, nm.account, NodeProposalKey, nm.saveNodeProposal); err != nil {
 		nm.gov.logger.Errorf("check and update state error: %s", err)
 	}
 }

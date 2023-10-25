@@ -264,7 +264,7 @@ func TestReadConfig(t *testing.T) {
 	ast.Equal(uint64(500), txpoolConfig.BatchSize)
 	ast.Equal(uint64(50000), txpoolConfig.PoolSize)
 	ast.Equal(500*time.Millisecond, rbftConf.BatchTimeout)
-	ast.Equal(3*time.Minute, rbftConf.CheckPoolTimeout)
+	ast.Equal(5*time.Minute, rbftConf.CheckPoolTimeout)
 	ast.Equal(5*time.Minute, txpoolConfig.ToleranceTime)
 }
 
