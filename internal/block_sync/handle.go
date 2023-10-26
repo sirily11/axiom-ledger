@@ -5,9 +5,10 @@ import (
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
+	"github.com/sirupsen/logrus"
+
 	"github.com/axiomesh/axiom-kit/types/pb"
 	network "github.com/axiomesh/axiom-p2p"
-	"github.com/sirupsen/logrus"
 )
 
 func (bs *BlockSync) handleSyncState(s network.Stream, msg *pb.Message) {
@@ -73,5 +74,4 @@ func (bs *BlockSync) handleSyncState(s network.Stream, msg *pb.Message) {
 		}).Error("Send sync state response failed")
 		return
 	}
-
 }

@@ -5,13 +5,13 @@ import (
 	"crypto/ecdsa"
 	"sync"
 
-	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/network"
 	"github.com/axiomesh/axiom-ledger/internal/storagemgr"

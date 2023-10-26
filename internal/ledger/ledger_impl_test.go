@@ -1096,7 +1096,7 @@ func benchStateLedgerRead(b *testing.B, sl StateLedger) {
 func makeDataset(size, ksize, vsize int, order bool) ([][]byte, [][]byte) {
 	var keys [][]byte
 	var vals [][]byte
-	for i := 0; i < size; i += 1 {
+	for i := 0; i < size; i++ {
 		keys = append(keys, randBytes(ksize))
 		vals = append(vals, randBytes(vsize))
 	}

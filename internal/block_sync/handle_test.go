@@ -4,8 +4,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/axiomesh/axiom-kit/types/pb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/axiomesh/axiom-kit/types/pb"
 )
 
 func TestHandleSyncState(t *testing.T) {

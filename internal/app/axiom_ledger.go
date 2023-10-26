@@ -8,7 +8,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/ethereum/go-ethereum/common/fdlimit"
 	"github.com/sirupsen/logrus"
@@ -17,6 +16,7 @@ import (
 	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc"
+	"github.com/axiomesh/axiom-ledger/internal/block_sync"
 	"github.com/axiomesh/axiom-ledger/internal/consensus"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/executor"

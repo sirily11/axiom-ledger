@@ -3,9 +3,10 @@ package network
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/axiomesh/axiom-kit/types/pb"
 	p2p "github.com/axiomesh/axiom-p2p"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHandleMessage(t *testing.T) {

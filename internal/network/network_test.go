@@ -11,23 +11,23 @@ import (
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
-	rbft "github.com/axiomesh/axiom-bft"
-	"github.com/axiomesh/axiom-kit/log"
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
-	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
-	p2p "github.com/axiomesh/axiom-p2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	rbft "github.com/axiomesh/axiom-bft"
+	"github.com/axiomesh/axiom-kit/log"
+	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
+	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
+	p2p "github.com/axiomesh/axiom-p2p"
 )
 
 func TestSwarm_OtherPeers(t *testing.T) {
