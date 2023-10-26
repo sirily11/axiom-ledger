@@ -133,6 +133,7 @@ func AriesConfig() *Config {
 					"/ip4/127.0.0.1/tcp/4004/p2p/16Uiu2HAm3ikUE3LjJeatMMgDuV2cAG9da8ZJJFLA8nBy6qcN1MMg",
 				},
 				ConsensusParams: &rbft.ConsensusParams{
+					ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
 					CheckpointPeriod:              10,
 					HighWatermarkCheckpointPeriod: 4,
 					MaxValidatorNum:               20,
@@ -204,6 +205,7 @@ func AriesConfig() *Config {
 				APP:        "info",
 				Access:     "info",
 				TxPool:     "info",
+				Epoch:      "info",
 			},
 		},
 	}

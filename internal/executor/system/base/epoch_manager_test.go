@@ -59,7 +59,7 @@ func TestEpochManager(t *testing.T) {
 	_, err = GetEpochInfo(stateLedger, 2)
 	assert.Error(t, err)
 
-	newCurrentEpoch, err := TurnIntoNewEpoch(stateLedger)
+	newCurrentEpoch, err := TurnIntoNewEpoch([]byte{}, stateLedger)
 	assert.Nil(t, err)
 	assert.EqualValues(t, 2, newCurrentEpoch.Epoch)
 	assert.EqualValues(t, 101, newCurrentEpoch.StartBlock)

@@ -181,6 +181,7 @@ type LogModule struct {
 	TxPool     string `mapstructure:"txpool" toml:"txpool"`
 	Access     string `mapstructure:"access" toml:"access"`
 	BlockSync  string `mapstructure:"blocksync" toml:"blocksync"`
+	Epoch      string `mapstructure:"epoch" toml:"epoch"`
 }
 
 type Genesis struct {
@@ -276,6 +277,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", 4001+idx, item)
 		}),
 		ConsensusParams: &rbft.ConsensusParams{
+			ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
 			CheckpointPeriod:              checkpointPeriod,
 			HighWatermarkCheckpointPeriod: highWatermarkCheckpointPeriod,
 			MaxValidatorNum:               20,
@@ -291,7 +293,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: 0,
+				ConsensusVotingPower: int64(idx+1) * 100,
 			}
 		}),
 		ValidatorSet: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
@@ -299,7 +301,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: 1000,
+				ConsensusVotingPower: int64(idx+1) * 100,
 			}
 		}),
 	}
@@ -337,16 +339,16 @@ func DefaultConfig(epochEnable bool) *Config {
 				Duration: Duration(15 * time.Second),
 			},
 			Pipe: P2PPipe{
-				ReceiveMsgCacheSize: 1024,
+				ReceiveMsgCacheSize: 10240,
 				BroadcastType:       P2PPipeBroadcastGossip,
 				SimpleBroadcast: P2PPipeSimpleBroadcast{
 					WorkerCacheSize:        1024,
 					WorkerConcurrencyLimit: 20,
 				},
 				Gossipsub: P2PPipeGossipsub{
-					SubBufferSize:          1024,
-					PeerOutboundBufferSize: 1024,
-					ValidateBufferSize:     1024,
+					SubBufferSize:          10240,
+					PeerOutboundBufferSize: 10240,
+					ValidateBufferSize:     10240,
 					SeenMessagesTTL:        Duration(120 * time.Second),
 				},
 				UnicastReadTimeout:       Duration(5 * time.Second),
@@ -453,6 +455,7 @@ func DefaultConfig(epochEnable bool) *Config {
 				APP:        "info",
 				Access:     "info",
 				TxPool:     "info",
+				Epoch:      "info",
 			},
 		},
 		Access: Access{

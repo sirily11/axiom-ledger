@@ -1,9 +1,10 @@
 package base
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/axiomesh/axiom-ledger/pkg/loggers"
+	"github.com/samber/lo"
 
 	"github.com/sirupsen/logrus"
 
@@ -53,7 +54,7 @@ func InitEpochInfo(lg ledger.StateLedger, epochInfo *rbft.EpochInfo) error {
 	account := lg.GetOrCreateAccount(types.NewAddressByStr(common.EpochManagerContractAddr))
 	epochInfo = epochInfo.Clone()
 
-	c, err := json.Marshal(epochInfo)
+	c, err := epochInfo.Marshal()
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func InitEpochInfo(lg ledger.StateLedger, epochInfo *rbft.EpochInfo) error {
 
 	epochInfo.Epoch++
 	epochInfo.StartBlock += epochInfo.EpochPeriod
-	c, err = json.Marshal(epochInfo)
+	c, err = epochInfo.Marshal()
 	if err != nil {
 		return err
 	}
@@ -74,11 +75,11 @@ func getEpoch(lg ledger.StateLedger, key []byte) (*rbft.EpochInfo, error) {
 	account := lg.GetOrCreateAccount(types.NewAddressByStr(common.EpochManagerContractAddr))
 	success, data := account.GetState(key)
 	if success {
-		var e rbft.EpochInfo
-		if err := json.Unmarshal(data, &e); err != nil {
+		e := &rbft.EpochInfo{}
+		if err := e.Unmarshal(data); err != nil {
 			return nil, err
 		}
-		return &e, nil
+		return e, nil
 	}
 	return nil, errors.New("not found epoch info")
 }
@@ -100,12 +101,23 @@ func GetCurrentEpochInfo(lg ledger.StateLedger) (*rbft.EpochInfo, error) {
 }
 
 // TurnIntoNewEpoch when execute epoch last, return new current epoch info
-func TurnIntoNewEpoch(lg ledger.StateLedger) (*rbft.EpochInfo, error) {
+func TurnIntoNewEpoch(electValidatorsByWrfSeed []byte, lg ledger.StateLedger) (*rbft.EpochInfo, error) {
 	account := lg.GetOrCreateAccount(types.NewAddressByStr(common.EpochManagerContractAddr))
 	success, data := account.GetState([]byte(nextEpochInfoKey))
 	if success {
-		var e rbft.EpochInfo
-		if err := json.Unmarshal(data, &e); err != nil {
+		e := &rbft.EpochInfo{}
+		if err := e.Unmarshal(data); err != nil {
+			return nil, err
+		}
+		if err := e.ElectValidators(electValidatorsByWrfSeed); err != nil {
+			return nil, err
+		}
+		validatorIDs := lo.Map(e.ValidatorSet, func(item *rbft.NodeInfo, index int) uint64 {
+			return item.ID
+		})
+		loggers.Logger(loggers.Epoch).Infof("Elect new Validators: %v", validatorIDs)
+		data, err := e.Marshal()
+		if err != nil {
 			return nil, err
 		}
 		// set current epoch info
@@ -114,7 +126,7 @@ func TurnIntoNewEpoch(lg ledger.StateLedger) (*rbft.EpochInfo, error) {
 		n := e.Clone()
 		n.Epoch++
 		n.StartBlock += n.EpochPeriod
-		c, err := json.Marshal(n)
+		c, err := n.Marshal()
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +134,7 @@ func TurnIntoNewEpoch(lg ledger.StateLedger) (*rbft.EpochInfo, error) {
 		account.SetState([]byte(nextEpochInfoKey), c)
 
 		// return current
-		return &e, nil
+		return e, nil
 	}
 	return nil, errors.New("not found current epoch info")
 }

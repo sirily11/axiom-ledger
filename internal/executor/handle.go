@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"strings"
@@ -115,7 +116,17 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	// check need turn into NewEpoch
 	epochInfo := exec.rep.EpochInfo
 	if block.BlockHeader.Number == (epochInfo.StartBlock + epochInfo.EpochPeriod - 1) {
-		newEpoch, err := base.TurnIntoNewEpoch(exec.ledger.StateLedger)
+		var seed []byte
+		seed = append(seed, []byte(exec.currentBlockHash.String())...)
+		seed = append(seed, []byte(block.BlockHeader.ProposerAccount)...)
+		seed = binary.BigEndian.AppendUint64(seed, block.BlockHeader.Number)
+		seed = binary.BigEndian.AppendUint64(seed, block.BlockHeader.Epoch)
+		seed = binary.BigEndian.AppendUint64(seed, uint64(block.BlockHeader.Timestamp))
+		for _, tx := range block.Transactions {
+			seed = append(seed, []byte(tx.GetHash().String())...)
+		}
+
+		newEpoch, err := base.TurnIntoNewEpoch(seed, exec.ledger.StateLedger)
 		if err != nil {
 			panic(err)
 		}
