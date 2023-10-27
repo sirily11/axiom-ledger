@@ -414,6 +414,14 @@ func (n *Node) GetLowWatermark() uint64 {
 	return n.n.GetLowWatermark()
 }
 
+func (n *Node) GetAccountPoolMeta(account string, full bool) *common.AccountMeta {
+	return common.AccountMetaFromTxpool(n.n.GetAccountPoolMeta(account, full))
+}
+
+func (n *Node) GetPoolMeta(full bool) *common.Meta {
+	return common.MetaFromTxpool(n.n.GetPoolMeta(full))
+}
+
 func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, ckp *consensus.Checkpoint) {
 	// need update cached epoch info
 	epochInfo := n.stack.EpochInfo

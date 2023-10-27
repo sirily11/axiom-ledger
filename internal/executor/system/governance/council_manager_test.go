@@ -311,7 +311,7 @@ func TestRunForVote(t *testing.T) {
 			Caller: admin2,
 			Data:   generateVoteData(t, cm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas:    CouncilVoteGas,
+				UsedGas: CouncilVoteGas,
 			},
 			Err: nil,
 		},
@@ -319,7 +319,7 @@ func TestRunForVote(t *testing.T) {
 			Caller: admin3,
 			Data:   generateVoteData(t, cm.proposalID.GetID()-1, Pass),
 			Expected: vm.ExecutionResult{
-				UsedGas:    CouncilVoteGas,
+				UsedGas: CouncilVoteGas,
 			},
 			Err: nil,
 		},

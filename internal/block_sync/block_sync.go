@@ -3,6 +3,7 @@ package block_sync
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -13,14 +14,15 @@ import (
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/backoff"
 	"github.com/Rican7/retry/strategy"
+	"github.com/gammazero/workerpool"
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
+
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
 	"github.com/axiomesh/axiom-ledger/internal/network"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
-	"github.com/gammazero/workerpool"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 )
 
 //go:generate mockgen -destination mock_block_sync/mock_block_sync.go -package mock_block_sync -source block_sync.go
@@ -113,7 +115,6 @@ func NewBlockSync(logger logrus.FieldLogger, fn func(height uint64) (*types.Bloc
 
 func (bs *BlockSync) StartSync(peers []string, latestBlockHash string, quorum, curHeight, targetHeight uint64,
 	quorumCheckpoint *consensus.SignedCheckpoint, epc ...*consensus.EpochChange) error {
-
 	now := time.Now()
 	syncCount := targetHeight - curHeight + 1
 	syncCtx, syncCancel := context.WithCancel(context.Background())
@@ -192,7 +193,7 @@ func (bs *BlockSync) StartSync(peers []string, latestBlockHash string, quorum, c
 				}
 
 				// release requester and send block to blockCacheCh
-				bs.requesters.Range(func(height, r interface{}) bool {
+				bs.requesters.Range(func(height, r any) bool {
 					if r.(*requester).block == nil {
 						bs.invalidRequestCh <- &invalidMsg{
 							nodeID: r.(*requester).peerID,
@@ -342,7 +343,6 @@ func (bs *BlockSync) updateLatestCheckedState(height uint64, digest string) {
 
 func (bs *BlockSync) InitBlockSyncInfo(peers []string, latestBlockHash string, quorum, curHeight, targetHeight uint64,
 	quorumCheckpoint *consensus.SignedCheckpoint, epc ...*consensus.EpochChange) {
-
 	bs.peers = make([]*peer, len(peers))
 	lo.ForEach(peers, func(p string, index int) {
 		bs.peers[index] = &peer{
@@ -540,7 +540,7 @@ func (bs *BlockSync) requestSyncState(height uint64, localHash string) error {
 
 func (bs *BlockSync) isValidSyncResponse(msg *pb.Message, id string) error {
 	if msg == nil || msg.Data == nil {
-		return fmt.Errorf("sync response is nil")
+		return errors.New("sync response is nil")
 	}
 
 	if msg.From != id {

@@ -181,6 +181,7 @@ type LogModule struct {
 	TxPool     string `mapstructure:"txpool" toml:"txpool"`
 	Access     string `mapstructure:"access" toml:"access"`
 	BlockSync  string `mapstructure:"blocksync" toml:"blocksync"`
+	Epoch      string `mapstructure:"epoch" toml:"epoch"`
 }
 
 type Genesis struct {
@@ -272,10 +273,11 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 		Epoch:       1,
 		EpochPeriod: epochPeriod,
 		StartBlock:  1,
-		P2PBootstrapNodeAddresses: lo.Map(defaultNodeIDs, func(item string, idx int) string {
+		P2PBootstrapNodeAddresses: lo.Map(defaultNodeIDs[0:4], func(item string, idx int) string {
 			return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", 4001+idx, item)
 		}),
 		ConsensusParams: &rbft.ConsensusParams{
+			ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
 			CheckpointPeriod:              checkpointPeriod,
 			HighWatermarkCheckpointPeriod: highWatermarkCheckpointPeriod,
 			MaxValidatorNum:               20,
@@ -285,13 +287,21 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			ExcludeView:                   100,
 			ProposerElectionType:          proposerElectionType,
 		},
-		CandidateSet: []*rbft.NodeInfo{},
-		ValidatorSet: lo.Map(DefaultNodeAddrs, func(item string, idx int) *rbft.NodeInfo {
+		CandidateSet: lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) *rbft.NodeInfo {
+			idx += 4
 			return &rbft.NodeInfo{
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: 1000,
+				ConsensusVotingPower: int64(idx+1) * 100,
+			}
+		}),
+		ValidatorSet: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
+			return &rbft.NodeInfo{
+				ID:                   uint64(idx + 1),
+				AccountAddress:       DefaultNodeAddrs[idx],
+				P2PNodeID:            defaultNodeIDs[idx],
+				ConsensusVotingPower: int64(idx+1) * 100,
 			}
 		}),
 	}
@@ -329,16 +339,16 @@ func DefaultConfig(epochEnable bool) *Config {
 				Duration: Duration(15 * time.Second),
 			},
 			Pipe: P2PPipe{
-				ReceiveMsgCacheSize: 1024,
+				ReceiveMsgCacheSize: 10240,
 				BroadcastType:       P2PPipeBroadcastGossip,
 				SimpleBroadcast: P2PPipeSimpleBroadcast{
 					WorkerCacheSize:        1024,
 					WorkerConcurrencyLimit: 20,
 				},
 				Gossipsub: P2PPipeGossipsub{
-					SubBufferSize:          1024,
-					PeerOutboundBufferSize: 1024,
-					ValidateBufferSize:     1024,
+					SubBufferSize:          10240,
+					PeerOutboundBufferSize: 10240,
+					ValidateBufferSize:     10240,
 					SeenMessagesTTL:        Duration(120 * time.Second),
 				},
 				UnicastReadTimeout:       Duration(5 * time.Second),
@@ -379,7 +389,7 @@ func DefaultConfig(epochEnable bool) *Config {
 			MinGasPrice:   1000000000000,
 			GasChangeRate: 0.125,
 			Balance:       "1000000000000000000000000000",
-			Admins: lo.Map(DefaultNodeAddrs, func(item string, idx int) *Admin {
+			Admins: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *Admin {
 				return &Admin{
 					Address: item,
 					Weight:  1,
@@ -445,6 +455,7 @@ func DefaultConfig(epochEnable bool) *Config {
 				APP:        "info",
 				Access:     "info",
 				TxPool:     "info",
+				Epoch:      "info",
 			},
 		},
 		Access: Access{

@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
@@ -18,8 +21,6 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/network/mock_network"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	network "github.com/axiomesh/axiom-p2p"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -229,7 +230,7 @@ func newMockBlockResponsePipe(ctrl *gomock.Controller, localId string, wrongPid 
 	}
 	mockPipe := mock_network.NewMockPipe(ctrl)
 	if wrongSendBlockResponse {
-		mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("send block response error")).AnyTimes()
+		mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("send block response error")).AnyTimes()
 	} else {
 		mockPipe.EXPECT().Send(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, to string, data []byte) error {
@@ -319,7 +320,7 @@ func newMockMiniNetwork(ctrl *gomock.Controller, localId string, wrong ...int) *
 	mock.EXPECT().PeerID().Return(localId).AnyTimes()
 
 	if wrongSendStateRequest {
-		mock.EXPECT().Send(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("send error")).AnyTimes()
+		mock.EXPECT().Send(gomock.Any(), gomock.Any()).Return(nil, errors.New("send error")).AnyTimes()
 	} else {
 		mock.EXPECT().Send(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(to string, msg *pb.Message) (*pb.Message, error) {
@@ -354,7 +355,7 @@ func newMockMiniNetwork(ctrl *gomock.Controller, localId string, wrong ...int) *
 	}
 
 	if wrongSendStream {
-		mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).Return(fmt.Errorf("send stream error")).AnyTimes()
+		mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).Return(errors.New("send stream error")).AnyTimes()
 	} else {
 		mock.EXPECT().SendWithStream(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(s network.Stream, msg *pb.Message) error {

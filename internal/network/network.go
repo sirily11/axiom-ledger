@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -190,8 +191,13 @@ func (swarm *networkImpl) Stop() error {
 
 func (swarm *networkImpl) onConnected(net p2pnetwork.Network, conn p2pnetwork.Conn) error {
 	peerID := conn.RemotePeer().String()
-	swarm.connectedPeers.Set(peerID, true)
-
+	validatorSet := swarm.repo.EpochInfo.ValidatorSet
+	for _, n := range validatorSet {
+		if n.P2PNodeID == peerID {
+			swarm.connectedPeers.Set(peerID, true)
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -237,7 +243,7 @@ func (swarm *networkImpl) PeerID() string {
 
 func (swarm *networkImpl) RegisterMsgHandler(messageType pb.Message_Type, handler func(network.Stream, *pb.Message)) error {
 	if handler == nil {
-		return fmt.Errorf("register msg handler: empty handler")
+		return errors.New("register msg handler: empty handler")
 	}
 
 	for msgType := range pb.Message_Type_name {
@@ -247,7 +253,7 @@ func (swarm *networkImpl) RegisterMsgHandler(messageType pb.Message_Type, handle
 		}
 	}
 
-	return fmt.Errorf("register msg handler: invalid message type")
+	return errors.New("register msg handler: invalid message type")
 }
 
 func (swarm *networkImpl) RegisterMultiMsgHandler(messageTypes []pb.Message_Type, handler func(network.Stream, *pb.Message)) error {

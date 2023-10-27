@@ -210,6 +210,25 @@ func (n *Node) SubmitTxsFromRemote(_ [][]byte) error {
 	return nil
 }
 
+func (n *Node) GetAccountPoolMeta(account string, full bool) *common.AccountMeta {
+	request := &getAccountPoolMetaReq{
+		account: account,
+		full:    full,
+		Resp:    make(chan *common.AccountMeta),
+	}
+	n.recvCh <- request
+	return <-request.Resp
+}
+
+func (n *Node) GetPoolMeta(full bool) *common.Meta {
+	request := &getPoolMetaReq{
+		full: full,
+		Resp: make(chan *common.Meta),
+	}
+	n.recvCh <- request
+	return <-request.Resp
+}
+
 func (n *Node) listenEvent() {
 	for {
 		select {
@@ -306,6 +325,10 @@ func (n *Node) listenEvent() {
 				e.Resp <- n.txpool.GetTotalPendingTxCount()
 			case *getLowWatermarkReq:
 				e.Resp <- n.lastExec
+			case *getPoolMetaReq:
+				e.Resp <- common.MetaFromTxpool(n.txpool.GetMeta(e.full))
+			case *getAccountPoolMetaReq:
+				e.Resp <- common.AccountMetaFromTxpool(n.txpool.GetAccountMeta(e.account, e.full))
 			}
 		}
 	}

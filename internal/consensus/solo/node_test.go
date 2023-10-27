@@ -280,3 +280,29 @@ func TestNode_GetLowWatermark(t *testing.T) {
 	ast.NotNil(commitEvent)
 	ast.Equal(commitEvent.Block.Height(), node.GetLowWatermark())
 }
+
+func TestNode_GetAccountPoolMeta(t *testing.T) {
+	ast := assert.New(t)
+	node, err := mockSoloNode(t, false)
+	ast.Nil(err)
+
+	err = node.Start()
+	ast.Nil(err)
+	defer node.Stop()
+
+	accountPoolMeta := node.GetAccountPoolMeta("", true)
+	ast.Equal(uint64(0), accountPoolMeta.CommitNonce)
+}
+
+func TestNode_GetPoolMeta(t *testing.T) {
+	ast := assert.New(t)
+	node, err := mockSoloNode(t, false)
+	ast.Nil(err)
+
+	err = node.Start()
+	ast.Nil(err)
+	defer node.Stop()
+
+	poolMeta := node.GetPoolMeta(true)
+	ast.Equal(uint64(0), poolMeta.TxCount)
+}

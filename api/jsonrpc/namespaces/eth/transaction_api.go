@@ -137,7 +137,7 @@ func (api *TransactionAPI) GetTransactionCount(address common.Address, blockNrOr
 	api.logger.Debugf("eth_getTransactionCount, address: %s", address)
 	if blockNrOrHash != nil {
 		if blockNumber, ok := blockNrOrHash.Number(); ok && blockNumber == rpctypes.PendingBlockNumber {
-			nonce := api.api.Broker().GetPendingTxCountByAccount(address.String())
+			nonce := api.api.TxPool().GetPendingTxCountByAccount(address.String())
 			return (*hexutil.Uint64)(&nonce), nil
 		}
 	}
@@ -177,7 +177,7 @@ func (api *TransactionAPI) GetTransactionByHash(hash common.Hash) (ret *rpctypes
 	}
 
 	// retrieve tx from the pool
-	if poolTx := api.api.Broker().GetPoolTransaction(typesHash); poolTx != nil {
+	if poolTx := api.api.TxPool().GetTransaction(typesHash); poolTx != nil {
 		return NewRPCTransaction(poolTx, common.Hash{}, 0, 0), nil
 	}
 

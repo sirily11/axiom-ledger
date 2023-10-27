@@ -4,10 +4,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
-	"github.com/stretchr/testify/require"
 )
 
 func TestStartSync(t *testing.T) {
@@ -408,7 +409,6 @@ func TestHandleSyncErrMsg(t *testing.T) {
 	blocks := <-syncs[0].Commit()
 	require.Equal(t, 99, len(blocks))
 	require.Equal(t, uint64(100), blocks[len(blocks)-1].Height())
-
 }
 
 func TestSendSyncStateError(t *testing.T) {

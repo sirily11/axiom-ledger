@@ -11,23 +11,23 @@ import (
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
-	rbft "github.com/axiomesh/axiom-bft"
-	"github.com/axiomesh/axiom-kit/log"
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
-	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
-	p2p "github.com/axiomesh/axiom-p2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	rbft "github.com/axiomesh/axiom-bft"
+	"github.com/axiomesh/axiom-kit/log"
+	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
+	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
+	p2p "github.com/axiomesh/axiom-p2p"
 )
 
 func TestSwarm_OtherPeers(t *testing.T) {
@@ -178,8 +178,9 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 
 	epochInfo := repo.GenesisEpochInfo(false)
 	epochInfo.CandidateSet = append(epochInfo.CandidateSet, &rbft.NodeInfo{
-		ID:        5,
-		P2PNodeID: "16Uiu2HAmJ3bjAhtYc7QabCWWUKagY9RLddypDPXhFYkmFxSwzHQd",
+		ID:             9,
+		P2PNodeID:      "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
+		AccountAddress: "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 	})
 	err = base.InitEpochInfo(mockLedger.StateLedger, epochInfo)
 	assert.Nil(t, err)

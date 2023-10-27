@@ -26,6 +26,7 @@ const (
 	BlockSync  = "blocksync"
 	Access     = "access"
 	TxPool     = "txpool"
+	Epoch      = "epoch"
 )
 
 var w = &LoggerWrapper{
@@ -43,6 +44,7 @@ var w = &LoggerWrapper{
 		Access:     log.NewWithModule(Access),
 		TxPool:     log.NewWithModule(TxPool),
 		BlockSync:  log.NewWithModule(BlockSync),
+		Epoch:      log.NewWithModule(Epoch),
 	},
 }
 
@@ -124,6 +126,8 @@ func Initialize(ctx context.Context, rep *repo.Repo, persist bool) error {
 	m[Access].Logger.SetLevel(log.ParseLevel(config.Log.Module.Access))
 	m[TxPool] = log.NewWithModule(TxPool)
 	m[TxPool].Logger.SetLevel(log.ParseLevel(config.Log.Module.TxPool))
+	m[Epoch] = log.NewWithModule(Epoch)
+	m[Epoch].Logger.SetLevel(log.ParseLevel(config.Log.Module.Epoch))
 
 	w = &LoggerWrapper{loggers: m}
 	InitializeEthLog(m[API])
