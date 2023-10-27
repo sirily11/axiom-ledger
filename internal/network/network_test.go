@@ -178,8 +178,9 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 
 	epochInfo := repo.GenesisEpochInfo(false)
 	epochInfo.CandidateSet = append(epochInfo.CandidateSet, &rbft.NodeInfo{
-		ID:        5,
-		P2PNodeID: "16Uiu2HAmJ3bjAhtYc7QabCWWUKagY9RLddypDPXhFYkmFxSwzHQd",
+		ID:             9,
+		P2PNodeID:      "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
+		AccountAddress: "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 	})
 	err = base.InitEpochInfo(mockLedger.StateLedger, epochInfo)
 	assert.Nil(t, err)

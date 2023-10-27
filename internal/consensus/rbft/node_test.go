@@ -14,6 +14,7 @@ import (
 
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-bft/common/consensus"
+	"github.com/axiomesh/axiom-bft/txpool"
 	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
@@ -224,6 +225,26 @@ func TestPrepare(t *testing.T) {
 		}).AnyTimes()
 		lowWatermark := node.GetLowWatermark()
 		ast.Equal(uint64(1), lowWatermark)
+	})
+
+	t.Run("GetAccountPoolMeta", func(t *testing.T) {
+		node.n.(*rbft.MockNode[types.Transaction, *types.Transaction]).EXPECT().GetAccountPoolMeta(gomock.Any(), gomock.Any()).DoAndReturn(func(s string, b bool) *txpool.AccountMeta[types.Transaction, *types.Transaction] {
+			return &txpool.AccountMeta[types.Transaction, *types.Transaction]{
+				CommitNonce: 1,
+			}
+		}).AnyTimes()
+		accountPoolMeta := node.GetAccountPoolMeta("", true)
+		ast.Equal(uint64(1), accountPoolMeta.CommitNonce)
+	})
+
+	t.Run("GetPoolMeta", func(t *testing.T) {
+		node.n.(*rbft.MockNode[types.Transaction, *types.Transaction]).EXPECT().GetPoolMeta(gomock.Any()).DoAndReturn(func(b bool) *txpool.Meta[types.Transaction, *types.Transaction] {
+			return &txpool.Meta[types.Transaction, *types.Transaction]{
+				TxCount: 1,
+			}
+		}).AnyTimes()
+		poolMeta := node.GetPoolMeta(true)
+		ast.Equal(uint64(1), poolMeta.TxCount)
 	})
 }
 
