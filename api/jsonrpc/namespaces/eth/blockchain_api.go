@@ -451,11 +451,7 @@ func (s *BlockChainAPI) CreateAccessList(args types.CallArgs, blockNrOrHash *rpc
 // FormatBlock creates an ethereum block from a tendermint header and ethereum-formatted
 // transactions.
 func formatBlock(api api.CoreAPI, config *repo.Config, block *types.Block, fullTx bool) (map[string]any, error) {
-	cumulativeGas, err := getBlockCumulativeGas(api, block, uint64(len(block.Transactions)-1))
-	if err != nil {
-		return nil, err
-	}
-
+	var err error
 	formatTx := func(tx *types.Transaction, index uint64) (any, error) {
 		return tx.GetHash().ETHHash(), nil
 	}
@@ -490,7 +486,7 @@ func formatBlock(api api.CoreAPI, config *repo.Config, block *types.Block, fullT
 		"extraData":        ethhexutil.Bytes{},
 		"size":             ethhexutil.Uint64(block.Size()),
 		"gasLimit":         ethhexutil.Uint64(config.Genesis.GasLimit), // Static gas limit
-		"gasUsed":          ethhexutil.Uint64(cumulativeGas),
+		"gasUsed":          ethhexutil.Uint64(block.BlockHeader.GasUsed),
 		"timestamp":        ethhexutil.Uint64(block.BlockHeader.Timestamp),
 		"transactions":     transactions,
 		"receiptsRoot":     block.BlockHeader.ReceiptRoot.ETHHash(),

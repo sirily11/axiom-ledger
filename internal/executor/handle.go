@@ -162,6 +162,7 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	accounts, journalHash := exec.ledger.StateLedger.FlushDirtyData()
 
 	block.BlockHeader.StateRoot = journalHash
+	block.BlockHeader.GasUsed = exec.cumulativeGasUsed
 	block.BlockHash = block.Hash()
 
 	exec.logger.WithFields(logrus.Fields{
@@ -170,6 +171,7 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 		"epoch":        block.BlockHeader.Epoch,
 		"coinbase":     block.BlockHeader.ProposerAccount,
 		"gas_price":    block.BlockHeader.GasPrice,
+		"gas_used":     block.BlockHeader.GasUsed,
 		"parent_hash":  block.BlockHeader.ParentHash.String(),
 		"tx_root":      block.BlockHeader.TxRoot.String(),
 		"receipt_root": block.BlockHeader.ReceiptRoot.String(),
