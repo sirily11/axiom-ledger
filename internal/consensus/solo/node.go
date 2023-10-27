@@ -89,7 +89,7 @@ func NewNode(config *common.Config) (*Node, error) {
 		network:          config.Network,
 		ctx:              ctx,
 		cancel:           cancel,
-		txPreCheck:       precheck.NewTxPreCheckMgr(ctx, config.EVMConfig, config.Logger, config.GetAccountBalance),
+		txPreCheck:       precheck.NewTxPreCheckMgr(ctx, config),
 		logger:           config.Logger,
 	}
 	soloNode.logger.Infof("SOLO lastExec = %d", soloNode.lastExec)

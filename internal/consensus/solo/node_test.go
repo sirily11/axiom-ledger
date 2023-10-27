@@ -38,6 +38,11 @@ func TestNode_Start(t *testing.T) {
 		common.WithGetAccountBalanceFunc(func(address *types.Address) *big.Int {
 			return big.NewInt(adminBalance)
 		}),
+		common.WithGetChainMetaFunc(func() *types.ChainMeta {
+			return &types.ChainMeta{
+				GasPrice: big.NewInt(0),
+			}
+		}),
 	)
 	require.Nil(t, err)
 

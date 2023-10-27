@@ -86,6 +86,7 @@ func NewNode(config *common.Config) (*Node, error) {
 	if config.Config.Limit.Enable {
 		receiveMsgLimiter = rate.NewLimiter(rate.Limit(config.Config.Limit.Limit), int(config.Config.Limit.Burst))
 	}
+
 	return &Node{
 		config:            config,
 		n:                 n,
@@ -96,7 +97,7 @@ func NewNode(config *common.Config) (*Node, error) {
 		cancel:            cancel,
 		txCache:           txcache.NewTxCache(rbftConfig.SetTimeout, uint64(rbftConfig.SetSize), config.Logger),
 		network:           config.Network,
-		txPreCheck:        precheck.NewTxPreCheckMgr(ctx, config.EVMConfig, config.Logger, config.GetAccountBalance),
+		txPreCheck:        precheck.NewTxPreCheckMgr(ctx, config),
 	}, nil
 }
 
@@ -426,7 +427,8 @@ func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*t
 	// need update cached epoch info
 	epochInfo := n.stack.EpochInfo
 	epochChanged := false
-	if height == (epochInfo.StartBlock + epochInfo.EpochPeriod - 1) {
+	if common.NeedChangeEpoch(height, epochInfo) {
+		n.txPreCheck.UpdateEpochInfo(epochInfo)
 		err := n.stack.UpdateEpoch()
 		if err != nil {
 			panic(err)

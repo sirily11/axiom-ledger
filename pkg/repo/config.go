@@ -90,6 +90,7 @@ type JsonRPC struct {
 	EVMTimeout                   Duration `mapstructure:"evm_timeout" toml:"evm_timeout"`
 	Limiter                      JLimiter `mapstructure:"limiter" toml:"limiter"`
 	RejectTxsIfConsensusAbnormal bool     `mapstructure:"reject_txs_if_consensus_abnormal" toml:"reject_txs_if_consensus_abnormal"`
+	EnableTest                   bool     `mapstructure:"enable_test" toml:"enable_test"`
 }
 
 type P2PPipeGossipsub struct {
@@ -186,11 +187,7 @@ type LogModule struct {
 
 type Genesis struct {
 	ChainID         uint64          `mapstructure:"chainid" toml:"chainid"`
-	GasLimit        uint64          `mapstructure:"gas_limit" toml:"gas_limit"`
 	GasPrice        uint64          `mapstructure:"gas_price" toml:"gas_price"`
-	MaxGasPrice     uint64          `mapstructure:"max_gas_price" toml:"max_gas_price"`
-	MinGasPrice     uint64          `mapstructure:"min_gas_price" toml:"min_gas_price"`
-	GasChangeRate   float64         `mapstructure:"gas_change_rate" toml:"gas_change_rate"`
 	Balance         string          `mapstructure:"balance" toml:"balance"`
 	Admins          []*Admin        `mapstructure:"admins" toml:"admins"`
 	InitKycServices []string        `mapstructure:"init_key_services" toml:"init_key_services"`
@@ -268,6 +265,14 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 		proposerElectionType = rbft.ProposerElectionTypeWRF
 	}
 
+	financeInfo := &rbft.Finance{
+		GasLimit:       0x5f5e100,
+		MaxGasPrice:    10000000000000,
+		MinGasPrice:    1000000000000,
+		GasChangeRate:  0.125,
+		GasPremiumRate: DefaultGasPremiumRate,
+	}
+
 	return &rbft.EpochInfo{
 		Version:     1,
 		Epoch:       1,
@@ -304,6 +309,11 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ConsensusVotingPower: int64(idx+1) * 100,
 			}
 		}),
+
+		FinanceParams: financeInfo,
+		ConfigParams: &rbft.ConfigParams{
+			TxMaxSize: DefaultTxMaxSize,
+		},
 	}
 }
 
@@ -329,6 +339,7 @@ func DefaultConfig(epochEnable bool) *Config {
 				Capacity: 10000,
 			},
 			RejectTxsIfConsensusAbnormal: false,
+			EnableTest:                   false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
@@ -382,13 +393,9 @@ func DefaultConfig(epochEnable bool) *Config {
 			},
 		},
 		Genesis: Genesis{
-			ChainID:       1356,
-			GasLimit:      0x5f5e100,
-			GasPrice:      5000000000000,
-			MaxGasPrice:   10000000000000,
-			MinGasPrice:   1000000000000,
-			GasChangeRate: 0.125,
-			Balance:       "1000000000000000000000000000",
+			ChainID:  1356,
+			GasPrice: 5000000000000,
+			Balance:  "1000000000000000000000000000",
 			Admins: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *Admin {
 				return &Admin{
 					Address: item,

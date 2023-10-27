@@ -23,6 +23,9 @@ var (
 func AriesConfig() *Config {
 	return &Config{
 		Ulimit: 65535,
+		Access: Access{
+			KycVerification: 0,
+		},
 		Port: Port{
 			JsonRpc:   8881,
 			WebSocket: 9991,
@@ -39,6 +42,7 @@ func AriesConfig() *Config {
 				Capacity: 10000,
 			},
 			RejectTxsIfConsensusAbnormal: false,
+			EnableTest:                   false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
@@ -91,13 +95,9 @@ func AriesConfig() *Config {
 			},
 		},
 		Genesis: Genesis{
-			ChainID:       23411,
-			GasLimit:      0x5f5e100,
-			GasPrice:      5000000000000,
-			MaxGasPrice:   10000000000000,
-			MinGasPrice:   1000000000000,
-			GasChangeRate: 0.125,
-			Balance:       "1000000000000000000000000000",
+			ChainID:  23411,
+			GasPrice: 5000000000000,
+			Balance:  "1000000000000000000000000000",
 			Admins: []*Admin{
 				{
 					Address: "0xecFE18Dc453CCdF96f1b9b58ccb4db3c6115A1D0",
@@ -169,6 +169,16 @@ func AriesConfig() *Config {
 						P2PNodeID:            "16Uiu2HAm3ikUE3LjJeatMMgDuV2cAG9da8ZJJFLA8nBy6qcN1MMg",
 						ConsensusVotingPower: 1000,
 					},
+				},
+				FinanceParams: &rbft.Finance{
+					GasLimit:       0x5f5e100,
+					MaxGasPrice:    10000000000000,
+					MinGasPrice:    1000000000000,
+					GasChangeRate:  0.125,
+					GasPremiumRate: DefaultGasPremiumRate,
+				},
+				ConfigParams: &rbft.ConfigParams{
+					TxMaxSize: DefaultTxMaxSize,
 				},
 			},
 		},

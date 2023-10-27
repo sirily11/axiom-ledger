@@ -193,3 +193,7 @@ func (lg *Logger) Notice(v ...any) {
 func (lg *Logger) Noticef(format string, v ...any) {
 	lg.Infof(format, v...)
 }
+
+func NeedChangeEpoch(height uint64, epochInfo *rbft.EpochInfo) bool {
+	return height == (epochInfo.StartBlock + epochInfo.EpochPeriod - 1)
+}
