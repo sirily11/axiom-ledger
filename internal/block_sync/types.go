@@ -1,8 +1,6 @@
 package block_sync
 
 import (
-	"time"
-
 	"github.com/axiomesh/axiom-kit/types/pb"
 )
 
@@ -10,8 +8,7 @@ const (
 	syncBlockRequestPipe  = "sync_block_pipe_v1_request"
 	syncBlockResponsePipe = "sync_block_pipe_v1_response"
 
-	maxRetryCount   = 5
-	requestInterval = 500 * time.Millisecond
+	maxRetryCount = 5
 )
 
 type syncMsgType int
