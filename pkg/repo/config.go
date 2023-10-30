@@ -143,6 +143,7 @@ type JLimiter struct {
 	Interval Duration `mapstructure:"interval" toml:"interval"`
 	Quantum  int64    `mapstructure:"quantum" toml:"quantum"`
 	Capacity int64    `mapstructure:"capacity" toml:"capacity"`
+	Enable   bool     `mapstructure:"enable" toml:"enable"`
 }
 
 type Ping struct {
@@ -318,11 +319,13 @@ func DefaultConfig(epochEnable bool) *Config {
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
+				Enable:   true,
 			},
 			WriteLimiter: JLimiter{
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
+				Enable:   true,
 			},
 			RejectTxsIfConsensusAbnormal: false,
 		},

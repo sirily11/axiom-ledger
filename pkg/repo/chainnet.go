@@ -37,11 +37,13 @@ func AriesConfig() *Config {
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
+				Enable:   true,
 			},
 			WriteLimiter: JLimiter{
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
+				Enable:   true,
 			},
 			RejectTxsIfConsensusAbnormal: false,
 		},

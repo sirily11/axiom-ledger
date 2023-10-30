@@ -160,55 +160,68 @@ func (cbs *ChainBrokerService) Stop() error {
 
 func (cbs *ChainBrokerService) tokenBucketMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rateLimiter = cbs.rateLimiterForRead
-		requestBody, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		// Restore the r.Body with the captured content.
-		r.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
 
-		newRequest, err := http.NewRequest(r.Method, r.URL.String(), ioutil.NopCloser(bytes.NewReader(requestBody)))
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		newRequest.Header = r.Header.Clone()
+		readJsonRpc := cbs.rep.Config.JsonRPC.ReadLimiter.Enable
+		writeJsonRpc := cbs.rep.Config.JsonRPC.WriteLimiter.Enable
 
-		var request interface{}
-		var isJson = true
-		if err := json.NewDecoder(ioutil.NopCloser(bytes.NewReader(requestBody))).Decode(&request); err != nil {
-			isJson = false
-			cbs.logger.Error("tokenBucketMiddleware JSON decode error: ", err)
-		}
+		if !readJsonRpc && !writeJsonRpc {
+			next.ServeHTTP(w, r)
+		} else {
+			requestBody, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			// Restore the r.Body with the captured content.
+			r.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
 
-		if isJson {
-			switch req := request.(type) {
-			case []interface{}:
-				for _, req := range req {
-					if reqMap, ok := req.(map[string]interface{}); ok {
-						method, ok := reqMap["method"].(string)
-						if ok {
-							cbs.logger.Info("request method: ", method)
-							if method == "eth_sendRawTransaction" {
-								rateLimiter = cbs.rateLimiterForWrite
-								cbs.logger.Info("tokenBucketMiddleware rateLimiter is rateLimiterForWrite")
-							} else {
-								rateLimiter = cbs.rateLimiterForRead
+			newRequest, err := http.NewRequest(r.Method, r.URL.String(), ioutil.NopCloser(bytes.NewReader(requestBody)))
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			newRequest.Header = r.Header.Clone()
+
+			var request interface{}
+			var isJson = true
+			if err := json.NewDecoder(ioutil.NopCloser(bytes.NewReader(requestBody))).Decode(&request); err != nil {
+				isJson = false
+				cbs.logger.Error("tokenBucketMiddleware JSON decode error: ", err)
+			}
+
+			var rateLimiter *ratelimiter.JRateLimiter
+			if isJson {
+				switch req := request.(type) {
+				case []interface{}:
+					for _, req := range req {
+						if reqMap, ok := req.(map[string]interface{}); ok {
+							method, ok := reqMap["method"].(string)
+							if ok {
+								cbs.logger.Info("request method: ", method)
+								if method == "eth_sendRawTransaction" {
+									if writeJsonRpc {
+										rateLimiter = cbs.rateLimiterForWrite
+									}
+									cbs.logger.Info("tokenBucketMiddleware rateLimiter is rateLimiterForWrite writeJsonRpc:", writeJsonRpc)
+								} else if readJsonRpc {
+									rateLimiter = cbs.rateLimiterForRead
+								}
 							}
 						}
 					}
+				default:
+					if readJsonRpc {
+						rateLimiter = cbs.rateLimiterForRead
+					}
 				}
-			default:
-				rateLimiter = cbs.rateLimiterForRead
 			}
+
+			if rateLimiter != nil && rateLimiter.JLimit() {
+				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, newRequest)
 		}
 
-		if rateLimiter == nil || rateLimiter.JLimit() {
-			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-			return
-		}
-		next.ServeHTTP(w, newRequest)
 	})
 }

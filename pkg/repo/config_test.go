@@ -14,10 +14,14 @@ func TestConfig(t *testing.T) {
 	require.Equal(t, "rbft", cnf.Consensus.Type)
 	require.Equal(t, int64(10000), cnf.JsonRPC.WriteLimiter.Capacity)
 	require.Equal(t, int64(10000), cnf.JsonRPC.ReadLimiter.Capacity)
+	require.Equal(t, false, cnf.JsonRPC.WriteLimiter.Enable)
+	require.Equal(t, false, cnf.JsonRPC.ReadLimiter.Enable)
 	require.Equal(t, false, cnf.P2P.Ping.Enable)
 	cnf.Consensus.Type = "solo"
 	cnf.JsonRPC.WriteLimiter.Capacity = 100
 	cnf.JsonRPC.ReadLimiter.Capacity = 100
+	cnf.JsonRPC.WriteLimiter.Enable = true
+	cnf.JsonRPC.ReadLimiter.Enable = true
 	cnf.P2P.Ping.Enable = true
 	err = writeConfigWithEnv(path.Join(repoPath, CfgFileName), cnf)
 	require.Nil(t, err)
@@ -26,5 +30,7 @@ func TestConfig(t *testing.T) {
 	require.Equal(t, "solo", cnf2.Consensus.Type)
 	require.Equal(t, int64(100), cnf2.JsonRPC.WriteLimiter.Capacity)
 	require.Equal(t, int64(100), cnf2.JsonRPC.ReadLimiter.Capacity)
+	require.Equal(t, true, cnf.JsonRPC.WriteLimiter.Enable)
+	require.Equal(t, true, cnf.JsonRPC.ReadLimiter.Enable)
 	require.Equal(t, true, cnf2.P2P.Ping.Enable)
 }
