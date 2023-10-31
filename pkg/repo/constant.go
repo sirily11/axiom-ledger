@@ -46,8 +46,6 @@ const (
 	ExecTypeNative = "native"
 	ExecTypeDev    = "dev"
 
-	EnableKycVerify = 1
-
 	// txSlotSize is used to calculate how many data slots a single transaction
 	// takes up based on its size. The slots are used as DoS protection, ensuring
 	// that validating a new transaction remains a constant operation (in reality

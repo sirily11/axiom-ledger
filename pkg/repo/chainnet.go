@@ -24,7 +24,7 @@ func AriesConfig() *Config {
 	return &Config{
 		Ulimit: 65535,
 		Access: Access{
-			KycVerification: 0,
+			EnableWhiteList: false,
 		},
 		Port: Port{
 			JsonRpc:   8881,
