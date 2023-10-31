@@ -7,6 +7,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/axm"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/filters"
+	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/net"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/web3"
 	"github.com/axiomesh/axiom-ledger/internal/coreapi/api"
@@ -20,6 +21,7 @@ const (
 	NetNamespace    = "net"
 	AxmNamespace    = "axm"
 	TxPoolNamespace = "txpool"
+	DebugNamespace = "debug"
 
 	apiVersion = "1.0"
 )
@@ -95,6 +97,15 @@ func GetAPIs(rep *repo.Repo, api api.CoreAPI, logger logrus.FieldLogger) ([]rpc.
 			Namespace: TxPoolNamespace,
 			Version:   apiVersion,
 			Service:   axm.NewTxPoolAPI(rep, api, logger),
+			Public:    true,
+		},
+	)
+
+	apis = append(apis,
+		rpc.API{
+			Namespace: DebugNamespace,
+			Version:   apiVersion,
+			Service:   tracers.NewTracerAPI(rep, api, logger),
 			Public:    true,
 		},
 	)
