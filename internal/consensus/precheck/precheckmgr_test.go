@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	rbft "github.com/axiomesh/axiom-bft"
-
 	"github.com/axiomesh/axiom-kit/types"
 	common2 "github.com/axiomesh/axiom-ledger/internal/consensus/common"
 )

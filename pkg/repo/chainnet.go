@@ -48,17 +48,13 @@ func AriesConfig() *Config {
 				Capacity: 10000,
 				Enable:   true,
 			},
-			RejectTxsIfConsensusAbnormal: false,
-			EnableTest:                   false,
+			RejectTxsIfConsensusAbnormal:   false,
+			DisableGasPriceAPIPricePremium: false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
 			SendTimeout: Duration(5 * time.Second),
 			ReadTimeout: Duration(5 * time.Second),
-			Ping: Ping{
-				Enable:   false,
-				Duration: Duration(15 * time.Second),
-			},
 			Pipe: P2PPipe{
 				ReceiveMsgCacheSize: 1024,
 				BroadcastType:       P2PPipeBroadcastGossip,
@@ -71,6 +67,7 @@ func AriesConfig() *Config {
 					PeerOutboundBufferSize: 1024,
 					ValidateBufferSize:     1024,
 					SeenMessagesTTL:        Duration(120 * time.Second),
+					EnableMetrics:          false,
 				},
 				UnicastReadTimeout:       Duration(5 * time.Second),
 				UnicastSendRetryNumber:   5,

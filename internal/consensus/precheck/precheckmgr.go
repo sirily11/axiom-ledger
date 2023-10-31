@@ -15,12 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	rbft "github.com/axiomesh/axiom-bft"
-
-	vm "github.com/axiomesh/eth-kit/evm"
-
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 var _ PreCheck = (*TxPreCheckMgr)(nil)
@@ -213,7 +211,6 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 						}
 
 						validDataTxs = append(validDataTxs, tx)
-
 					}
 				}
 

@@ -67,9 +67,6 @@ type networkImpl struct {
 	p2p            network.Network
 	logger         logrus.FieldLogger
 	connectedPeers cmap.ConcurrentMap[string, bool]
-	enablePing     bool
-	pingTimeout    time.Duration
-	pingC          chan *repo.Ping
 	ctx            context.Context
 	cancel         context.CancelFunc
 	gater          connmgr.ConnectionGater
@@ -147,6 +144,7 @@ func (swarm *networkImpl) init() error {
 				PeerOutboundBufferSize: swarm.repo.Config.P2P.Pipe.Gossipsub.PeerOutboundBufferSize,
 				ValidateBufferSize:     swarm.repo.Config.P2P.Pipe.Gossipsub.ValidateBufferSize,
 				SeenMessagesTTL:        swarm.repo.Config.P2P.Pipe.Gossipsub.SeenMessagesTTL.ToDuration(),
+				EnableMetrics:          swarm.repo.Config.P2P.Pipe.Gossipsub.EnableMetrics,
 			},
 			UnicastReadTimeout:       swarm.repo.Config.P2P.Pipe.UnicastReadTimeout.ToDuration(),
 			UnicastSendRetryNumber:   swarm.repo.Config.P2P.Pipe.UnicastSendRetryNumber,
@@ -165,9 +163,6 @@ func (swarm *networkImpl) init() error {
 	p2p.SetConnectCallback(swarm.onConnected)
 	p2p.SetDisconnectCallback(swarm.onDisconnected)
 	swarm.p2p = p2p
-	swarm.enablePing = swarm.repo.Config.P2P.Ping.Enable
-	swarm.pingTimeout = swarm.repo.Config.P2P.Ping.Duration.ToDuration()
-	swarm.pingC = make(chan *repo.Ping)
 	swarm.connectedPeers = cmap.New[bool]()
 	swarm.gater = gater
 	swarm.PipeManager = p2p
