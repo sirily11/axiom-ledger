@@ -46,7 +46,24 @@ const (
 	ExecTypeNative = "native"
 	ExecTypeDev    = "dev"
 
-	EnableKycVerify uint8 = 1
+	EnableKycVerify = 1
+
+	// txSlotSize is used to calculate how many data slots a single transaction
+	// takes up based on its size. The slots are used as DoS protection, ensuring
+	// that validating a new transaction remains a constant operation (in reality
+	// O(maxslots), where max slots are 4 currently).
+	txSlotSize = 32 * 1024
+
+	// DefaultTxMaxSize is the maximum size a single transaction can have. This field has
+	// non-trivial consequences: larger transactions are significantly harder and
+	// more expensive to propagate; larger transactions also take more resources
+	// to validate whether they fit into the pool or not.
+	DefaultTxMaxSize = 4 * txSlotSize // 128KB
+
+	// DefaultGasPremiumRate is the default gas price premium rate,
+	// For example: if current gas price is 10wei, the default gas price premium rate is 0.2.
+	// Then the gasPrice interface will return 10+10 * 0.2 = 12 wei
+	DefaultGasPremiumRate = 0.2
 )
 
 var (

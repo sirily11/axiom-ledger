@@ -65,7 +65,7 @@ func New(rep *repo.Repo, ledger *ledger.Ledger) (*BlockExecutor, error) {
 		currentBlockHash:  ledger.ChainLedger.GetChainMeta().BlockHash,
 		evmChainCfg:       newEVMChainCfg(rep.Config),
 		rep:               rep,
-		gasLimit:          rep.Config.Genesis.GasLimit,
+		gasLimit:          rep.Config.Genesis.EpochInfo.FinanceParams.GasLimit,
 		lock:              &sync.Mutex{},
 	}
 

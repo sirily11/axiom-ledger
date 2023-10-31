@@ -342,7 +342,8 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
 		hi = uint64(*args.Gas)
 	} else {
-		hi = api.rep.Config.Genesis.GasLimit
+		// todo : api need get current epochInfo
+		hi = api.rep.Config.Genesis.EpochInfo.FinanceParams.GasLimit
 	}
 
 	var feeCap *big.Int
@@ -485,7 +486,7 @@ func formatBlock(api api.CoreAPI, config *repo.Config, block *types.Block, fullT
 		"miner":            block.BlockHeader.ProposerAccount,
 		"extraData":        ethhexutil.Bytes{},
 		"size":             ethhexutil.Uint64(block.Size()),
-		"gasLimit":         ethhexutil.Uint64(config.Genesis.GasLimit), // Static gas limit
+		"gasLimit":         ethhexutil.Uint64(config.Genesis.EpochInfo.FinanceParams.GasLimit), // Static gas limit
 		"gasUsed":          ethhexutil.Uint64(block.BlockHeader.GasUsed),
 		"timestamp":        ethhexutil.Uint64(block.BlockHeader.Timestamp),
 		"transactions":     transactions,

@@ -42,7 +42,11 @@ func (api *AxiomAPI) GasPrice() *hexutil.Big {
 		queryFailedCounter.Inc()
 		api.logger.Errorf("get gas price err: %v", err)
 	}
-	out := big.NewInt(int64(gasPrice))
+	var gasPremium int64
+	if !api.rep.Config.JsonRPC.EnableTest {
+		gasPremium = int64(float64(gasPrice) * api.rep.Config.Genesis.EpochInfo.FinanceParams.GasPremiumRate)
+	}
+	out := big.NewInt(int64(gasPrice) + gasPremium)
 	return (*hexutil.Big)(out)
 }
 
