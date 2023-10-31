@@ -86,12 +86,12 @@ type Port struct {
 }
 
 type JsonRPC struct {
-	GasCap                       uint64   `mapstructure:"gas_cap" toml:"gas_cap"`
-	EVMTimeout                   Duration `mapstructure:"evm_timeout" toml:"evm_timeout"`
-	ReadLimiter                  JLimiter `mapstructure:"read_limiter" toml:"read_limiter"`
-	WriteLimiter                 JLimiter `mapstructure:"write_limiter" toml:"write_limiter"`
-	RejectTxsIfConsensusAbnormal bool     `mapstructure:"reject_txs_if_consensus_abnormal" toml:"reject_txs_if_consensus_abnormal"`
-	EnableTest                   bool     `mapstructure:"enable_test" toml:"enable_test"`
+	GasCap                         uint64   `mapstructure:"gas_cap" toml:"gas_cap"`
+	EVMTimeout                     Duration `mapstructure:"evm_timeout" toml:"evm_timeout"`
+	ReadLimiter                    JLimiter `mapstructure:"read_limiter" toml:"read_limiter"`
+	WriteLimiter                   JLimiter `mapstructure:"write_limiter" toml:"write_limiter"`
+	RejectTxsIfConsensusAbnormal   bool     `mapstructure:"reject_txs_if_consensus_abnormal" toml:"reject_txs_if_consensus_abnormal"`
+	DisableGasPriceAPIPricePremium bool     `mapstructure:"disable_gas_price_api_price_premium" toml:"disable_gas_price_api_price_premium"`
 }
 
 type P2PPipeGossipsub struct {
@@ -100,6 +100,7 @@ type P2PPipeGossipsub struct {
 	PeerOutboundBufferSize int      `mapstructure:"peer_outbound_buffer_size" toml:"peer_outbound_buffer_size"`
 	ValidateBufferSize     int      `mapstructure:"validate_buffer_size" toml:"validate_buffer_size"`
 	SeenMessagesTTL        Duration `mapstructure:"seen_messages_ttl" toml:"seen_messages_ttl"`
+	EnableMetrics          bool     `mapstructure:"enable_metrics" toml:"enable_metrics"`
 }
 
 type P2PPipeSimpleBroadcast struct {
@@ -124,7 +125,6 @@ type P2P struct {
 	Security               string   `mapstructure:"security" toml:"security"`
 	SendTimeout            Duration `mapstructure:"send_timeout" toml:"send_timeout"`
 	ReadTimeout            Duration `mapstructure:"read_timeout" toml:"read_timeout"`
-	Ping                   Ping     `mapstructure:"ping" toml:"ping"`
 	Pipe                   P2PPipe  `mapstructure:"pipe" toml:"pipe"`
 }
 
@@ -145,11 +145,6 @@ type JLimiter struct {
 	Quantum  int64    `mapstructure:"quantum" toml:"quantum"`
 	Capacity int64    `mapstructure:"capacity" toml:"capacity"`
 	Enable   bool     `mapstructure:"enable" toml:"enable"`
-}
-
-type Ping struct {
-	Enable   bool     `mapstructure:"enable" toml:"enable"`
-	Duration Duration `mapstructure:"duration" toml:"duration"`
 }
 
 type Log struct {
@@ -339,25 +334,21 @@ func DefaultConfig(epochEnable bool) *Config {
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
-				Enable:   true,
+				Enable:   false,
 			},
 			WriteLimiter: JLimiter{
 				Interval: 50,
 				Quantum:  500,
 				Capacity: 10000,
-				Enable:   true,
+				Enable:   false,
 			},
-			RejectTxsIfConsensusAbnormal: false,
-			EnableTest:                   false,
+			RejectTxsIfConsensusAbnormal:   false,
+			DisableGasPriceAPIPricePremium: false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
 			SendTimeout: Duration(5 * time.Second),
 			ReadTimeout: Duration(5 * time.Second),
-			Ping: Ping{
-				Enable:   false,
-				Duration: Duration(15 * time.Second),
-			},
 			Pipe: P2PPipe{
 				ReceiveMsgCacheSize: 10240,
 				BroadcastType:       P2PPipeBroadcastGossip,
@@ -370,6 +361,7 @@ func DefaultConfig(epochEnable bool) *Config {
 					PeerOutboundBufferSize: 10240,
 					ValidateBufferSize:     10240,
 					SeenMessagesTTL:        Duration(120 * time.Second),
+					EnableMetrics:          true,
 				},
 				UnicastReadTimeout:       Duration(5 * time.Second),
 				UnicastSendRetryNumber:   5,

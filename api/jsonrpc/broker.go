@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/node"
@@ -160,31 +160,30 @@ func (cbs *ChainBrokerService) Stop() error {
 
 func (cbs *ChainBrokerService) tokenBucketMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		readJsonRpc := cbs.rep.Config.JsonRPC.ReadLimiter.Enable
 		writeJsonRpc := cbs.rep.Config.JsonRPC.WriteLimiter.Enable
 
 		if !readJsonRpc && !writeJsonRpc {
 			next.ServeHTTP(w, r)
 		} else {
-			requestBody, err := ioutil.ReadAll(r.Body)
+			requestBody, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			// Restore the r.Body with the captured content.
-			r.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
+			r.Body = io.NopCloser(bytes.NewReader(requestBody))
 
-			newRequest, err := http.NewRequest(r.Method, r.URL.String(), ioutil.NopCloser(bytes.NewReader(requestBody)))
+			newRequest, err := http.NewRequest(r.Method, r.URL.String(), io.NopCloser(bytes.NewReader(requestBody)))
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			newRequest.Header = r.Header.Clone()
 
-			var request interface{}
+			var request any
 			var isJson = true
-			if err := json.NewDecoder(ioutil.NopCloser(bytes.NewReader(requestBody))).Decode(&request); err != nil {
+			if err := json.NewDecoder(io.NopCloser(bytes.NewReader(requestBody))).Decode(&request); err != nil {
 				isJson = false
 				cbs.logger.Error("tokenBucketMiddleware JSON decode error: ", err)
 			}
@@ -192,9 +191,9 @@ func (cbs *ChainBrokerService) tokenBucketMiddleware(next http.Handler) http.Han
 			var rateLimiter *ratelimiter.JRateLimiter
 			if isJson {
 				switch req := request.(type) {
-				case []interface{}:
+				case []any:
 					for _, req := range req {
-						if reqMap, ok := req.(map[string]interface{}); ok {
+						if reqMap, ok := req.(map[string]any); ok {
 							method, ok := reqMap["method"].(string)
 							if ok {
 								cbs.logger.Info("request method: ", method)
@@ -222,6 +221,5 @@ func (cbs *ChainBrokerService) tokenBucketMiddleware(next http.Handler) http.Han
 			}
 			next.ServeHTTP(w, newRequest)
 		}
-
 	})
 }
