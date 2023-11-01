@@ -250,12 +250,9 @@ func (bs *BlockSync) StartSync(peers []string, latestBlockHash string, quorum, c
 				}
 			default:
 				switch {
-				case bs.syncTaskDone.Load():
-					// if sync task done, waiting for quit signal
-					continue
-				case bs.requesterLen.Load() >= int64(bs.chunk.chunkSize):
-					// sleep a while to wait for chunk task done, but not block sync task
-					time.Sleep(requestInterval)
+				case bs.syncTaskDone.Load() || bs.requesterLen.Load() >= int64(bs.chunk.chunkSize):
+					// if sync task done, waiting for quit signal,
+					// if requesterLen >= chunkSize, wait for chunk task done
 					continue
 				default:
 					bs.makeRequesters(bs.curHeight + uint64(bs.requesterLen.Load()))
