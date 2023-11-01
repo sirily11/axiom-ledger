@@ -146,9 +146,12 @@ func NewAxiomLedgerWithoutConsensus(rep *repo.Repo, ctx context.Context, cancel 
 	}
 
 	vl := rwLdg.NewView()
-	sync, err := block_sync.NewBlockSync(loggers.Logger(loggers.BlockSync), vl.ChainLedger.GetBlock, net, rep.Config.Sync)
-	if err != nil {
-		return nil, fmt.Errorf("create block sync: %w", err)
+	var sync block_sync.Sync
+	if !rep.ReadonlyMode {
+		sync, err = block_sync.NewBlockSync(loggers.Logger(loggers.BlockSync), vl.ChainLedger.GetBlock, net, rep.Config.Sync)
+		if err != nil {
+			return nil, fmt.Errorf("create block sync: %w", err)
+		}
 	}
 
 	axm := &AxiomLedger{
