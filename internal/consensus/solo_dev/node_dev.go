@@ -7,6 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/sirupsen/logrus"
 
+	"github.com/axiomesh/axiom-ledger/pkg/events"
+
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
@@ -30,6 +32,7 @@ type NodeDev struct {
 	logger          logrus.FieldLogger // logger
 	GetAccountNonce GetAccountNonceFunc
 	txFeed          event.Feed
+	mockBlockFeed   event.Feed
 }
 
 func NewNode(config *common.Config) (*NodeDev, error) {
@@ -89,7 +92,7 @@ func (n *NodeDev) Ready() error {
 	return nil
 }
 
-func (n *NodeDev) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, _ *consensus.Checkpoint) {
+func (n *NodeDev) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, _ *consensus.Checkpoint, _ bool) {
 	if height%checkpoint == 0 {
 		n.logger.WithFields(logrus.Fields{
 			"height": height,
@@ -120,6 +123,10 @@ func (n *NodeDev) DelNode(_ uint64) error {
 
 func (n *NodeDev) SubscribeTxEvent(events chan<- []*types.Transaction) event.Subscription {
 	return n.txFeed.Subscribe(events)
+}
+
+func (n *NodeDev) SubscribeMockBlockEvent(ch chan<- events.ExecutedEvent) event.Subscription {
+	return n.mockBlockFeed.Subscribe(ch)
 }
 
 func (n *NodeDev) GetTotalPendingTxCount() uint64 {

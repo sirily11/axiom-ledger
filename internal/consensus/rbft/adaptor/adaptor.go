@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
@@ -51,7 +52,8 @@ type RBFTAdaptor struct {
 	broadcastNodes []string
 	ctx            context.Context
 
-	lock sync.Mutex
+	lock          sync.Mutex
+	MockBlockFeed event.Feed
 }
 
 type Ready struct {

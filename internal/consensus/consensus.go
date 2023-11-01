@@ -5,6 +5,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 
+	"github.com/axiomesh/axiom-ledger/pkg/events"
+
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
@@ -34,7 +36,7 @@ type Consensus interface {
 	Ready() error
 
 	// ReportState means block was persisted and report it to the consensus engine
-	ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, stateUpdatedCheckpoint *consensus.Checkpoint)
+	ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, stateUpdatedCheckpoint *consensus.Checkpoint, needRemoveTxs bool)
 
 	// Quorum means minimum number of nodes in the cluster that can work
 	Quorum() uint64
@@ -56,6 +58,8 @@ type Consensus interface {
 	GetAccountPoolMeta(account string, full bool) *common.AccountMeta
 
 	GetPoolMeta(full bool) *common.Meta
+
+	SubscribeMockBlockEvent(ch chan<- events.ExecutedEvent) event.Subscription
 }
 
 func New(consensusType string, opts ...common.Option) (Consensus, error) {

@@ -91,7 +91,7 @@ func TestNode_Start(t *testing.T) {
 
 	txHashList := make([]*types.Hash, 0)
 	txHashList = append(txHashList, tx.GetHash())
-	solo.ReportState(commitEvent.Block.Height(), blockHash, txHashList, nil)
+	solo.ReportState(commitEvent.Block.Height(), blockHash, txHashList, nil, false)
 	solo.Stop()
 }
 
@@ -166,7 +166,7 @@ func TestNode_ReportState(t *testing.T) {
 	ast.Nil(err)
 	defer node.Stop()
 	node.batchDigestM[10] = "test"
-	node.ReportState(10, types.NewHashByStr("0x123"), []*types.Hash{}, nil)
+	node.ReportState(10, types.NewHashByStr("0x123"), []*types.Hash{}, nil, false)
 	time.Sleep(10 * time.Millisecond)
 	ast.Equal(0, len(node.batchDigestM))
 
@@ -201,7 +201,7 @@ func TestNode_ReportState(t *testing.T) {
 
 	ast.NotNil(node.txpool.GetPendingTxByHash(txList[9].RbftGetTxHash()), "tx10 should be in txpool")
 	// trigger the report state
-	node.ReportState(10, types.NewHashByStr("0x123"), []*types.Hash{txList[9].GetHash()}, nil)
+	node.ReportState(10, types.NewHashByStr("0x123"), []*types.Hash{txList[9].GetHash()}, nil, false)
 	time.Sleep(100 * time.Millisecond)
 	ast.Equal(0, len(node.batchDigestM))
 	ast.Nil(node.txpool.GetPendingTxByHash(txList[9].RbftGetTxHash()), "tx10 should be removed from txpool")
