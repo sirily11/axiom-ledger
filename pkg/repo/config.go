@@ -255,11 +255,40 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 	var checkpointPeriod uint64 = 1
 	var highWatermarkCheckpointPeriod uint64 = 10
 	var proposerElectionType = rbft.ProposerElectionTypeRotating
+	var validatorSet, candidateSet []*rbft.NodeInfo
+
 	if epochEnable {
 		epochPeriod = 100
 		checkpointPeriod = 1
 		highWatermarkCheckpointPeriod = 10
 		proposerElectionType = rbft.ProposerElectionTypeWRF
+
+		candidateSet = lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) *rbft.NodeInfo {
+			idx += 4
+			return &rbft.NodeInfo{
+				ID:                   uint64(idx + 1),
+				AccountAddress:       DefaultNodeAddrs[idx],
+				P2PNodeID:            defaultNodeIDs[idx],
+				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 100,
+			}
+		})
+		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
+			return &rbft.NodeInfo{
+				ID:                   uint64(idx + 1),
+				AccountAddress:       DefaultNodeAddrs[idx],
+				P2PNodeID:            defaultNodeIDs[idx],
+				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 100,
+			}
+		})
+	} else {
+		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
+			return &rbft.NodeInfo{
+				ID:                   uint64(idx + 1),
+				AccountAddress:       DefaultNodeAddrs[idx],
+				P2PNodeID:            defaultNodeIDs[idx],
+				ConsensusVotingPower: 100,
+			}
+		})
 	}
 
 	financeInfo := &rbft.Finance{
@@ -289,24 +318,8 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			ExcludeView:                   100,
 			ProposerElectionType:          proposerElectionType,
 		},
-		CandidateSet: lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) *rbft.NodeInfo {
-			idx += 4
-			return &rbft.NodeInfo{
-				ID:                   uint64(idx + 1),
-				AccountAddress:       DefaultNodeAddrs[idx],
-				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: int64(idx+1) * 100,
-			}
-		}),
-		ValidatorSet: lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
-			return &rbft.NodeInfo{
-				ID:                   uint64(idx + 1),
-				AccountAddress:       DefaultNodeAddrs[idx],
-				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: int64(idx+1) * 100,
-			}
-		}),
-
+		CandidateSet:  candidateSet,
+		ValidatorSet:  validatorSet,
 		FinanceParams: financeInfo,
 		ConfigParams: &rbft.ConfigParams{
 			TxMaxSize: DefaultTxMaxSize,

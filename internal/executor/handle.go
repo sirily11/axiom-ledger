@@ -213,6 +213,9 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 
 	// metrics for cal tx tps
 	txCounter.Add(float64(len(data.Block.Transactions)))
+	if block.BlockHeader.ProposerAccount == exec.rep.AccountAddress {
+		proposedBlockCounter.Inc()
+	}
 
 	exec.logger.WithFields(logrus.Fields{
 		"gasPrice": data.Block.BlockHeader.GasPrice,
