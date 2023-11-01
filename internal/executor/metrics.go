@@ -37,6 +37,12 @@ var (
 		Name:      "tx_counter",
 		Help:      "the total number of transactions",
 	})
+	proposedBlockCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "axiom_ledger",
+		Subsystem: "executor",
+		Name:      "proposed_block_counter",
+		Help:      "the total number of node proposed blocks",
+	})
 )
 
 func init() {
@@ -45,4 +51,5 @@ func init() {
 	prometheus.MustRegister(calcBlockSize)
 	prometheus.MustRegister(executeBlockDuration)
 	prometheus.MustRegister(txCounter)
+	prometheus.MustRegister(proposedBlockCounter)
 }

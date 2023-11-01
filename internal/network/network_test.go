@@ -176,7 +176,7 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
-	epochInfo := repo.GenesisEpochInfo(false)
+	epochInfo := repo.GenesisEpochInfo(true)
 	epochInfo.CandidateSet = append(epochInfo.CandidateSet, &rbft.NodeInfo{
 		ID:             9,
 		P2PNodeID:      "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",

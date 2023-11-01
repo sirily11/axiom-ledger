@@ -44,7 +44,7 @@ func TestEpochManager(t *testing.T) {
 	_, err = epochMgr.Run(nil)
 	assert.Error(t, err)
 
-	g := repo.GenesisEpochInfo(false)
+	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
 	err = InitEpochInfo(stateLedger, g)
@@ -93,7 +93,7 @@ func TestEpochManager(t *testing.T) {
 func TestInitEpochInfo_InvalidNodeInfo(t *testing.T) {
 	stateLedger := prepareLedger(t)
 
-	g := repo.GenesisEpochInfo(false)
+	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
 
@@ -165,7 +165,7 @@ func TestAddNode(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	g := repo.GenesisEpochInfo(false)
+	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
 	g.DataSyncerSet = append(g.DataSyncerSet, &rbft.NodeInfo{
@@ -264,7 +264,7 @@ func TestRemoveNode(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	g := repo.GenesisEpochInfo(false)
+	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
 	g.DataSyncerSet = append(g.DataSyncerSet, &rbft.NodeInfo{
