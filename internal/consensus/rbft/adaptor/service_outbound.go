@@ -13,6 +13,7 @@ import (
 	rbfttypes "github.com/axiomesh/axiom-bft/types"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
+	"github.com/axiomesh/axiom-ledger/pkg/events"
 )
 
 func (a *RBFTAdaptor) Execute(requests []*types.Transaction, localList []bool, seqNo uint64, timestamp int64, proposerAccount string) {
@@ -65,11 +66,19 @@ func (a *RBFTAdaptor) StateUpdate(lowWatermark, seqNo uint64, digest string, che
 			startHeight = lowWatermark + 1
 			latestBlockHash = localBlock.BlockHash.String()
 		} else {
+			txHashList := make([]*types.Hash, len(localBlock.Transactions))
+			lo.ForEach(localBlock.Transactions, func(tx *types.Transaction, index int) {
+				txHashList[index] = tx.GetHash()
+			})
+
+			// notify rbft report State Updated
+			a.postMockBlockEvent(localBlock, txHashList, checkpoints[0].GetCheckpoint())
 			a.logger.WithFields(logrus.Fields{
 				"remote": digest,
 				"local":  localBlock.BlockHash.String(),
 				"height": seqNo,
-			}).Info("state update is ignored, because we have the same block")
+			}).Info("because we have the same block," +
+				" we will post mock block event to report State Updated")
 			return
 		}
 	}
@@ -155,6 +164,14 @@ func (a *RBFTAdaptor) postCommitEvent(commitEvent *common.CommitEvent) {
 
 func (a *RBFTAdaptor) GetCommitChannel() chan *common.CommitEvent {
 	return a.BlockC
+}
+
+func (a *RBFTAdaptor) postMockBlockEvent(block *types.Block, txHashList []*types.Hash, ckp *consensus.Checkpoint) {
+	a.MockBlockFeed.Send(events.ExecutedEvent{
+		Block:                  block,
+		TxHashList:             txHashList,
+		StateUpdatedCheckpoint: ckp,
+	})
 }
 
 func CalQuorum(N uint64) uint64 {

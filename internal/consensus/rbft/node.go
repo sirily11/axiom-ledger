@@ -24,6 +24,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/rbft/adaptor"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/txcache"
 	"github.com/axiomesh/axiom-ledger/internal/network"
+	"github.com/axiomesh/axiom-ledger/pkg/events"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	p2p "github.com/axiomesh/axiom-p2p"
 )
@@ -423,7 +424,7 @@ func (n *Node) GetPoolMeta(full bool) *common.Meta {
 	return common.MetaFromTxpool(n.n.GetPoolMeta(full))
 }
 
-func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, ckp *consensus.Checkpoint) {
+func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, ckp *consensus.Checkpoint, needRemoveTxs bool) {
 	// need update cached epoch info
 	epochInfo := n.stack.EpochInfo
 	epochChanged := false
@@ -466,6 +467,14 @@ func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*t
 			n.stack.StateUpdating = false
 		}
 
+		if needRemoveTxs {
+			// notify tx pool remove these committed tx
+			committedTxHashList := make([]string, len(txHashList))
+			lo.ForEach(txHashList, func(item *types.Hash, index int) {
+				committedTxHashList[index] = item.String()
+			})
+			n.n.ReportStateUpdatingBatches(committedTxHashList)
+		}
 		return
 	}
 
@@ -481,6 +490,10 @@ func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*t
 	if n.stack.StateUpdateHeight == height {
 		n.stack.StateUpdating = false
 	}
+}
+
+func (n *Node) SubscribeMockBlockEvent(ch chan<- events.ExecutedEvent) event.Subscription {
+	return n.stack.MockBlockFeed.Subscribe(ch)
 }
 
 func (n *Node) verifyStateUpdatedCheckpoint(checkpoint *consensus.Checkpoint) error {

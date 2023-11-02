@@ -20,14 +20,24 @@ func (axm *AxiomLedger) listenWaitReportBlock() {
 	blockSub := axm.BlockExecutor.SubscribeBlockEvent(blockCh)
 	defer blockSub.Unsubscribe()
 
+	mockBlockCh := make(chan events.ExecutedEvent)
+	mockBlockSub := axm.Consensus.SubscribeMockBlockEvent(mockBlockCh)
+	defer mockBlockSub.Unsubscribe()
+
 	for {
 		select {
 		case <-axm.Ctx.Done():
 			return
 		case ev := <-blockCh:
-			axm.Consensus.ReportState(ev.Block.BlockHeader.Number, ev.Block.BlockHash, ev.TxHashList, ev.StateUpdatedCheckpoint)
+			axm.reportBlock(ev, true)
+		case ev := <-mockBlockCh:
+			axm.reportBlock(ev, false)
 		}
 	}
+}
+
+func (axm *AxiomLedger) reportBlock(ev events.ExecutedEvent, needRemoveTxs bool) {
+	axm.Consensus.ReportState(ev.Block.BlockHeader.Number, ev.Block.BlockHash, ev.TxHashList, ev.StateUpdatedCheckpoint, needRemoveTxs)
 }
 
 func (axm *AxiomLedger) listenWaitExecuteBlock() {

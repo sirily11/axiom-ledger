@@ -247,10 +247,10 @@ func AriesConsensusConfig() *ConsensusConfig {
 			SetTimeout: Duration(100 * time.Millisecond),
 		},
 		Rbft: RBFT{
-			EnableMultiPipes: false,
-			EnableMetrics:    true,
-			CheckInterval:    Duration(3 * time.Minute),
-			MinimumNumberOfBatchesToRetainAfterCheckpoint: 10,
+			EnableMultiPipes:          false,
+			EnableMetrics:             true,
+			CheckInterval:             Duration(3 * time.Minute),
+			CommittedBlockCacheNumber: 10,
 			Timeout: RBFTTimeout{
 				SyncState:        Duration(3 * time.Second),
 				SyncInterval:     Duration(1 * time.Minute),

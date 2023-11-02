@@ -17,6 +17,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/precheck"
 	"github.com/axiomesh/axiom-ledger/internal/network"
+	"github.com/axiomesh/axiom-ledger/pkg/events"
 	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
@@ -46,7 +47,8 @@ type Node struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	sync.RWMutex
-	txFeed event.Feed
+	txFeed        event.Feed
+	mockBlockFeed event.Feed
 }
 
 func NewNode(config *common.Config) (*Node, error) {
@@ -189,7 +191,7 @@ func (n *Node) Ready() error {
 	return nil
 }
 
-func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, _ *consensus.Checkpoint) {
+func (n *Node) ReportState(height uint64, blockHash *types.Hash, txHashList []*types.Hash, _ *consensus.Checkpoint, _ bool) {
 	state := &chainState{
 		Height:     height,
 		BlockHash:  blockHash,
@@ -204,6 +206,10 @@ func (n *Node) Quorum() uint64 {
 
 func (n *Node) SubscribeTxEvent(events chan<- []*types.Transaction) event.Subscription {
 	return n.txFeed.Subscribe(events)
+}
+
+func (n *Node) SubscribeMockBlockEvent(ch chan<- events.ExecutedEvent) event.Subscription {
+	return n.mockBlockFeed.Subscribe(ch)
 }
 
 func (n *Node) SubmitTxsFromRemote(_ [][]byte) error {

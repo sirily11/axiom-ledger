@@ -309,13 +309,13 @@ func TestReportState(t *testing.T) {
 	block := testutil.ConstructBlock("blockHash", uint64(20))
 	node.stack.StateUpdating = true
 	node.stack.StateUpdateHeight = 20
-	node.ReportState(uint64(10), block.BlockHash, nil, nil)
+	node.ReportState(uint64(10), block.BlockHash, nil, nil, false)
 	ast.Equal(true, node.stack.StateUpdating)
 
-	node.ReportState(uint64(20), block.BlockHash, nil, nil)
+	node.ReportState(uint64(20), block.BlockHash, nil, nil, false)
 	ast.Equal(false, node.stack.StateUpdating)
 
-	node.ReportState(uint64(21), block.BlockHash, nil, nil)
+	node.ReportState(uint64(21), block.BlockHash, nil, nil, false)
 	ast.Equal(false, node.stack.StateUpdating)
 
 	t.Run("ReportStateUpdating with checkpoint", func(t *testing.T) {
@@ -331,7 +331,7 @@ func TestReportState(t *testing.T) {
 				Digest: block30.BlockHash.String(),
 			},
 		}
-		node.ReportState(uint64(30), block.BlockHash, nil, ckp)
+		node.ReportState(uint64(30), block.BlockHash, nil, ckp, false)
 		ast.Equal(false, node.stack.StateUpdating)
 	})
 }
