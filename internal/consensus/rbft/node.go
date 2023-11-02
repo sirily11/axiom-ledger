@@ -13,8 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 
-	"github.com/axiomesh/axiom-ledger/pkg/events"
-
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-bft/common/consensus"
 	"github.com/axiomesh/axiom-bft/txpool"
@@ -26,6 +24,7 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/consensus/rbft/adaptor"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/txcache"
 	"github.com/axiomesh/axiom-ledger/internal/network"
+	"github.com/axiomesh/axiom-ledger/pkg/events"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	p2p "github.com/axiomesh/axiom-p2p"
 )

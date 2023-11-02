@@ -16,29 +16,29 @@ import (
 
 func defaultRbftConfig() rbft.Config {
 	return rbft.Config{
-		Applied:                 0,
-		SetSize:                 1000,
-		SetTimeout:              100 * time.Millisecond,
-		BatchTimeout:            200 * time.Millisecond,
-		RequestTimeout:          6 * time.Second,
-		NullRequestTimeout:      9 * time.Second,
-		VcResendTimeout:         8 * time.Second,
-		CleanVCTimeout:          60 * time.Second,
-		NewViewTimeout:          1 * time.Second,
-		SyncStateTimeout:        3 * time.Second,
-		SyncStateRestartTimeout: 40 * time.Second,
-		FetchCheckpointTimeout:  5 * time.Second,
-		FetchViewTimeout:        1 * time.Second,
-		CheckPoolTimeout:        100 * time.Second,
-		FlowControl:             false,
-		FlowControlMaxMem:       0,
-		MetricsProv:             &disabled.Provider{},
-		Tracer:                  trace.NewNoopTracerProvider().Tracer("axiom-ledger"),
-		DelFlag:                 make(chan bool, 10),
-		Logger:                  nil,
-		NoTxBatchTimeout:        0,
-		CheckPoolRemoveTimeout:  30 * time.Minute,
-		MinimumNumberOfBatchesToRetainAfterCheckpoint: 10,
+		Applied:                   0,
+		SetSize:                   1000,
+		SetTimeout:                100 * time.Millisecond,
+		BatchTimeout:              200 * time.Millisecond,
+		RequestTimeout:            6 * time.Second,
+		NullRequestTimeout:        9 * time.Second,
+		VcResendTimeout:           8 * time.Second,
+		CleanVCTimeout:            60 * time.Second,
+		NewViewTimeout:            1 * time.Second,
+		SyncStateTimeout:          3 * time.Second,
+		SyncStateRestartTimeout:   40 * time.Second,
+		FetchCheckpointTimeout:    5 * time.Second,
+		FetchViewTimeout:          1 * time.Second,
+		CheckPoolTimeout:          100 * time.Second,
+		FlowControl:               false,
+		FlowControlMaxMem:         0,
+		MetricsProv:               &disabled.Provider{},
+		Tracer:                    trace.NewNoopTracerProvider().Tracer("axiom-ledger"),
+		DelFlag:                   make(chan bool, 10),
+		Logger:                    nil,
+		NoTxBatchTimeout:          0,
+		CheckPoolRemoveTimeout:    30 * time.Minute,
+		CommittedBlockCacheNumber: 10,
 	}
 }
 
@@ -99,8 +99,8 @@ func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
 			Name: "rbft",
 		}
 	}
-	if readConfig.Rbft.MinimumNumberOfBatchesToRetainAfterCheckpoint > 0 {
-		defaultConfig.MinimumNumberOfBatchesToRetainAfterCheckpoint = readConfig.Rbft.MinimumNumberOfBatchesToRetainAfterCheckpoint
+	if readConfig.Rbft.CommittedBlockCacheNumber > 0 {
+		defaultConfig.CommittedBlockCacheNumber = readConfig.Rbft.CommittedBlockCacheNumber
 	}
 	fn := func(addr string) uint64 {
 		return config.GetAccountNonce(types.NewAddressByStr(addr))

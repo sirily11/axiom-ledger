@@ -3,7 +3,6 @@ package adaptor
 import (
 	"context"
 	"crypto/ecdsa"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/samber/lo"
@@ -52,7 +51,6 @@ type RBFTAdaptor struct {
 	broadcastNodes []string
 	ctx            context.Context
 
-	lock          sync.Mutex
 	MockBlockFeed event.Feed
 }
 
