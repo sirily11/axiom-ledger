@@ -299,7 +299,11 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (ret common.Ha
 		if from == nil {
 			return [32]byte{}, errors.New("verify tx err")
 		}
-		if err := access.Verify(api.api.Broker().GetViewStateLedger().NewView(), from.String()); err != nil {
+		stateLedger, err := getStateLedgerAt(api.api, nil) // use the latest block
+		if err != nil {
+			return [32]byte{}, err
+		}
+		if err := access.Verify(stateLedger, from.String()); err != nil {
 			return [32]byte{}, err
 		}
 	}

@@ -30,8 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-//go:generate go run github.com/fjl/gencodec -type account -field-override accountMarshaling -out gen_account_json.go
-
 func init() {
 	tracers.DefaultDirectory.Register("prestateTracer", newPrestateTracer, false)
 }

@@ -236,6 +236,9 @@ func (l *StateLedgerImpl) flushDirtyData() (map[string]IAccount, *types.Hash) {
 
 // Commit the state, and get account trie root hash
 func (l *StateLedgerImpl) Commit() (*types.Hash, error) {
+	l.logger.Debugf("==================[Commit-Start]==================")
+	defer l.logger.Debugf("==================[Commit-End]==================")
+
 	accounts, journalHash := l.flushDirtyData()
 	height := l.blockHeight
 
@@ -263,24 +266,31 @@ func (l *StateLedgerImpl) Commit() (*types.Hash, error) {
 			ldbBatch.Put(compositeCodeKey(account.Addr, account.dirtyAccount.CodeHash), account.dirtyCode)
 		}
 
+		l.logger.Debugf("[Commit-Before] committing storage trie begin, addr: %v,account.dirtyAccount.StorageRoot: %v", account.Addr, account.dirtyAccount.StorageRoot)
+
 		stateSize := 0
-		for key, valBytes := range account.dirtyState {
+		for key, valBytes := range account.pendingState {
 			origValBytes := account.originState[key]
 
 			if !bytes.Equal(origValBytes, valBytes) {
 				if err := account.storageTrie.Update(height, compositeStorageKey(account.Addr, []byte(key)), valBytes); err != nil {
 					panic(err)
 				}
-				l.logger.Debugf("[Commit] update storage trie, addr: %v, key: %v, origin state: %v, dirty state: %v", account.Addr, &bytesLazyLogger{bytes: compositeStorageKey(account.Addr, []byte(key))}, &bytesLazyLogger{bytes: origValBytes}, &bytesLazyLogger{bytes: valBytes})
+				if account.storageTrie.Root() != nil {
+					l.logger.Debugf("[Commit-Update-After][%v] after updating storage trie, addr: %v, key: %v, origin state: %v, "+
+						"dirty state: %v, root node: %v", stateSize, account.Addr, &bytesLazyLogger{bytes: compositeStorageKey(account.Addr, []byte(key))},
+						&bytesLazyLogger{bytes: origValBytes}, &bytesLazyLogger{bytes: valBytes}, account.storageTrie.Root().Print())
+				}
+				stateSize++
 			}
-		}
-		if l.enableExpensiveMetric {
-			stateFlushSize.Set(float64(stateSize))
 		}
 		// commit account's storage trie
 		if account.storageTrie != nil {
 			account.dirtyAccount.StorageRoot = account.storageTrie.Commit()
-			l.logger.Debugf("[Commit] after committed account storage trie, addr: %v,account.dirtyAccount.StorageRoot: %v", account.Addr, account.dirtyAccount.StorageRoot)
+			l.logger.Debugf("[Commit-After] committing storage trie end, addr: %v,account.dirtyAccount.StorageRoot: %v", account.Addr, account.dirtyAccount.StorageRoot)
+		}
+		if l.enableExpensiveMetric {
+			stateFlushSize.Set(float64(stateSize))
 		}
 		// update account trie if needed
 		if InnerAccountChanged(account.originAccount, account.dirtyAccount) {
@@ -301,6 +311,7 @@ func (l *StateLedgerImpl) Commit() (*types.Hash, error) {
 	if l.enableExpensiveMetric {
 		accountFlushSize.Set(float64(accSize))
 	}
+	l.logger.Debugf("[Commit] after committed world state trie, StateRoot: %v", stateRoot)
 
 	blockJournal, ok := l.blockJournals[journalHash.String()]
 	if !ok {

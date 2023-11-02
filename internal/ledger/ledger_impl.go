@@ -65,7 +65,6 @@ func (l *Ledger) PersistBlockData(blockData *BlockData) {
 	block := blockData.Block
 	receipts := blockData.Receipts
 
-	current = time.Now()
 	if err := l.ChainLedger.PersistExecutionResult(block, receipts); err != nil {
 		panic(err)
 	}

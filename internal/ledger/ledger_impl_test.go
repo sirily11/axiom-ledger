@@ -231,25 +231,6 @@ func TestNew005(t *testing.T) {
 	}
 }
 
-func Test_KV_Compatibility(t *testing.T) {
-	testcase := map[string]struct {
-		kvType string
-	}{
-		"leveldb": {kvType: "leveldb"},
-		"pebble":  {kvType: "pebble"},
-	}
-
-	for name, tc := range testcase {
-		t.Run(name, func(t *testing.T) {
-			testChainLedger_EVMAccessor(t, tc.kvType)
-			testChainLedger_Rollback(t, tc.kvType)
-			testChainLedger_GetAccount(t, tc.kvType)
-			testChainLedger_GetCode(t, tc.kvType)
-			testChainLedger_AddState(t, tc.kvType)
-		})
-	}
-}
-
 func TestChainLedger_PersistBlockData(t *testing.T) {
 	testcase := map[string]struct {
 		kvType string
@@ -291,6 +272,7 @@ func TestChainLedger_Commit(t *testing.T) {
 
 			sl.blockHeight = 1
 			sl.SetState(account, []byte("a"), []byte("b"))
+			sl.Finalise()
 			stateRoot1, err := sl.Commit()
 			assert.NotNil(t, stateRoot1)
 			assert.Nil(t, err)
@@ -300,14 +282,16 @@ func TestChainLedger_Commit(t *testing.T) {
 			assert.Equal(t, uint64(1), sl.Version())
 
 			sl.blockHeight = 2
+			sl.Finalise()
 			stateRoot2, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(2), sl.Version())
 			assert.Equal(t, stateRoot1, stateRoot2)
 
-			lg.StateLedger.SetState(account, []byte("a"), []byte("3"))
-			lg.StateLedger.SetState(account, []byte("a"), []byte("2"))
+			sl.SetState(account, []byte("a"), []byte("3"))
+			sl.SetState(account, []byte("a"), []byte("2"))
 			sl.blockHeight = 3
+			sl.Finalise()
 			stateRoot3, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(3), lg.StateLedger.Version())
@@ -325,6 +309,7 @@ func TestChainLedger_Commit(t *testing.T) {
 			lg.StateLedger.SetState(account, []byte("b"), []byte("3"))
 			lg.StateLedger.SetState(account, []byte("c"), []byte("2"))
 			sl.blockHeight = 5
+			sl.Finalise()
 			stateRoot5, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(5), lg.StateLedger.Version())
@@ -418,330 +403,386 @@ func TestChainLedger_Commit(t *testing.T) {
 	}
 }
 
-func testChainLedger_EVMAccessor(t *testing.T, kvType
-string) {
-ledger, _ := initLedger(t, "", kvType)
+func TestChainLedger_EVMAccessor(t *testing.T) {
+	testcase := map[string]struct {
+		kvType string
+	}{
+		"leveldb": {kvType: "leveldb"},
+		"pebble":  {kvType: "pebble"},
+	}
 
-hash := common.HexToHash("0xe9FC370DD36C9BD5f67cCfbc031C909F53A3d8bC7084C01362c55f2D42bA841c")
-// create an account
-account := common.BytesToAddress(LeftPadBytes([]byte{100}, 20))
+	for name, tc := range testcase {
+		t.Run(name, func(t *testing.T) {
+			ledger, _ := initLedger(t, "", tc.kvType)
 
-ledger.StateLedger.(*StateLedgerImpl).CreateEVMAccount(account)
-ledger.StateLedger.(*StateLedgerImpl).AddEVMBalance(account, big.NewInt(2))
-balance := ledger.StateLedger.(*StateLedgerImpl).GetEVMBalance(account)
-assert.Equal(t, balance, big.NewInt(2))
-ledger.StateLedger.(*StateLedgerImpl).SubEVMBalance(account, big.NewInt(1))
-balance = ledger.StateLedger.(*StateLedgerImpl).GetEVMBalance(account)
-assert.Equal(t, balance, big.NewInt(1))
-ledger.StateLedger.(*StateLedgerImpl).SetEVMNonce(account, 10)
-nonce := ledger.StateLedger.(*StateLedgerImpl).GetEVMNonce(account)
-assert.Equal(t, nonce, uint64(10))
-ledger.StateLedger.(*StateLedgerImpl).GetEVMCodeHash(account)
-ledger.StateLedger.(*StateLedgerImpl).SetEVMCode(account, []byte("111"))
-code := ledger.StateLedger.(*StateLedgerImpl).GetEVMCode(account)
-assert.Equal(t, code, []byte("111"))
-codeSize := ledger.StateLedger.(*StateLedgerImpl).GetEVMCodeSize(account)
-assert.Equal(t, codeSize, 3)
-ledger.StateLedger.(*StateLedgerImpl).AddEVMRefund(2)
-refund := ledger.StateLedger.(*StateLedgerImpl).GetEVMRefund()
-assert.Equal(t, refund, uint64(2))
-ledger.StateLedger.(*StateLedgerImpl).SubEVMRefund(1)
-refund = ledger.StateLedger.(*StateLedgerImpl).GetEVMRefund()
-assert.Equal(t, refund, uint64(1))
-ledger.StateLedger.(*StateLedgerImpl).GetEVMCommittedState(account, hash)
-ledger.StateLedger.(*StateLedgerImpl).SetEVMState(account, hash, hash)
-value := ledger.StateLedger.(*StateLedgerImpl).GetEVMState(account, hash)
-assert.Equal(t, value, hash)
-ledger.StateLedger.(*StateLedgerImpl).SuicideEVM(account)
-isSuicide := ledger.StateLedger.(*StateLedgerImpl).HasSuicideEVM(account)
-assert.Equal(t, isSuicide, false)
-isExist := ledger.StateLedger.(*StateLedgerImpl).ExistEVM(account)
-assert.Equal(t, isExist, true)
-isEmpty := ledger.StateLedger.(*StateLedgerImpl).EmptyEVM(account)
-assert.Equal(t, isEmpty, false)
-ledger.StateLedger.(*StateLedgerImpl).PrepareEVMAccessList(account, &account, []common.Address{}, etherTypes.AccessList{})
-ledger.StateLedger.(*StateLedgerImpl).AddAddressToEVMAccessList(account)
-isIn := ledger.StateLedger.(*StateLedgerImpl).AddressInEVMAccessList(account)
-assert.Equal(t, isIn, true)
-ledger.StateLedger.(*StateLedgerImpl).AddSlotToEVMAccessList(account, hash)
-isSlotIn, _ := ledger.StateLedger.(*StateLedgerImpl).SlotInEVMAceessList(account, hash)
-assert.Equal(t, isSlotIn, true)
-ledger.StateLedger.(*StateLedgerImpl).AddEVMPreimage(hash, []byte("1111"))
-// ledger.StateLedgerImpl.(*SimpleLedger).PrepareEVM(hash, 1)
-ledger.StateLedger.(*StateLedgerImpl).StateDB()
-ledger.StateLedger.SetTxContext(types.NewHash(hash.Bytes()), 1)
-ledger.StateLedger.(*StateLedgerImpl).AddEVMLog(&etherTypes.Log{})
+			hash := common.HexToHash("0xe9FC370DD36C9BD5f67cCfbc031C909F53A3d8bC7084C01362c55f2D42bA841c")
+			// create an account
+			account := common.BytesToAddress(LeftPadBytes([]byte{100}, 20))
 
-addr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-ledger.StateLedger.(*StateLedgerImpl).transientStorage = newTransientStorage()
-ledger.StateLedger.(*StateLedgerImpl).SetEVMTransientState(addr, hash, hash)
-ledger.StateLedger.(*StateLedgerImpl).GetEVMTransientState(addr, hash)
-_ = ledger.StateLedger.(*StateLedgerImpl).transientStorage.Copy()
-ledger.StateLedger.PrepareEVM(params.Rules{IsBerlin: true}, addr, addr, &addr, []common.Address{addr}, nil)
+			ledger.StateLedger.(*StateLedgerImpl).CreateEVMAccount(account)
+			ledger.StateLedger.(*StateLedgerImpl).AddEVMBalance(account, big.NewInt(2))
+			balance := ledger.StateLedger.(*StateLedgerImpl).GetEVMBalance(account)
+			assert.Equal(t, balance, big.NewInt(2))
+			ledger.StateLedger.(*StateLedgerImpl).SubEVMBalance(account, big.NewInt(1))
+			balance = ledger.StateLedger.(*StateLedgerImpl).GetEVMBalance(account)
+			assert.Equal(t, balance, big.NewInt(1))
+			ledger.StateLedger.(*StateLedgerImpl).SetEVMNonce(account, 10)
+			nonce := ledger.StateLedger.(*StateLedgerImpl).GetEVMNonce(account)
+			assert.Equal(t, nonce, uint64(10))
+			ledger.StateLedger.(*StateLedgerImpl).GetEVMCodeHash(account)
+			ledger.StateLedger.(*StateLedgerImpl).SetEVMCode(account, []byte("111"))
+			code := ledger.StateLedger.(*StateLedgerImpl).GetEVMCode(account)
+			assert.Equal(t, code, []byte("111"))
+			codeSize := ledger.StateLedger.(*StateLedgerImpl).GetEVMCodeSize(account)
+			assert.Equal(t, codeSize, 3)
+			ledger.StateLedger.(*StateLedgerImpl).AddEVMRefund(2)
+			refund := ledger.StateLedger.(*StateLedgerImpl).GetEVMRefund()
+			assert.Equal(t, refund, uint64(2))
+			ledger.StateLedger.(*StateLedgerImpl).SubEVMRefund(1)
+			refund = ledger.StateLedger.(*StateLedgerImpl).GetEVMRefund()
+			assert.Equal(t, refund, uint64(1))
+			ledger.StateLedger.(*StateLedgerImpl).GetEVMCommittedState(account, hash)
+			ledger.StateLedger.(*StateLedgerImpl).SetEVMState(account, hash, hash)
+			value := ledger.StateLedger.(*StateLedgerImpl).GetEVMState(account, hash)
+			assert.Equal(t, value, hash)
+			ledger.StateLedger.(*StateLedgerImpl).SuicideEVM(account)
+			isSuicide := ledger.StateLedger.(*StateLedgerImpl).HasSuicideEVM(account)
+			assert.Equal(t, isSuicide, false)
+			isExist := ledger.StateLedger.(*StateLedgerImpl).ExistEVM(account)
+			assert.Equal(t, isExist, true)
+			isEmpty := ledger.StateLedger.(*StateLedgerImpl).EmptyEVM(account)
+			assert.Equal(t, isEmpty, false)
+			ledger.StateLedger.(*StateLedgerImpl).PrepareEVMAccessList(account, &account, []common.Address{}, etherTypes.AccessList{})
+			ledger.StateLedger.(*StateLedgerImpl).AddAddressToEVMAccessList(account)
+			isIn := ledger.StateLedger.(*StateLedgerImpl).AddressInEVMAccessList(account)
+			assert.Equal(t, isIn, true)
+			ledger.StateLedger.(*StateLedgerImpl).AddSlotToEVMAccessList(account, hash)
+			isSlotIn, _ := ledger.StateLedger.(*StateLedgerImpl).SlotInEVMAceessList(account, hash)
+			assert.Equal(t, isSlotIn, true)
+			ledger.StateLedger.(*StateLedgerImpl).AddEVMPreimage(hash, []byte("1111"))
+			// ledger.StateLedgerImpl.(*SimpleLedger).PrepareEVM(hash, 1)
+			ledger.StateLedger.(*StateLedgerImpl).StateDB()
+			ledger.StateLedger.SetTxContext(types.NewHash(hash.Bytes()), 1)
+			ledger.StateLedger.(*StateLedgerImpl).AddEVMLog(&etherTypes.Log{})
+
+			addr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+			ledger.StateLedger.(*StateLedgerImpl).transientStorage = newTransientStorage()
+			ledger.StateLedger.(*StateLedgerImpl).SetEVMTransientState(addr, hash, hash)
+			ledger.StateLedger.(*StateLedgerImpl).GetEVMTransientState(addr, hash)
+			_ = ledger.StateLedger.(*StateLedgerImpl).transientStorage.Copy()
+			ledger.StateLedger.PrepareEVM(params.Rules{IsBerlin: true}, addr, addr, &addr, []common.Address{addr}, nil)
+		})
+	}
 }
 
-func testChainLedger_Rollback(t *testing.T, kvType
-string) {
-ledger, repoRoot := initLedger(t, "", kvType)
-stateLedger := ledger.StateLedger.(*StateLedgerImpl)
+func TestChainLedger_Rollback(t *testing.T) {
+	testcase := map[string]struct {
+		kvType string
+	}{
+		"leveldb": {kvType: "leveldb"},
+		"pebble":  {kvType: "pebble"},
+	}
 
-// create an addr0
-addr0 := types.NewAddress(LeftPadBytes([]byte{100}, 20))
-addr1 := types.NewAddress(LeftPadBytes([]byte{101}, 20))
+	for name, tc := range testcase {
+		t.Run(name, func(t *testing.T) {
+			ledger, repoRoot := initLedger(t, "", tc.kvType)
+			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
 
-hash0 := types.Hash{}
-assert.Equal(t, &hash0, stateLedger.prevJnlHash)
+			// create an addr0
+			addr0 := types.NewAddress(LeftPadBytes([]byte{100}, 20))
+			addr1 := types.NewAddress(LeftPadBytes([]byte{101}, 20))
 
-ledger.StateLedger.PrepareBlock(nil, nil, 1)
-ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(1))
-stateRoot1, err := stateLedger.Commit()
-assert.Nil(t, err)
-assert.NotNil(t, stateRoot1)
-ledger.PersistBlockData(genBlockData(1, stateRoot1))
+			hash0 := types.Hash{}
+			assert.Equal(t, &hash0, stateLedger.prevJnlHash)
 
-ledger.StateLedger.PrepareBlock(stateRoot1, nil, 2)
-ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(2))
-ledger.StateLedger.SetState(addr0, []byte("a"), []byte("2"))
+			ledger.StateLedger.PrepareBlock(nil, nil, 1)
+			ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(1))
+			stateLedger.Finalise()
+			stateRoot1, err := stateLedger.Commit()
+			assert.Nil(t, err)
+			assert.NotNil(t, stateRoot1)
+			ledger.PersistBlockData(genBlockData(1, stateRoot1))
 
-code := sha256.Sum256([]byte("code"))
-ret := crypto1.Keccak256Hash(code[:])
-codeHash := ret.Bytes()
-ledger.StateLedger.SetCode(addr0, code[:])
-	ledger.StateLedger.Finalise()
+			ledger.StateLedger.PrepareBlock(stateRoot1, nil, 2)
+			ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(2))
+			ledger.StateLedger.SetState(addr0, []byte("a"), []byte("2"))
 
-	stateRoot2, err := stateLedger.Commit()
-	assert.Nil(t, err)
-	ledger.PersistBlockData(genBlockData(2, stateRoot2))
+			code := sha256.Sum256([]byte("code"))
+			ret := crypto1.Keccak256Hash(code[:])
+			codeHash := ret.Bytes()
+			ledger.StateLedger.SetCode(addr0, code[:])
+			ledger.StateLedger.Finalise()
 
-	ledger.StateLedger.PrepareBlock(stateRoot2, nil, 3)
-account0 := ledger.StateLedger.GetAccount(addr0)
-assert.Equal(t, uint64(2), account0.GetBalance().Uint64())
+			stateRoot2, err := stateLedger.Commit()
+			assert.Nil(t, err)
+			ledger.PersistBlockData(genBlockData(2, stateRoot2))
 
-ledger.StateLedger.SetBalance(addr1, new(big.Int).SetInt64(3))
-ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(4))
-ledger.StateLedger.SetState(addr0, []byte("a"), []byte("3"))
-ledger.StateLedger.SetState(addr0, []byte("b"), []byte("4"))
+			ledger.StateLedger.PrepareBlock(stateRoot2, nil, 3)
+			account0 := ledger.StateLedger.GetAccount(addr0)
+			assert.Equal(t, uint64(2), account0.GetBalance().Uint64())
 
-code1 := sha256.Sum256([]byte("code1"))
-ret1 := crypto1.Keccak256Hash(code1[:])
-codeHash1 := ret1.Bytes()
-ledger.StateLedger.SetCode(addr0, code1[:])
-	ledger.StateLedger.Finalise()
+			ledger.StateLedger.SetBalance(addr1, new(big.Int).SetInt64(3))
+			ledger.StateLedger.SetBalance(addr0, new(big.Int).SetInt64(4))
+			ledger.StateLedger.SetState(addr0, []byte("a"), []byte("3"))
+			ledger.StateLedger.SetState(addr0, []byte("b"), []byte("4"))
 
-	stateRoot3, err := stateLedger.Commit()
-	assert.Nil(t, err)
-	ledger.PersistBlockData(genBlockData(3, stateRoot3))
+			code1 := sha256.Sum256([]byte("code1"))
+			ret1 := crypto1.Keccak256Hash(code1[:])
+			codeHash1 := ret1.Bytes()
+			ledger.StateLedger.SetCode(addr0, code1[:])
+			ledger.StateLedger.Finalise()
 
-block, err := ledger.ChainLedger.GetBlock(3)
-assert.Nil(t, err)
-assert.NotNil(t, block)
-assert.Equal(t, uint64(3), ledger.ChainLedger.GetChainMeta().Height)
+			stateRoot3, err := stateLedger.Commit()
+			assert.Nil(t, err)
+			ledger.PersistBlockData(genBlockData(3, stateRoot3))
 
-account0 = ledger.StateLedger.GetAccount(addr0)
-assert.Equal(t, uint64(4), account0.GetBalance().Uint64())
+			block, err := ledger.ChainLedger.GetBlock(3)
+			assert.Nil(t, err)
+			assert.NotNil(t, block)
+			assert.Equal(t, uint64(3), ledger.ChainLedger.GetChainMeta().Height)
 
-err = ledger.Rollback(4)
-	assert.Equal(t, fmt.Sprintf("rollback state to height 4 failed: get bodies with height 4 from blockfile failed: out of bounds"), err.Error())
+			account0 = ledger.StateLedger.GetAccount(addr0)
+			assert.Equal(t, uint64(4), account0.GetBalance().Uint64())
 
-hash := ledger.ChainLedger.GetBlockHash(3)
-assert.NotNil(t, hash)
+			err = ledger.Rollback(4)
+			assert.Equal(t, fmt.Sprintf("rollback state to height 4 failed: get bodies with height 4 from blockfile failed: out of bounds"), err.Error())
 
-hash = ledger.ChainLedger.GetBlockHash(100)
-assert.NotNil(t, hash)
+			hash := ledger.ChainLedger.GetBlockHash(3)
+			assert.NotNil(t, hash)
 
-	num, err := ledger.ChainLedger.GetTransactionCount(0)
-	assert.NotNil(t, err)
-	num, err = ledger.ChainLedger.GetTransactionCount(3)
-assert.Nil(t, err)
-assert.NotNil(t, num)
+			hash = ledger.ChainLedger.GetBlockHash(100)
+			assert.NotNil(t, hash)
 
-meta, err := ledger.ChainLedger.LoadChainMeta()
-assert.Nil(t, err)
-assert.NotNil(t, meta)
-assert.Equal(t, uint64(3), meta.Height)
+			num, err := ledger.ChainLedger.GetTransactionCount(0)
+			assert.NotNil(t, err)
+			num, err = ledger.ChainLedger.GetTransactionCount(3)
+			assert.Nil(t, err)
+			assert.NotNil(t, num)
 
-//
-// err = ledger.Rollback(0)
-// assert.Equal(t, ErrorRollbackTooMuch, err)
-//
-// err = ledger.Rollback(1)
-// assert.Equal(t, ErrorRollbackTooMuch, err)
-// assert.Equal(t, uint64(3), ledger.GetChainMeta().Height)
+			meta, err := ledger.ChainLedger.LoadChainMeta()
+			assert.Nil(t, err)
+			assert.NotNil(t, meta)
+			assert.Equal(t, uint64(3), meta.Height)
 
-err = ledger.Rollback(3)
-assert.Nil(t, err)
-	block3, err := ledger.ChainLedger.GetBlock(3)
-assert.Nil(t, err)
-	assert.NotNil(t, block3)
-	assert.Equal(t, stateRoot3, block3.BlockHeader.StateRoot)
-assert.Equal(t, uint64(3), ledger.ChainLedger.GetChainMeta().Height)
-assert.Equal(t, codeHash1, account0.CodeHash())
-assert.Equal(t, code1[:], account0.Code())
+			//
+			// err = ledger.Rollback(0)
+			// assert.Equal(t, ErrorRollbackTooMuch, err)
+			//
+			// err = ledger.Rollback(1)
+			// assert.Equal(t, ErrorRollbackTooMuch, err)
+			// assert.Equal(t, uint64(3), ledger.GetChainMeta().Height)
 
-err = ledger.Rollback(2)
-assert.Nil(t, err)
-block, err = ledger.ChainLedger.GetBlock(3)
-assert.Equal(t, "get bodies with height 3 from blockfile failed: out of bounds", err.Error())
-assert.Nil(t, block)
-	block2, err := ledger.ChainLedger.GetBlock(2)
-	assert.Nil(t, err)
-	assert.NotNil(t, block2)
-assert.Equal(t, uint64(2), ledger.ChainLedger.GetChainMeta().Height)
-	assert.Equal(t, stateRoot2.String(), block2.BlockHeader.StateRoot.String())
-assert.Equal(t, uint64(1), stateLedger.minJnlHeight)
-assert.Equal(t, uint64(2), stateLedger.maxJnlHeight)
+			err = ledger.Rollback(3)
+			assert.Nil(t, err)
+			block3, err := ledger.ChainLedger.GetBlock(3)
+			assert.Nil(t, err)
+			assert.NotNil(t, block3)
+			assert.Equal(t, stateRoot3, block3.BlockHeader.StateRoot)
+			assert.Equal(t, uint64(3), ledger.ChainLedger.GetChainMeta().Height)
+			assert.Equal(t, codeHash1, account0.CodeHash())
+			assert.Equal(t, code1[:], account0.Code())
 
-account0 = ledger.StateLedger.GetAccount(addr0)
-assert.Equal(t, uint64(2), account0.GetBalance().Uint64())
-assert.Equal(t, uint64(0), account0.GetNonce())
-assert.Equal(t, codeHash[:], account0.CodeHash())
-assert.Equal(t, code[:], account0.Code())
-ok, val := account0.GetState([]byte("a"))
-assert.True(t, ok)
-assert.Equal(t, []byte("2"), val)
+			err = ledger.Rollback(2)
+			assert.Nil(t, err)
+			block, err = ledger.ChainLedger.GetBlock(3)
+			assert.Equal(t, "get bodies with height 3 from blockfile failed: out of bounds", err.Error())
+			assert.Nil(t, block)
+			block2, err := ledger.ChainLedger.GetBlock(2)
+			assert.Nil(t, err)
+			assert.NotNil(t, block2)
+			assert.Equal(t, uint64(2), ledger.ChainLedger.GetChainMeta().Height)
+			assert.Equal(t, stateRoot2.String(), block2.BlockHeader.StateRoot.String())
+			assert.Equal(t, uint64(1), stateLedger.minJnlHeight)
+			assert.Equal(t, uint64(2), stateLedger.maxJnlHeight)
 
-account1 := ledger.StateLedger.GetAccount(addr1)
-assert.Nil(t, account1)
+			account0 = ledger.StateLedger.GetAccount(addr0)
+			assert.Equal(t, uint64(2), account0.GetBalance().Uint64())
+			assert.Equal(t, uint64(0), account0.GetNonce())
+			assert.Equal(t, codeHash[:], account0.CodeHash())
+			assert.Equal(t, code[:], account0.Code())
+			ok, val := account0.GetState([]byte("a"))
+			assert.True(t, ok)
+			assert.Equal(t, []byte("2"), val)
 
-ledger.ChainLedger.GetChainMeta()
-ledger.ChainLedger.CloseBlockfile()
+			account1 := ledger.StateLedger.GetAccount(addr1)
+			assert.Nil(t, account1)
 
-ledger, _ = initLedger(t, repoRoot, kvType)
-assert.Equal(t, uint64(1), stateLedger.minJnlHeight)
-assert.Equal(t, uint64(2), stateLedger.maxJnlHeight)
+			ledger.ChainLedger.GetChainMeta()
+			ledger.ChainLedger.CloseBlockfile()
 
-err = ledger.Rollback(1)
-assert.Nil(t, err)
-err = ledger.Rollback(0)
-assert.Nil(t, err)
+			ledger, _ = initLedger(t, repoRoot, tc.kvType)
+			assert.Equal(t, uint64(1), stateLedger.minJnlHeight)
+			assert.Equal(t, uint64(2), stateLedger.maxJnlHeight)
 
-err = ledger.Rollback(100)
-assert.NotNil(t, err)
+			err = ledger.Rollback(1)
+			assert.Nil(t, err)
+			err = ledger.Rollback(0)
+			assert.Nil(t, err)
+
+			err = ledger.Rollback(100)
+			assert.NotNil(t, err)
+		})
+	}
 }
 
-func testChainLedger_GetAccount(t *testing.T, kvType
-string) {
-ledger, _ := initLedger(t, "", kvType)
-	stateLedger := ledger.StateLedger.(*StateLedgerImpl)
+func TestChainLedger_GetAccount(t *testing.T) {
+	testcase := map[string]struct {
+		kvType string
+	}{
+		"leveldb": {kvType: "leveldb"},
+		"pebble":  {kvType: "pebble"},
+	}
 
-addr := types.NewAddress(LeftPadBytes([]byte{1}, 20))
-code := LeftPadBytes([]byte{1}, 120)
-key0 := []byte{100, 100}
-key1 := []byte{100, 101}
+	for name, tc := range testcase {
+		t.Run(name, func(t *testing.T) {
+			ledger, _ := initLedger(t, "", tc.kvType)
+			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
 
-account := ledger.StateLedger.GetOrCreateAccount(addr)
-account.SetBalance(new(big.Int).SetInt64(1))
-account.SetNonce(2)
-account.SetCodeAndHash(code)
+			addr := types.NewAddress(LeftPadBytes([]byte{1}, 20))
+			code := LeftPadBytes([]byte{1}, 120)
+			key0 := []byte{100, 100}
+			key1 := []byte{100, 101}
 
-account.SetState(key0, key1)
-account.SetState(key1, key0)
+			account := ledger.StateLedger.GetOrCreateAccount(addr)
+			account.SetBalance(new(big.Int).SetInt64(1))
+			account.SetNonce(2)
+			account.SetCodeAndHash(code)
 
-	stateLedger.blockHeight = 1
-	stateRoot, err := stateLedger.Commit()
-assert.Nil(t, err)
-	assert.NotNil(t, stateRoot)
+			account.SetState(key0, key1)
+			account.SetState(key1, key0)
 
-account1 := ledger.StateLedger.GetAccount(addr)
+			stateLedger.blockHeight = 1
+			stateLedger.Finalise()
+			stateRoot, err := stateLedger.Commit()
+			assert.Nil(t, err)
+			assert.NotNil(t, stateRoot)
 
-assert.Equal(t, account.GetBalance(), ledger.StateLedger.GetBalance(addr))
-assert.Equal(t, account.GetBalance(), account1.GetBalance())
-assert.Equal(t, account.GetNonce(), account1.GetNonce())
-assert.Equal(t, account.CodeHash(), account1.CodeHash())
-assert.Equal(t, account.Code(), account1.Code())
-ok0, val0 := account.GetState(key0)
-ok1, val1 := account.GetState(key1)
-assert.Equal(t, ok0, ok1)
-assert.Equal(t, val0, key1)
-assert.Equal(t, val1, key0)
+			account1 := ledger.StateLedger.GetAccount(addr)
 
-key2 := []byte{100, 102}
-val2 := []byte{111}
-ledger.StateLedger.SetState(addr, key0, val0)
-ledger.StateLedger.SetState(addr, key2, val2)
-ledger.StateLedger.SetState(addr, key0, val1)
-	stateLedger.blockHeight = 2
-	stateRoot, err = stateLedger.Commit()
-assert.Nil(t, err)
-	assert.NotNil(t, stateRoot)
+			assert.Equal(t, account.GetBalance(), ledger.StateLedger.GetBalance(addr))
+			assert.Equal(t, account.GetBalance(), account1.GetBalance())
+			assert.Equal(t, account.GetNonce(), account1.GetNonce())
+			assert.Equal(t, account.CodeHash(), account1.CodeHash())
+			assert.Equal(t, account.Code(), account1.Code())
+			ok0, val0 := account.GetState(key0)
+			ok1, val1 := account.GetState(key1)
+			assert.Equal(t, ok0, ok1)
+			assert.Equal(t, val0, key1)
+			assert.Equal(t, val1, key0)
 
-ledger.StateLedger.SetState(addr, key0, val0)
-ledger.StateLedger.SetState(addr, key0, val1)
-ledger.StateLedger.SetState(addr, key2, nil)
-	stateLedger.blockHeight = 3
-	stateRoot, err = stateLedger.Commit()
-assert.Nil(t, err)
-	assert.NotNil(t, stateRoot)
+			key2 := []byte{100, 102}
+			val2 := []byte{111}
+			ledger.StateLedger.SetState(addr, key0, val0)
+			ledger.StateLedger.SetState(addr, key2, val2)
+			ledger.StateLedger.SetState(addr, key0, val1)
+			stateLedger.blockHeight = 2
+			stateLedger.Finalise()
+			stateRoot, err = stateLedger.Commit()
+			assert.Nil(t, err)
+			assert.NotNil(t, stateRoot)
 
-ok, val := ledger.StateLedger.GetState(addr, key0)
-assert.True(t, ok)
-assert.Equal(t, val1, val)
+			ledger.StateLedger.SetState(addr, key0, val0)
+			ledger.StateLedger.SetState(addr, key0, val1)
+			ledger.StateLedger.SetState(addr, key2, nil)
+			stateLedger.blockHeight = 3
+			stateLedger.Finalise()
+			stateRoot, err = stateLedger.Commit()
+			assert.Nil(t, err)
+			assert.NotNil(t, stateRoot)
 
-ok, val2 = ledger.StateLedger.GetState(addr, key2)
-assert.False(t, ok)
-assert.Nil(t, val2)
+			ok, val := ledger.StateLedger.GetState(addr, key0)
+			assert.True(t, ok)
+			assert.Equal(t, val1, val)
+
+			ok, val2 = ledger.StateLedger.GetState(addr, key2)
+			assert.False(t, ok)
+			assert.Nil(t, val2)
+		})
+	}
 }
 
-func testChainLedger_GetCode(t *testing.T, kvType
-string) {
-ledger, _ := initLedger(t, "", kvType)
-	stateLedger := ledger.StateLedger.(*StateLedgerImpl)
+func TestChainLedger_GetCode(t *testing.T) {
+	testcase := map[string]struct {
+		kvType string
+	}{
+		"leveldb": {kvType: "leveldb"},
+		"pebble":  {kvType: "pebble"},
+	}
 
-addr := types.NewAddress(LeftPadBytes([]byte{1}, 20))
-code := LeftPadBytes([]byte{10}, 120)
+	for name, tc := range testcase {
+		t.Run(name, func(t *testing.T) {
+			ledger, _ := initLedger(t, "", tc.kvType)
+			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
 
-code0 := ledger.StateLedger.GetCode(addr)
-assert.Nil(t, code0)
+			addr := types.NewAddress(LeftPadBytes([]byte{1}, 20))
+			code := LeftPadBytes([]byte{10}, 120)
 
-ledger.StateLedger.SetCode(addr, code)
+			code0 := ledger.StateLedger.GetCode(addr)
+			assert.Nil(t, code0)
 
-	stateLedger.blockHeight = 1
-	stateRoot, err := stateLedger.Commit()
-assert.Nil(t, err)
-	assert.NotNil(t, stateRoot)
+			ledger.StateLedger.SetCode(addr, code)
 
-vals := ledger.StateLedger.GetCode(addr)
-assert.Equal(t, code, vals)
+			stateLedger.blockHeight = 1
+			stateRoot, err := stateLedger.Commit()
+			assert.Nil(t, err)
+			assert.NotNil(t, stateRoot)
+
+			vals := ledger.StateLedger.GetCode(addr)
+			assert.Equal(t, code, vals)
+		})
+	}
 }
 
-func testChainLedger_AddState(t *testing.T, kvType
-string) {
-ledger, _ := initLedger(t, "", kvType)
+func TestChainLedger_AddState(t *testing.T) {
+	testcase := map[string]struct {
+		kvType string
+	}{
+		"leveldb": {kvType: "leveldb"},
+		"pebble":  {kvType: "pebble"},
+	}
 
-account := types.NewAddress(LeftPadBytes([]byte{100}, 20))
-key0 := "100"
-value0 := []byte{100}
-	ledger.StateLedger.(*StateLedgerImpl).blockHeight = 1
-ledger.StateLedger.SetState(account, []byte(key0), value0)
-	rootHash, err := ledger.StateLedger.Commit()
-	assert.Nil(t, err)
+	for name, tc := range testcase {
+		t.Run(name, func(t *testing.T) {
+			ledger, _ := initLedger(t, "", tc.kvType)
 
-	ledger.PersistBlockData(genBlockData(1, rootHash))
-require.Equal(t, uint64(1), ledger.StateLedger.Version())
+			account := types.NewAddress(LeftPadBytes([]byte{100}, 20))
+			key0 := "100"
+			value0 := []byte{100}
+			ledger.StateLedger.(*StateLedgerImpl).blockHeight = 1
+			ledger.StateLedger.SetState(account, []byte(key0), value0)
+			ledger.StateLedger.Finalise()
+			rootHash, err := ledger.StateLedger.Commit()
+			assert.Nil(t, err)
 
-ok, val := ledger.StateLedger.GetState(account, []byte(key0))
-assert.True(t, ok)
-assert.Equal(t, value0, val)
+			ledger.PersistBlockData(genBlockData(1, rootHash))
+			require.Equal(t, uint64(1), ledger.StateLedger.Version())
 
-key1 := "101"
-value0 = []byte{99}
-value1 := []byte{101}
-	ledger.StateLedger.(*StateLedgerImpl).blockHeight = 2
-ledger.StateLedger.SetState(account, []byte(key0), value0)
-ledger.StateLedger.SetState(account, []byte(key1), value1)
-	rootHash, err = ledger.StateLedger.Commit()
-	assert.Nil(t, err)
+			ok, val := ledger.StateLedger.GetState(account, []byte(key0))
+			assert.True(t, ok)
+			assert.Equal(t, value0, val)
 
-	ledger.PersistBlockData(genBlockData(2, rootHash))
-require.Equal(t, uint64(2), ledger.StateLedger.Version())
+			key1 := "101"
+			value0 = []byte{99}
+			value1 := []byte{101}
+			ledger.StateLedger.(*StateLedgerImpl).blockHeight = 2
+			ledger.StateLedger.SetState(account, []byte(key0), value0)
+			ledger.StateLedger.SetState(account, []byte(key1), value1)
+			ledger.StateLedger.Finalise()
+			rootHash, err = ledger.StateLedger.Commit()
+			assert.Nil(t, err)
 
-ok, val = ledger.StateLedger.GetState(account, []byte(key0))
-assert.True(t, ok)
-assert.Equal(t, value0, val)
+			ledger.PersistBlockData(genBlockData(2, rootHash))
+			require.Equal(t, uint64(2), ledger.StateLedger.Version())
 
-ok, val = ledger.StateLedger.GetState(account, []byte(key1))
-assert.True(t, ok)
-assert.Equal(t, value1, val)
+			ok, val = ledger.StateLedger.GetState(account, []byte(key0))
+			assert.True(t, ok)
+			assert.Equal(t, value0, val)
+
+			ok, val = ledger.StateLedger.GetState(account, []byte(key1))
+			assert.True(t, ok)
+			assert.Equal(t, value1, val)
+		})
+	}
 }
 
 func TestGetBlockSign(t *testing.T) {
@@ -1136,6 +1177,7 @@ func TestStateLedger_ContractStateHistory(t *testing.T) {
 			sl.SetState(account1, []byte("key2"), []byte("val102"))
 			sl.SetState(account3, []byte("key1"), []byte("val301"))
 			sl.SetState(account3, []byte("key2"), []byte("val302"))
+			sl.Finalise()
 			stateRoot1, err := sl.Commit()
 			assert.NotNil(t, stateRoot1)
 			assert.Nil(t, err)
@@ -1153,6 +1195,7 @@ func TestStateLedger_ContractStateHistory(t *testing.T) {
 			sl.SetState(account2, []byte("key2"), []byte("val202"))
 			sl.SetState(account3, []byte("key1"), []byte("val3011"))
 			sl.SetState(account3, []byte("key2"), []byte("val3021"))
+			sl.Finalise()
 			stateRoot2, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(2), sl.Version())
@@ -1168,6 +1211,7 @@ func TestStateLedger_ContractStateHistory(t *testing.T) {
 			sl.SetState(account2, []byte("key2"), nil)
 			sl.SetState(account3, []byte("key1"), nil)
 			sl.SetState(account3, []byte("key2"), nil)
+			sl.Finalise()
 			stateRoot3, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(3), sl.Version())
@@ -1178,6 +1222,7 @@ func TestStateLedger_ContractStateHistory(t *testing.T) {
 			// account2: key1=val2011, key2=nil
 			// account3: key1=nil, key2=nil
 			sl.blockHeight = 4
+			sl.Finalise()
 			stateRoot4, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(4), sl.Version())
@@ -1194,6 +1239,7 @@ func TestStateLedger_ContractStateHistory(t *testing.T) {
 			sl.SetState(account2, []byte("key2"), []byte("val2025"))
 			sl.SetState(account3, []byte("key1"), []byte("val3015"))
 			sl.SetState(account3, []byte("key2"), []byte("val3025"))
+			sl.Finalise()
 			stateRoot5, err := sl.Commit()
 			assert.Nil(t, err)
 			assert.Equal(t, uint64(5), sl.Version())
@@ -1351,6 +1397,7 @@ func TestStateLedger_ContractCodeHistory(t *testing.T) {
 			code1 := sha256.Sum256([]byte("code1"))
 			sl.SetState(contractAccount, []byte("key1"), []byte("val1"))
 			sl.SetCode(contractAccount, code1[:])
+			sl.Finalise()
 			stateRoot1, err := sl.Commit()
 			assert.NotNil(t, stateRoot1)
 			assert.Nil(t, err)
@@ -1362,6 +1409,7 @@ func TestStateLedger_ContractCodeHistory(t *testing.T) {
 			sl.blockHeight = 2
 			code2 := sha256.Sum256([]byte("code2"))
 			sl.SetCode(contractAccount, code2[:])
+			sl.Finalise()
 			stateRoot2, err := sl.Commit()
 			assert.NotNil(t, stateRoot2)
 			assert.Nil(t, err)
@@ -1373,6 +1421,7 @@ func TestStateLedger_ContractCodeHistory(t *testing.T) {
 			// account2: key1=val1,code=code2
 			sl.blockHeight = 3
 			sl.SetNonce(eoaAccount, 2)
+			sl.Finalise()
 			stateRoot3, err := sl.Commit()
 			assert.NotNil(t, stateRoot3)
 			assert.Nil(t, err)
@@ -1449,6 +1498,7 @@ func TestStateLedger_RollbackToHistoryVersion(t *testing.T) {
 			sl.SetBalance(account1, new(big.Int).SetInt64(101))
 			sl.SetBalance(account2, new(big.Int).SetInt64(201))
 			sl.SetBalance(account3, new(big.Int).SetInt64(301))
+			sl.Finalise()
 			stateRoot1, err := sl.Commit()
 			assert.NotNil(t, stateRoot1)
 			assert.Nil(t, err)
@@ -1467,6 +1517,7 @@ func TestStateLedger_RollbackToHistoryVersion(t *testing.T) {
 			sl.SetNonce(account1, 12)
 			sl.SetNonce(account2, 22)
 			sl.SetNonce(account3, 32)
+			sl.Finalise()
 			stateRoot2, err := sl.Commit()
 			assert.Nil(t, err)
 			lg.PersistBlockData(genBlockData(2, stateRoot2))
@@ -1482,6 +1533,7 @@ func TestStateLedger_RollbackToHistoryVersion(t *testing.T) {
 			sl.SetBalance(account2, new(big.Int).SetInt64(203))
 			sl.SetNonce(account1, 13)
 			sl.SetNonce(account2, 23)
+			sl.Finalise()
 			stateRoot3, err := sl.Commit()
 			assert.Nil(t, err)
 			lg.PersistBlockData(genBlockData(3, stateRoot3))
@@ -1521,84 +1573,78 @@ func TestStateLedger_RollbackToHistoryVersion(t *testing.T) {
 }
 
 func genBlockData(height uint64, stateRoot *types.Hash) *BlockData {
-block, := &types.Block{
-BlockHeader: &types.BlockHeader{
-Number:    height,
-StateRoot: stateRoot,
-},
-Transactions: []*types.Transaction{},
-}
+	block := &types.Block{
+		BlockHeader: &types.BlockHeader{
+			Number:    height,
+			StateRoot: stateRoot,
+		},
+		Transactions: []*types.Transaction{},
+	}
 
-block.BlockHash = block.Hash()
-return &BlockData{
-Block: &types.Block{
-BlockHeader: &types.BlockHeader{
-Number:    height,
-StateRoot: stateRoot,
-},
-BlockHash:    types.NewHash([]byte{1}),
-Transactions: []*types.Transaction{},
-},
-Receipts: nil,
-}
+	block.BlockHash = block.Hash()
+	return &BlockData{
+		Block: &types.Block{
+			BlockHeader: &types.BlockHeader{
+				Number:    height,
+				StateRoot: stateRoot,
+			},
+			BlockHash:    types.NewHash([]byte{1}),
+			Transactions: []*types.Transaction{},
+		},
+		Receipts: nil,
+	}
 }
 
 func createMockRepo(t *testing.T) *repo.Repo {
-	r, err, := repo.Default(t.TempDir())
+	r, err := repo.Default(t.TempDir())
 	require.Nil(t, err)
 	return r
 }
 
-func initLedger(t *testing.T, repoRoot
-string, kv
-string) (*Ledger, string) {
-rep := createMockRepo(t)
-if repoRoot != "" {
-rep.RepoRoot = repoRoot
-}
+func initLedger(t *testing.T, repoRoot string, kv string) (*Ledger, string) {
+	rep := createMockRepo(t)
+	if repoRoot != "" {
+		rep.RepoRoot = repoRoot
+	}
 
 	err := storagemgr.Initialize(kv, repo.KVStorageCacheSize)
-require.Nil(t, err)
+	require.Nil(t, err)
 	rep.Config.Monitor.EnableExpensive = true
-l, err := NewLedger(rep)
-require.Nil(t, err)
+	l, err := NewLedger(rep)
+	require.Nil(t, err)
 
-return l, rep.RepoRoot
+	return l, rep.RepoRoot
 }
 
 // LeftPadBytes zero-pads slice to the left up to length l.
-func LeftPadBytes(slice[]
-byte, l
-int) []byte{
-if l <= len(slice){
-return slice
+func LeftPadBytes(slice []byte, l int) []byte {
+	if l <= len(slice) {
+		return slice
+	}
+
+	padded := make([]byte, l)
+	copy(padded[l-len(slice):], slice)
+
+	return padded
 }
 
-padded := make([]byte, l)
-copy(padded[l-len(slice):], slice)
+func RightPadBytes(slice []byte, l int) []byte {
+	if l <= len(slice) {
+		return slice
+	}
 
-return padded
-}
+	padded := make([]byte, l)
+	copy(padded, slice)
 
-func RightPadBytes(slice[]
-byte, l
-int) []byte{
-if l <= len(slice){
-return slice
-}
-
-padded := make([]byte, l)
-copy(padded, slice)
-
-return padded
+	return padded
 }
 
 func TestEvmLogs(t *testing.T) {
-logs := NewEvmLogs()
-hash := types.NewHashByStr("0xe9FC370DD36C9BD5f67cCfbc031C909F53A3d8bC7084C01362c55f2D42bA841c")
-logs.SetBHash(hash)
-logs.SetTHash(hash)
-logs.SetIndex(1)
+	logs := NewEvmLogs()
+	hash := types.NewHashByStr("0xe9FC370DD36C9BD5f67cCfbc031C909F53A3d8bC7084C01362c55f2D42bA841c")
+	logs.SetBHash(hash)
+	logs.SetTHash(hash)
+	logs.SetIndex(1)
 }
 
 func BenchmarkStateLedgerWrite(b *testing.B) {
@@ -1648,10 +1694,11 @@ func benchStateLedgerWrite(b *testing.B, sl StateLedger) {
 		for i := 0; i < len(keys); i++ {
 			stateLedger.SetState(addr, keys[i], vals[i])
 		}
-		accounts, stateRoot := stateLedger.FlushDirtyData()
 		b.ResetTimer()
 		b.ReportAllocs()
-		stateLedger.Commit(1, accounts, stateRoot)
+		stateLedger.blockHeight = 1
+		stateLedger.Finalise()
+		stateLedger.Commit()
 	})
 }
 
@@ -1664,8 +1711,9 @@ func benchStateLedgerRead(b *testing.B, sl StateLedger) {
 	for i := 0; i < len(keys); i++ {
 		stateLedger.SetState(addr, keys[i], vals[i])
 	}
-	accounts, stateRoot := stateLedger.FlushDirtyData()
-	stateLedger.Commit(1, accounts, stateRoot)
+	stateLedger.blockHeight = 1
+	stateLedger.Finalise()
+	stateLedger.Commit()
 
 	b.Run("Read", func(b *testing.B) {
 		b.ResetTimer()

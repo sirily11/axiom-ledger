@@ -163,17 +163,16 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 
 	chainLedger.EXPECT().GetBlockSign(gomock.Any()).Return([]byte("sign"), nil).AnyTimes()
 	chainLedger.EXPECT().GetTransaction(gomock.Any()).Return(&types.Transaction{}, nil).AnyTimes()
-	stateLedger.EXPECT().NewView().Return(stateLedger).AnyTimes()
+	stateLedger.EXPECT().NewView(gomock.Any()).Return(stateLedger).AnyTimes()
+	chainLedger.EXPECT().GetChainMeta().Return(&types.ChainMeta{Height: 1, BlockHash: types.NewHashByStr("")}).AnyTimes()
 	stateLedger.EXPECT().GetState(gomock.Any(), gomock.Any()).DoAndReturn(func(addr *types.Address, key []byte) (bool, []byte) {
 		return false, nil
 	}).AnyTimes()
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "network"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	epochInfo := repo.GenesisEpochInfo(true)

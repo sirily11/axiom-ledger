@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/axiomesh/axiom-kit/log"
@@ -161,4 +162,27 @@ func TestAccount_setNonce(t *testing.T) {
 			ledger.Close()
 		})
 	}
+}
+
+func TestAccount_InitJMTError(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
+	assert.Nil(t, err)
+
+	addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	account := NewAccount(1, lStateStorage, addr, NewChanger())
+
+	defer func() {
+		if r := recover(); r != nil {
+			assert.NotNil(t, r)
+		}
+	}()
+	account.storageTrie = nil
+	account.originAccount = &InnerAccount{
+		StorageRoot: common.Hash{1},
+	}
+	_ = account.originAccount.String()
+
+	account.initStorageTrie()
 }

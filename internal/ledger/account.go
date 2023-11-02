@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
 
@@ -244,7 +245,11 @@ func (o *SimpleAccount) Code() []byte {
 		return nil
 	}
 
+	start := time.Now()
 	code := o.ldb.Get(compositeCodeKey(o.Addr, o.CodeHash()))
+	if o.enableExpensiveMetric {
+		codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+	}
 
 	o.originCode = code
 	o.dirtyCode = code

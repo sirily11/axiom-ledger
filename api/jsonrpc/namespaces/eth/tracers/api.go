@@ -27,18 +27,6 @@ const (
 	// and reexecute to produce missing historical state necessary to run a specific
 	// trace.
 	defaultTraceReexec = uint64(128)
-
-	// defaultTracechainMemLimit is the size of the triedb, at which traceChain
-	// switches over and tries to use a disk-api.Broker()ed database instead of building
-	// on top of memory.
-	// For non-archive nodes, this limit _will_ be overblown, as disk-api.Broker()ed tries
-	// will only be found every ~15K blocks or so.
-	defaultTracechainMemLimit = common.StorageSize(500 * 1024 * 1024)
-
-	// maximumPendingTraceStates is the maximum number of states allowed waiting
-	// for tracing. The creation of trace state will be paused if the unused
-	// trace states exceed this limit.
-	maximumPendingTraceStates = 128
 )
 
 type StateReleaseFunc func()

@@ -21,7 +21,7 @@ const (
 	NetNamespace    = "net"
 	AxmNamespace    = "axm"
 	TxPoolNamespace = "txpool"
-	DebugNamespace = "debug"
+	DebugNamespace  = "debug"
 
 	apiVersion = "1.0"
 )

@@ -32,8 +32,8 @@ func compositeAccountKey(addr *types.Address) []byte {
 }
 
 func compositeStorageKey(addr *types.Address, key []byte) []byte {
-	keyHash := sha256.Sum256(append(hexutil.EncodeToNibbles(addr.String()), key...))
-	return hexutil.BytesToHex(keyHash[:])
+	keyHash := sha256.Sum256(append(addr.Bytes(), key...))
+	return hexutil.EncodeToNibbles(types.NewHash(keyHash[:]).String())
 }
 
 func compositeCodeKey(addr *types.Address, codeHash []byte) []byte {
