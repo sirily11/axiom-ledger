@@ -278,6 +278,136 @@ func TestMultiEpochSync(t *testing.T) {
 	})
 }
 
+func TestMultiEpochSyncWithWrongBlock(t *testing.T) {
+	n := 4
+	syncs := newMockBlockSyncs(t, n)
+	defer stopSyncs(syncs)
+
+	// store blocks expect node 0
+	prepareLedger(n, 200)
+
+	// start sync model
+	for i := 0; i < n; i++ {
+		err := syncs[i].Start()
+		require.Nil(t, err)
+	}
+
+	// node0 start sync block
+	peers := []string{"1", "2", "3"}
+	latestBlockHash := getMockChainMeta(0).BlockHash.String()
+
+	block100, err := getMockBlockLedger(100, 1)
+	require.Nil(t, err)
+
+	epc1 := &consensus.EpochChange{
+		Checkpoint: &consensus.QuorumCheckpoint{
+			Checkpoint: &consensus.Checkpoint{
+				ExecuteState: &consensus.Checkpoint_ExecuteState{
+					Height: block100.Height(),
+					Digest: block100.BlockHash.String(),
+				},
+			},
+		},
+	}
+
+	// wrong block is not epoch block
+	// mock wrong block
+	wrongHeight := uint64(7)
+	oldRightBlock, err := getMockBlockLedger(wrongHeight, 1)
+	require.Nil(t, err)
+	parentBlock, err := getMockBlockLedger(wrongHeight-1, 1)
+	require.Nil(t, err)
+	wrongBlock := &types.Block{
+		BlockHeader: &types.BlockHeader{
+			Number:     wrongHeight,
+			ParentHash: parentBlock.BlockHash,
+		},
+		BlockHash: types.NewHash([]byte("wrong_block")),
+	}
+
+	idx := wrongHeight % uint64(len(peers))
+	peerId := peers[idx]
+	id, err := strconv.Atoi(peerId)
+	require.Nil(t, err)
+	setMockBlockLedger(wrongBlock, id)
+
+	block10, err := getMockBlockLedger(10, 1)
+	require.Nil(t, err)
+
+	quorumCkpt10 := &consensus.SignedCheckpoint{
+		Checkpoint: &consensus.Checkpoint{
+			ExecuteState: &consensus.Checkpoint_ExecuteState{
+				Height: block10.Height(),
+				Digest: block10.BlockHash.String(),
+			},
+		},
+	}
+	// start sync
+	err = syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt10)
+	require.Nil(t, err)
+
+	blocks1 := <-syncs[0].Commit()
+	require.Equal(t, 9, len(blocks1))
+	require.Equal(t, uint64(10), blocks1[len(blocks1)-1].Height())
+	require.Equal(t, block10.BlockHash, blocks1[len(blocks1)-1].BlockHash)
+	require.True(t, syncs[0].syncStatus.Load())
+
+	// reset right block
+	setMockBlockLedger(oldRightBlock, id)
+	err = syncs[0].StopSync()
+	require.Nil(t, err)
+	require.False(t, syncs[0].syncStatus.Load())
+
+	t.Run("wrong block is epoch block", func(t *testing.T) {
+		// mock wrong block
+		wrongHeight = uint64(100)
+		oldRightBlock, err = getMockBlockLedger(wrongHeight, 1)
+		require.Nil(t, err)
+		parentBlock, err = getMockBlockLedger(wrongHeight-1, 1)
+		require.Nil(t, err)
+		wrongBlock = &types.Block{
+			BlockHeader: &types.BlockHeader{
+				Number:     wrongHeight,
+				ParentHash: parentBlock.BlockHash,
+			},
+			BlockHash: types.NewHash([]byte("wrong_block")),
+		}
+		id, err = strconv.Atoi(syncs[0].pickPeer(wrongHeight))
+		require.Nil(t, err)
+		setMockBlockLedger(wrongBlock, id)
+
+		block101, err := getMockBlockLedger(101, 1)
+		require.Nil(t, err)
+
+		quorumCkpt101 := &consensus.SignedCheckpoint{
+			Checkpoint: &consensus.Checkpoint{
+				ExecuteState: &consensus.Checkpoint_ExecuteState{
+					Height: block101.Height(),
+					Digest: block101.BlockHash.String(),
+				},
+			},
+		}
+
+		// start sync
+		err = syncs[0].StartSync(peers, latestBlockHash, 2, 2, 101, quorumCkpt101, epc1)
+		require.Nil(t, err)
+
+		blocks1 = <-syncs[0].Commit()
+		require.Equal(t, 99, len(blocks1))
+		require.Equal(t, uint64(100), blocks1[len(blocks1)-1].Height())
+		require.True(t, syncs[0].syncStatus.Load())
+		blocks2 := <-syncs[0].Commit()
+		require.Equal(t, 1, len(blocks2))
+		require.Equal(t, uint64(101), blocks2[len(blocks2)-1].Height())
+
+		// reset right block
+		setMockBlockLedger(oldRightBlock, id)
+		err = syncs[0].StopSync()
+		require.Nil(t, err)
+		require.False(t, syncs[0].syncStatus.Load())
+	})
+}
+
 func TestHandleTimeoutBlockMsg(t *testing.T) {
 	n := 4
 	// mock syncs[0] which send sync request error
@@ -310,44 +440,43 @@ func TestHandleTimeoutBlockMsg(t *testing.T) {
 		},
 	}
 
-	t.Run("TestSyncTimeoutBlock with one time", func(t *testing.T) {
-		timeoutBlockHeight := uint64(7)
-		idx := int(timeoutBlockHeight % uint64(len(peers)))
-		wrongId := idx + 1
+	// timeout with one time
+	timeoutBlockHeight := uint64(7)
+	idx := int(timeoutBlockHeight % uint64(len(peers)))
+	wrongId := idx + 1
 
-		oldRightBlock, err := getMockBlockLedger(timeoutBlockHeight, wrongId)
-		require.Nil(t, err)
-		deleteMockBlockLedger(timeoutBlockHeight, wrongId)
+	oldRightBlock, err := getMockBlockLedger(timeoutBlockHeight, wrongId)
+	require.Nil(t, err)
+	deleteMockBlockLedger(timeoutBlockHeight, wrongId)
 
-		block10, err := getMockBlockLedger(10, 1)
-		require.Nil(t, err)
+	block10, err := getMockBlockLedger(10, 1)
+	require.Nil(t, err)
 
-		quorumCkpt10 := &consensus.SignedCheckpoint{
-			Checkpoint: &consensus.Checkpoint{
-				ExecuteState: &consensus.Checkpoint_ExecuteState{
-					Height: block10.Height(),
-					Digest: block10.BlockHash.String(),
-				},
+	quorumCkpt10 := &consensus.SignedCheckpoint{
+		Checkpoint: &consensus.Checkpoint{
+			ExecuteState: &consensus.Checkpoint_ExecuteState{
+				Height: block10.Height(),
+				Digest: block10.BlockHash.String(),
 			},
-		}
+		},
+	}
 
-		// start sync
-		err = syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt10)
-		require.Nil(t, err)
-		blocks1 := <-syncs[0].Commit()
-		require.Equal(t, strconv.Itoa(wrongId), syncs[0].peers[idx].peerID)
-		require.Equal(t, uint64(1), syncs[0].peers[idx].timeoutCount, "record timeout count")
-		require.Equal(t, 3, len(syncs[0].peers), "not remove timeout peer because timeoutCount < timeoutCountLimit")
-		require.Equal(t, 9, len(blocks1))
-		require.Equal(t, uint64(10), blocks1[len(blocks1)-1].Height())
-		require.Equal(t, oldRightBlock.BlockHash.String(), blocks1[timeoutBlockHeight-2].BlockHash.String())
+	// start sync
+	err = syncs[0].StartSync(peers, latestBlockHash, 2, 2, 10, quorumCkpt10)
+	require.Nil(t, err)
+	blocks1 := <-syncs[0].Commit()
+	require.Equal(t, strconv.Itoa(wrongId), syncs[0].peers[idx].peerID)
+	require.Equal(t, uint64(1), syncs[0].peers[idx].timeoutCount, "record timeout count")
+	require.Equal(t, 3, len(syncs[0].peers), "not remove timeout peer because timeoutCount < timeoutCountLimit")
+	require.Equal(t, 9, len(blocks1))
+	require.Equal(t, uint64(10), blocks1[len(blocks1)-1].Height())
+	require.Equal(t, oldRightBlock.BlockHash.String(), blocks1[timeoutBlockHeight-2].BlockHash.String())
 
-		// reset right block
-		setMockBlockLedger(oldRightBlock, wrongId)
-		err = syncs[0].StopSync()
-		require.Nil(t, err)
-		require.False(t, syncs[0].syncStatus.Load())
-	})
+	// reset right block
+	setMockBlockLedger(oldRightBlock, wrongId)
+	err = syncs[0].StopSync()
+	require.Nil(t, err)
+	require.False(t, syncs[0].syncStatus.Load())
 
 	t.Run("TestSyncTimeoutBlock with many times, bigger than timeoutCount", func(t *testing.T) {
 		syncs[1].Stop()
@@ -459,11 +588,10 @@ func TestValidateChunk(t *testing.T) {
 		chunkSize: 1,
 	}
 
-	t.Run("get requester err: nil", func(t *testing.T) {
-		_, err := syncs[0].validateChunk()
-		require.NotNil(t, err)
-		require.Contains(t, err.Error(), "requester[height:1] is nil")
-	})
+	// get requester err: nil
+	_, err := syncs[0].validateChunk()
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "requester[height:1] is nil")
 
 	oldRequest := &requester{
 		peerID:      "1",
