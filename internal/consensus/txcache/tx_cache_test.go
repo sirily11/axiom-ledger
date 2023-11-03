@@ -43,4 +43,6 @@ func TestAppendTx(t *testing.T) {
 	}
 	// test exit txCache
 	close(txCache.CloseC)
+	_, ok := <-txCache.CloseC
+	ast.Equal(false, ok)
 }
