@@ -99,3 +99,76 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 		account.SetState(notFinishedProposalsKey(), nil)
 	}
 }
+
+func TestProposal_CheckAndUpdateState_AllProposals(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
+
+	accountCache, err := ledger.NewAccountCache()
+	assert.Nil(t, err)
+	repoRoot := t.TempDir()
+	assert.Nil(t, err)
+	ld, err := leveldb.New(filepath.Join(repoRoot, "proposal"), nil)
+	assert.Nil(t, err)
+	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+
+	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
+	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
+
+	notFinishedProposalMgr := NewNotFinishedProposalMgr(stateLedger)
+
+	// test council
+	baseProposal := &BaseProposal{ID: 1, BlockNumber: 10, Status: Voting}
+	_, err = saveCouncilProposal(stateLedger, baseProposal)
+	assert.Nil(t, err)
+
+	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+		ID:                  baseProposal.ID,
+		DeadlineBlockNumber: baseProposal.BlockNumber,
+		ContractAddr:        common.CouncilManagerContractAddr,
+	})
+
+	err = CheckAndUpdateState(20, stateLedger)
+	assert.Nil(t, err)
+
+	proposal, err := loadCouncilProposal(stateLedger, baseProposal.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, Rejected, proposal.Status)
+
+	// test node
+	baseProposal = &BaseProposal{ID: 2, BlockNumber: 10, Status: Voting}
+	_, err = saveNodeProposal(stateLedger, baseProposal)
+	assert.Nil(t, err)
+
+	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+		ID:                  baseProposal.ID,
+		DeadlineBlockNumber: baseProposal.BlockNumber,
+		ContractAddr:        common.NodeManagerContractAddr,
+	})
+
+	err = CheckAndUpdateState(20, stateLedger)
+	assert.Nil(t, err)
+
+	nodeProposal, err := loadNodeProposal(stateLedger, baseProposal.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, Rejected, nodeProposal.Status)
+
+	// test white list provider
+	baseProposal = &BaseProposal{ID: 3, BlockNumber: 10, Status: Voting}
+	_, err = saveProviderProposal(stateLedger, baseProposal)
+	assert.Nil(t, err)
+
+	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+		ID:                  baseProposal.ID,
+		DeadlineBlockNumber: baseProposal.BlockNumber,
+		ContractAddr:        common.WhiteListProviderManagerContractAddr,
+	})
+
+	err = CheckAndUpdateState(20, stateLedger)
+	assert.Nil(t, err)
+
+	providerProposal, err := loadProviderProposal(stateLedger, baseProposal.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, Rejected, providerProposal.Status)
+}

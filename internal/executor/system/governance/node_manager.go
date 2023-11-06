@@ -59,8 +59,8 @@ type Node struct {
 }
 
 type NodeMember struct {
-	NodeId  string
 	Name    string
+	NodeId  string
 	Address string
 	ID      uint64
 }
