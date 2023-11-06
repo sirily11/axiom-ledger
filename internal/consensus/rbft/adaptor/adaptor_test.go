@@ -50,12 +50,19 @@ func TestSignAndVerify(t *testing.T) {
 	msgSign, err := adaptor.Sign([]byte("test sign"))
 	ast.Nil(err)
 
-	// TODO: impl it
-	// err = adaptor.Verify(adaptor.Nodes[0].Pid, msgSign, []byte("wrong sign"))
-	// ast.NotNil(err)
-
-	err = adaptor.Verify(adaptor.config.GenesisEpochInfo.ValidatorSet[0].P2PNodeID, msgSign, []byte("test sign"))
+	err = adaptor.Verify(adaptor.config.SelfAccountAddress, msgSign, []byte("test sign"))
 	ast.Nil(err)
+
+	err = adaptor.Verify("wrong", msgSign, []byte("test sign"))
+	ast.Error(err)
+
+	err = adaptor.Verify(adaptor.config.SelfAccountAddress, msgSign, []byte("wrong sign"))
+	ast.Error(err)
+
+	wrongSign := msgSign
+	wrongSign[0] = 255 - wrongSign[0]
+	err = adaptor.Verify(adaptor.config.SelfAccountAddress, wrongSign, []byte("test sign"))
+	ast.Error(err)
 }
 
 func TestExecute(t *testing.T) {
