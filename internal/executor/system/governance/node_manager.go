@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/samber/lo"
-
+	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/types"
+	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	vm "github.com/axiomesh/eth-kit/evm"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/samber/lo"
 )
 
 const (
@@ -58,7 +59,10 @@ type Node struct {
 }
 
 type NodeMember struct {
-	NodeId string
+	NodeId  string
+	Name    string
+	Address string
+	ID      uint64
 }
 
 type NodeVoteArgs struct {
@@ -367,6 +371,18 @@ func (nm *NodeManager) voteNodeAddRemove(user ethcommon.Address, proposal *NodeP
 		}
 
 		if proposal.Type == NodeAdd {
+			for _, node := range proposal.Nodes {
+				newNodeID, err := base.AddNode(nm.stateLedger, &rbft.NodeInfo{
+					AccountAddress:       node.Address,
+					P2PNodeID:            node.NodeId,
+					ConsensusVotingPower: 100,
+				})
+
+				if err != nil {
+					return nil, err
+				}
+				node.ID = newNodeID
+			}
 			members = append(members, proposal.Nodes...)
 		}
 
@@ -383,6 +399,12 @@ func (nm *NodeManager) voteNodeAddRemove(user ethcommon.Address, proposal *NodeP
 				return exists
 			})
 
+			for _, node := range proposal.Nodes {
+				err = base.RemoveNode(nm.stateLedger, node.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
 			members = filteredMembers
 		}
 
