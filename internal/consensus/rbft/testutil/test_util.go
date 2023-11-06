@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -125,7 +126,7 @@ func MockConsensusConfig(logger logrus.FieldLogger, ctrl *gomock.Controller, t *
 		Logger:             logger,
 		ConsensusType:      "",
 		PrivKey:            s.Sk,
-		SelfAccountAddress: genesisEpochInfo.ValidatorSet[0].AccountAddress,
+		SelfAccountAddress: crypto.PubkeyToAddress(s.Sk.PublicKey).String(),
 		GenesisEpochInfo:   genesisEpochInfo,
 		Applied:            0,
 		Digest:             "",

@@ -1,26 +1,25 @@
 package adaptor
 
+import (
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/pkg/errors"
+)
+
+// TODO: use edd25519 improve performance
 func (a *RBFTAdaptor) Sign(msg []byte) ([]byte, error) {
-	return []byte{}, nil
-	// h := sha256.Sum256(msg)
-	// return a.priv.Sign(h[:])
+	h := crypto.Keccak256Hash(msg)
+	return crypto.Sign(h[:], a.priv)
 }
 
-func (a *RBFTAdaptor) Verify(peerID string, signature []byte, msg []byte) error {
-	// h := sha256.Sum256(msg)
-	// id, ok := a.nodePIDToID[peerID]
-	// if !ok {
-	// 	return fmt.Errorf("not found peerID mapping: %v", peerID)
-	// }
-	// addr := types.NewAddressByStr(a.Nodes[id].Account)
-	// ret, err := asym.Verify(crypto.Secp256k1, signature, h[:], *addr)
-	// if err != nil {
-	// 	return err
-	// }
+func (a *RBFTAdaptor) Verify(address string, signature []byte, msg []byte) error {
+	h := crypto.Keccak256Hash(msg)
+	pubKey, err := crypto.SigToPub(h[:], signature)
+	if err != nil {
+		return err
+	}
 
-	// if !ret {
-	// 	return fmt.Errorf("verify error")
-	// }
-
+	if address != crypto.PubkeyToAddress(*pubKey).String() {
+		return errors.New("valid signature")
+	}
 	return nil
 }
