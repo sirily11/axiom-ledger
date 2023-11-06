@@ -127,7 +127,7 @@ func (cbs *ChainBrokerService) Start() error {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.rep.Config.Port.JsonRpc), cors.Default().Handler(router)); err != nil {
 			cbs.logger.WithFields(logrus.Fields{
 				"error": err.Error(),
-			}).Errorf("Failed to start JSON_RPC service: %s", err.Error())
+			}).Fatalf("Failed to start JSON_RPC service: %s", err.Error())
 			return
 		}
 	}()
@@ -140,7 +140,7 @@ func (cbs *ChainBrokerService) Start() error {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", cbs.rep.Config.Port.WebSocket), cors.Default().Handler(wsRouter)); err != nil {
 			cbs.logger.WithFields(logrus.Fields{
 				"error": err.Error(),
-			}).Errorf("Failed to start websocket service: %s", err.Error())
+			}).Fatalf("Failed to start websocket service: %s", err.Error())
 			return
 		}
 	}()
