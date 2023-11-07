@@ -231,19 +231,19 @@ func checkNodeInfo(node *rbft.NodeInfo) error {
 // AddNode adds a new node to the ledger.
 // It takes a StateLedger instance and a pointer to a NodeInfo struct as parameters.
 // It returns an error if any validation fails.
-func AddNode(lg ledger.StateLedger, newNode *rbft.NodeInfo) error {
+func AddNode(lg ledger.StateLedger, newNode *rbft.NodeInfo) (uint64, error) {
 	// Clone the newNode to avoid modifying the original instance
 	newNode = newNode.Clone()
 
 	// Check if the new node info is valid
 	if err := checkNodeInfo(newNode); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Get the next epoch information from the ledger
 	nextEpochInfo, err := GetNextEpochInfo(lg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Function to check for duplicate node information
@@ -264,19 +264,19 @@ func AddNode(lg ledger.StateLedger, newNode *rbft.NodeInfo) error {
 
 	// Check for duplicate node info in the validator set, candidate set, and data syncer set
 	if err := checkNodeInfoDuplicate(nextEpochInfo.ValidatorSet); err != nil {
-		return err
+		return 0, err
 	}
 	if err := checkNodeInfoDuplicate(nextEpochInfo.CandidateSet); err != nil {
-		return err
+		return 0, err
 	}
 	if err := checkNodeInfoDuplicate(nextEpochInfo.DataSyncerSet); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Get the node ID generator from the ledger
 	nodeIDGenerator, err := getNodeIDGenerator(lg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Automatically assign a self-increasing ID to the new node
@@ -290,10 +290,10 @@ func AddNode(lg ledger.StateLedger, newNode *rbft.NodeInfo) error {
 
 	// Set the updated next epoch info in the ledger
 	if err := setNextEpochInfo(lg, nextEpochInfo); err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return newNode.ID, nil
 }
 
 // RemoveNode removes a node from the validator set, candidate set, or data syncer set.

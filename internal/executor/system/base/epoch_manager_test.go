@@ -155,14 +155,18 @@ func TestInitEpochInfo_InvalidNodeInfo(t *testing.T) {
 
 func TestAddNode(t *testing.T) {
 	stateLedger := prepareLedger(t)
-
+	var newNodeID uint64
 	t.Run("next epoch info is not initialized", func(t *testing.T) {
-		err := AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err := AddNode(stateLedger, &rbft.NodeInfo{
 			AccountAddress:       "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 			P2PNodeID:            "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
 			ConsensusVotingPower: 100,
 		})
-		assert.Error(t, err)
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.NotNil(t, newNodeID)
+		}
 	})
 
 	g := repo.GenesisEpochInfo(true)
@@ -178,12 +182,13 @@ func TestAddNode(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("add correct node info", func(t *testing.T) {
-		err = AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err = AddNode(stateLedger, &rbft.NodeInfo{
 			AccountAddress:       "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 			P2PNodeID:            "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
 			ConsensusVotingPower: 100,
 		})
 		assert.Nil(t, err)
+		assert.NotNil(t, newNodeID)
 		ne, err := GetNextEpochInfo(stateLedger)
 		assert.Nil(t, err)
 		assert.EqualValues(t, len(g.CandidateSet)+1, len(ne.CandidateSet))
@@ -191,12 +196,13 @@ func TestAddNode(t *testing.T) {
 	})
 
 	t.Run("add next correct node info", func(t *testing.T) {
-		err = AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err = AddNode(stateLedger, &rbft.NodeInfo{
 			AccountAddress:       "0x7D9428f0cE5c89dA907Ae6860F93861BD99Fbf0d",
 			P2PNodeID:            "16Uiu2HAmTYQW5Tp2cXxyENCAy8cTNRyVrmxshUvS8fXWGakbUJep",
 			ConsensusVotingPower: 100,
 		})
 		assert.Nil(t, err)
+		assert.NotNil(t, newNodeID)
 		ne, err := GetNextEpochInfo(stateLedger)
 		assert.Nil(t, err)
 		assert.EqualValues(t, len(g.CandidateSet)+2, len(ne.CandidateSet))
@@ -250,8 +256,9 @@ func TestAddNode(t *testing.T) {
 	}
 	for _, tt := range exceptionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = AddNode(stateLedger, tt.newNode)
+			newNodeID, err = AddNode(stateLedger, tt.newNode)
 			assert.Error(t, err)
+			assert.NotNil(t, newNodeID)
 		})
 	}
 }
