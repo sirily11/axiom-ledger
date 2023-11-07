@@ -86,12 +86,11 @@ type Port struct {
 }
 
 type JsonRPC struct {
-	GasCap                         uint64   `mapstructure:"gas_cap" toml:"gas_cap"`
-	EVMTimeout                     Duration `mapstructure:"evm_timeout" toml:"evm_timeout"`
-	ReadLimiter                    JLimiter `mapstructure:"read_limiter" toml:"read_limiter"`
-	WriteLimiter                   JLimiter `mapstructure:"write_limiter" toml:"write_limiter"`
-	RejectTxsIfConsensusAbnormal   bool     `mapstructure:"reject_txs_if_consensus_abnormal" toml:"reject_txs_if_consensus_abnormal"`
-	DisableGasPriceAPIPricePremium bool     `mapstructure:"disable_gas_price_api_price_premium" toml:"disable_gas_price_api_price_premium"`
+	GasCap                       uint64   `mapstructure:"gas_cap" toml:"gas_cap"`
+	EVMTimeout                   Duration `mapstructure:"evm_timeout" toml:"evm_timeout"`
+	ReadLimiter                  JLimiter `mapstructure:"read_limiter" toml:"read_limiter"`
+	WriteLimiter                 JLimiter `mapstructure:"write_limiter" toml:"write_limiter"`
+	RejectTxsIfConsensusAbnormal bool     `mapstructure:"reject_txs_if_consensus_abnormal" toml:"reject_txs_if_consensus_abnormal"`
 }
 
 type P2PPipeGossipsub struct {
@@ -292,11 +291,10 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 	}
 
 	financeInfo := &rbft.Finance{
-		GasLimit:       0x5f5e100,
-		MaxGasPrice:    10000000000000,
-		MinGasPrice:    1000000000000,
-		GasChangeRate:  0.125,
-		GasPremiumRate: DefaultGasPremiumRate,
+		GasLimit:      0x5f5e100,
+		MaxGasPrice:   10000000000000,
+		MinGasPrice:   1000000000000,
+		GasChangeRate: 0.125,
 	}
 
 	return &rbft.EpochInfo{
@@ -355,8 +353,7 @@ func DefaultConfig(epochEnable bool) *Config {
 				Capacity: 10000,
 				Enable:   false,
 			},
-			RejectTxsIfConsensusAbnormal:   false,
-			DisableGasPriceAPIPricePremium: false,
+			RejectTxsIfConsensusAbnormal: false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
