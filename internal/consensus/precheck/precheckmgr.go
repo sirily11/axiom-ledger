@@ -123,6 +123,7 @@ func (tp *TxPreCheckMgr) dispatchTxEvent() {
 							Status:   false,
 							ErrorMsg: fmt.Errorf("%s:%w", PrecheckError, err).Error(),
 						}
+						tp.logger.Warningf("basic check local tx err:%s", err)
 						return
 					}
 					tp.verifyDataCh <- ev
@@ -229,9 +230,9 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 }
 
 func (tp *TxPreCheckMgr) verifyInsufficientBalance(tx *types.Transaction) error {
-	// 1. account has enough balance to cover transaction fee(gaslimit * gasprice)
+	// 1. account has enough balance to cover transaction fee(gaslimit * gasprice), gasprice is the chain's latest gas price
 	mgval := new(big.Int).SetUint64(tx.GetGas())
-	mgval = mgval.Mul(mgval, tx.GetGasPrice())
+	mgval = mgval.Mul(mgval, tp.getChainMetaFn().GasPrice)
 	balanceCheck := mgval
 	if tx.GetGasFeeCap() != nil {
 		balanceCheck = new(big.Int).SetUint64(tx.GetGas())
@@ -296,7 +297,8 @@ func (tp *TxPreCheckMgr) basicCheckTx(tx *types.Transaction) error {
 	// ignore gas price if it's 0 or nil
 	if tx.GetGasPrice() != nil {
 		if tx.GetGasPrice().Uint64() != 0 && tx.GetGasPrice().Cmp(gasPrice) < 0 {
-			return fmt.Errorf("%s: expect min gasPrice: %v, get price %v", ErrGasPriceTooLow, gasPrice, tx.GetGasPrice())
+			return fmt.Errorf("%s:[hash:%s, nonce:%d] expect min gasPrice: %v, get price %v",
+				ErrGasPriceTooLow, tx.GetHash().String(), tx.GetNonce(), gasPrice, tx.GetGasPrice())
 		}
 	}
 
@@ -304,25 +306,25 @@ func (tp *TxPreCheckMgr) basicCheckTx(tx *types.Transaction) error {
 	if tx.GetType() == types.DynamicFeeTxType {
 		if tx.GetGasFeeCap().BitLen() > 0 || tx.GetGasTipCap().BitLen() > 0 {
 			if l := tx.GetGasFeeCap().BitLen(); l > 256 {
-				return fmt.Errorf("%w: address %v, maxFeePerGas bit length: %d", core.ErrFeeCapVeryHigh,
-					tx.GetFrom(), l)
+				return fmt.Errorf("%w: [hash:%s, nonce:%d], maxFeePerGas bit length: %d", core.ErrFeeCapVeryHigh,
+					tx.GetHash().String(), tx.GetNonce(), l)
 			}
 			if l := tx.GetGasTipCap().BitLen(); l > 256 {
-				return fmt.Errorf("%w: address %v, maxPriorityFeePerGas bit length: %d", core.ErrTipVeryHigh,
-					tx.GetFrom(), l)
+				return fmt.Errorf("%w: [hash:%s, nonce:%d], maxPriorityFeePerGas bit length: %d", core.ErrTipVeryHigh,
+					tx.GetHash().String(), tx.GetNonce(), l)
 			}
 
 			if tx.GetGasFeeCap().Cmp(tx.GetGasTipCap()) < 0 {
-				return fmt.Errorf("%w: address %v, maxPriorityFeePerGas: %s, maxFeePerGas: %s", core.ErrTipAboveFeeCap,
-					tx.GetFrom(), tx.GetGasTipCap(), tx.GetGasFeeCap())
+				return fmt.Errorf("%w: [hash:%s, nonce:%d], maxPriorityFeePerGas: %s, maxFeePerGas: %s", core.ErrTipAboveFeeCap,
+					tx.GetHash().String(), tx.GetNonce(), tx.GetGasTipCap(), tx.GetGasFeeCap())
 			}
 
 			// This will panic if baseFee is nil, but basefee presence is verified
 			// as part of header validation.
 			// TODO: modify tp.BaseFee synchronously if baseFee changed
 			if tx.GetGasFeeCap().Cmp(tp.BaseFee) < 0 {
-				return fmt.Errorf("%w: address %v, maxFeePerGas: %s baseFee: %s", core.ErrFeeCapTooLow,
-					tx.GetFrom(), tx.GetGasFeeCap(), tp.BaseFee)
+				return fmt.Errorf("%w: [hash:%s, nonce:%d], maxFeePerGas: %s baseFee: %s", core.ErrFeeCapTooLow,
+					tx.GetHash().String(), tx.GetNonce(), tx.GetGasFeeCap(), tp.BaseFee)
 			}
 		}
 	}
@@ -333,7 +335,8 @@ func (tp *TxPreCheckMgr) basicCheckTx(tx *types.Transaction) error {
 	}
 	// 5. if deployed a contract, Check whether the init code size has been exceeded.
 	if isContractCreation && len(tx.GetPayload()) > params.MaxInitCodeSize && !tp.evmConfig.DisableMaxCodeSizeLimit {
-		return fmt.Errorf("%w: code size %v limit %v", core.ErrMaxInitCodeSizeExceeded, len(tx.GetPayload()), params.MaxInitCodeSize)
+		return fmt.Errorf("%w: [hash:%s, nonce:%d], code size %v limit %v", core.ErrMaxInitCodeSizeExceeded,
+			tx.GetHash().String(), tx.GetNonce(), len(tx.GetPayload()), params.MaxInitCodeSize)
 	}
 
 	return nil

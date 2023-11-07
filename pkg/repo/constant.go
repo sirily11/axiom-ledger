@@ -57,11 +57,6 @@ const (
 	// more expensive to propagate; larger transactions also take more resources
 	// to validate whether they fit into the pool or not.
 	DefaultTxMaxSize = 4 * txSlotSize // 128KB
-
-	// DefaultGasPremiumRate is the default gas price premium rate,
-	// For example: if current gas price is 10wei, the default gas price premium rate is 0.2.
-	// Then the gasPrice interface will return 10+10 * 0.2 = 12 wei
-	DefaultGasPremiumRate = 0.2
 )
 
 var (

@@ -48,8 +48,7 @@ func AriesConfig() *Config {
 				Capacity: 10000,
 				Enable:   true,
 			},
-			RejectTxsIfConsensusAbnormal:   false,
-			DisableGasPriceAPIPricePremium: false,
+			RejectTxsIfConsensusAbnormal: false,
 		},
 		P2P: P2P{
 			Security:    P2PSecurityTLS,
@@ -175,11 +174,10 @@ func AriesConfig() *Config {
 					},
 				},
 				FinanceParams: &rbft.Finance{
-					GasLimit:       0x5f5e100,
-					MaxGasPrice:    10000000000000,
-					MinGasPrice:    1000000000000,
-					GasChangeRate:  0.125,
-					GasPremiumRate: DefaultGasPremiumRate,
+					GasLimit:      0x5f5e100,
+					MaxGasPrice:   10000000000000,
+					MinGasPrice:   1000000000000,
+					GasChangeRate: 0.125,
 				},
 				ConfigParams: &rbft.ConfigParams{
 					TxMaxSize: DefaultTxMaxSize,
