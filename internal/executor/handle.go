@@ -110,7 +110,16 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 
 	exec.cumulativeGasUsed = 0
 	exec.evm = newEvm(exec.rep.Config.Executor.EVM, block.Height(), uint64(block.BlockHeader.Timestamp), exec.evmChainCfg, exec.ledger.StateLedger, exec.ledger.ChainLedger, block.BlockHeader.ProposerAccount)
-	exec.ledger.StateLedger.PrepareBlock(block.BlockHash, block.Height())
+	// get last block's stateRoot to init the latest world state trie
+	parentBlock, err := exec.ledger.ChainLedger.GetBlock(block.Height() - 1)
+	if err != nil {
+		exec.logger.WithFields(logrus.Fields{
+			"height": block.Height() - 1,
+			"err":    err.Error(),
+		}).Errorf("get last block from ledger error")
+		panic(err)
+	}
+	exec.ledger.StateLedger.PrepareBlock(parentBlock.BlockHeader.StateRoot, block.BlockHash, block.Height())
 	receipts := exec.applyTransactions(block.Transactions, block.Height())
 
 	// check need turn into NewEpoch
@@ -170,9 +179,12 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 
 	block.BlockHeader.GasPrice = int64(gasPrice)
 
-	accounts, journalHash := exec.ledger.StateLedger.FlushDirtyData()
+	stateRoot, err := exec.ledger.StateLedger.Commit()
+	if err != nil {
+		panic(fmt.Errorf("commit stateLedger failed: %w", err))
+	}
 
-	block.BlockHeader.StateRoot = journalHash
+	block.BlockHeader.StateRoot = stateRoot
 	block.BlockHeader.GasUsed = exec.cumulativeGasUsed
 	block.BlockHash = block.Hash()
 
@@ -198,7 +210,6 @@ func (exec *BlockExecutor) processExecuteEvent(commitEvent *consensuscommon.Comm
 	data := &ledger.BlockData{
 		Block:      block,
 		Receipts:   receipts,
-		Accounts:   accounts,
 		TxHashList: txHashList,
 	}
 
@@ -417,6 +428,10 @@ func (exec *BlockExecutor) NewEvmWithViewLedger(txCtx ethvm.TxContext, vmConfig 
 	lg := exec.ledger.NewView()
 	blkCtx = ethvm.NewEVMBlockContext(meta.Height, uint64(block.BlockHeader.Timestamp), exec.rep.AccountAddress, getBlockHashFunc(exec.ledger.ChainLedger))
 	return ethvm.NewEVM(blkCtx, txCtx, lg.StateLedger, exec.evmChainCfg, vmConfig), nil
+}
+
+func (exec *BlockExecutor) GetChainConfig() *params.ChainConfig {
+	return exec.evmChainCfg
 }
 
 // getCurrentGasPrice returns the current block's gas price, which is

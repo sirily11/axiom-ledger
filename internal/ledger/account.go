@@ -8,10 +8,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
 
 	"github.com/axiomesh/axiom-kit/hexutil"
+	"github.com/axiomesh/axiom-kit/jmt"
 	"github.com/axiomesh/axiom-kit/storage"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/pkg/loggers"
@@ -47,7 +49,9 @@ type SimpleAccount struct {
 	dirtyCode        []byte
 	pendingStateHash *types.Hash
 	ldb              storage.Storage
-	cache            *AccountCache
+
+	blockHeight uint64
+	storageTrie *jmt.JMT
 
 	changer  *stateChanger
 	suicided bool
@@ -55,15 +59,15 @@ type SimpleAccount struct {
 	enableExpensiveMetric bool
 }
 
-func NewAccount(ldb storage.Storage, cache *AccountCache, addr *types.Address, changer *stateChanger) *SimpleAccount {
+func NewAccount(blockHeight uint64, ldb storage.Storage, addr *types.Address, changer *stateChanger) *SimpleAccount {
 	return &SimpleAccount{
 		logger:       loggers.Logger(loggers.Storage),
 		Addr:         addr,
 		originState:  make(map[string][]byte),
 		pendingState: make(map[string][]byte),
 		dirtyState:   make(map[string][]byte),
+		blockHeight:  blockHeight,
 		ldb:          ldb,
-		cache:        cache,
 		changer:      changer,
 		suicided:     false,
 	}
@@ -75,6 +79,38 @@ func (o *SimpleAccount) SetEnableExpensiveMetric(enable bool) {
 
 func (o *SimpleAccount) String() string {
 	return fmt.Sprintf("{origin: %v, dirty: %v}", o.originAccount, o.dirtyAccount)
+}
+
+func (o *SimpleAccount) initStorageTrie() {
+	if o.storageTrie != nil {
+		return
+	}
+	// new account
+	if o.originAccount == nil || o.originAccount.StorageRoot == (common.Hash{}) {
+		rootHash := o.Addr.ETHAddress().Hash()
+		rootNodeKey := jmt.NodeKey{
+			Version: o.blockHeight,
+			Path:    []byte{},
+			Prefix:  o.Addr.Bytes(),
+		}
+		nk := rootNodeKey.Encode()
+		o.ldb.Put(nk, nil)
+		o.ldb.Put(rootHash[:], nk)
+		trie, err := jmt.New(rootHash, o.ldb)
+		if err != nil {
+			panic(err)
+		}
+		o.storageTrie = trie
+		o.logger.Debugf("[initStorageTrie] (new jmt) addr: %v, origin account: %v", o.Addr, o.originAccount)
+		return
+	}
+
+	trie, err := jmt.New(o.originAccount.StorageRoot, o.ldb)
+	if err != nil {
+		panic(err)
+	}
+	o.storageTrie = trie
+	o.logger.Debugf("[initStorageTrie] addr: %v, origin account: %v", o.Addr, o.originAccount)
 }
 
 func (o *SimpleAccount) GetAddress() *types.Address {
@@ -98,17 +134,16 @@ func (o *SimpleAccount) GetState(key []byte) (bool, []byte) {
 		return value != nil, value
 	}
 
-	val, ok := o.cache.getState(o.Addr, string(key))
-	if !ok {
-		start := time.Now()
-		val = o.ldb.Get(composeStateKey(o.Addr, key))
-		if o.enableExpensiveMetric {
-			stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
-		}
-		o.logger.Debugf("[GetState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
-	} else {
-		o.logger.Debugf("[GetState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
+	o.initStorageTrie()
+	start := time.Now()
+	val, err := o.storageTrie.Get(compositeStorageKey(o.Addr, key))
+	if err != nil {
+		panic(err)
 	}
+	if o.enableExpensiveMetric {
+		stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+	}
+	o.logger.Debugf("[GetState] get from storage trie, addr: %v, key: %v, state: %v", o.Addr, string(key), &bytesLazyLogger{bytes: val})
 
 	o.originState[string(key)] = val
 
@@ -134,17 +169,16 @@ func (o *SimpleAccount) GetCommittedState(key []byte) []byte {
 		return value
 	}
 
-	val, ok := o.cache.getState(o.Addr, string(key))
-	if !ok {
-		start := time.Now()
-		val = o.ldb.Get(composeStateKey(o.Addr, key))
-		if o.enableExpensiveMetric {
-			stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
-		}
-		o.logger.Debugf("[GetCommittedState] get from db, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
-	} else {
-		o.logger.Debugf("[GetCommittedState] get from cache, addr: %v, key: %v, state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: val})
+	o.initStorageTrie()
+	start := time.Now()
+	val, err := o.storageTrie.Get(compositeStorageKey(o.Addr, key))
+	if err != nil {
+		panic(err)
 	}
+	if o.enableExpensiveMetric {
+		stateReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+	}
+	o.logger.Debugf("[GetCommittedState] get from storage trie, addr: %v, key: %v, state: %v", o.Addr, string(key), &bytesLazyLogger{bytes: val})
 
 	o.originState[string(key)] = val
 
@@ -162,7 +196,10 @@ func (o *SimpleAccount) SetState(key []byte, value []byte) {
 		key:      key,
 		prevalue: prev,
 	})
-	o.logger.Debugf("[SetState] addr: %v, key: %v, before state: %v, after state: %v", o.Addr, &bytesLazyLogger{bytes: key}, &bytesLazyLogger{bytes: prev}, &bytesLazyLogger{bytes: value})
+	if o.dirtyAccount == nil {
+		o.dirtyAccount = CopyOrNewIfEmpty(o.originAccount)
+	}
+	o.logger.Debugf("[SetState] addr: %v, key: %v, before state: %v, after state: %v", o.Addr, string(key), &bytesLazyLogger{bytes: prev}, &bytesLazyLogger{bytes: value})
 	o.setState(key, value)
 }
 
@@ -208,13 +245,10 @@ func (o *SimpleAccount) Code() []byte {
 		return nil
 	}
 
-	code, ok := o.cache.getCode(o.Addr)
-	if !ok {
-		start := time.Now()
-		code = o.ldb.Get(compositeKey(codeKey, o.Addr))
-		if o.enableExpensiveMetric {
-			codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
-		}
+	start := time.Now()
+	code := o.ldb.Get(compositeCodeKey(o.Addr, o.CodeHash()))
+	if o.enableExpensiveMetric {
+		codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
 	}
 
 	o.originCode = code
@@ -344,8 +378,8 @@ func (o *SimpleAccount) getJournalIfModified() *blockJournalEntry {
 		entry.PrevAccount = o.originAccount
 	}
 
-	if o.originCode == nil && !(o.originAccount == nil || o.originAccount.CodeHash == nil) {
-		o.originCode = o.ldb.Get(compositeKey(codeKey, o.Addr))
+	if o.originCode == nil && o.originAccount != nil && o.originAccount.CodeHash != nil {
+		o.originCode = o.ldb.Get(compositeCodeKey(o.Addr, o.originAccount.CodeHash))
 	}
 
 	if !bytes.Equal(o.originCode, o.dirtyCode) {
@@ -417,18 +451,4 @@ func (o *SimpleAccount) IsEmpty() bool {
 
 func (o *SimpleAccount) Suicided() bool {
 	return false
-}
-
-func bytesPrefix(prefix []byte) ([]byte, []byte) {
-	var limit []byte
-	for i := len(prefix) - 1; i >= 0; i-- {
-		c := prefix[i]
-		if c < 0xff {
-			limit = make([]byte, i+1)
-			copy(limit, prefix)
-			limit[i] = c + 1
-			break
-		}
-	}
-	return prefix, limit
 }

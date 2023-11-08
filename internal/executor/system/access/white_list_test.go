@@ -37,12 +37,10 @@ func TestWhiteList_RunForSubmit(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -350,12 +348,10 @@ func TestAddAndRemoveProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -404,12 +400,10 @@ func TestGetProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -437,12 +431,10 @@ func TestGetProviders(t *testing.T) {
 func TestSetProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	providers := []WhiteListProvider{
 		{
@@ -460,12 +452,10 @@ func TestWhiteList_SaveLog(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -491,12 +481,10 @@ func TestVerify(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	// test fail to get state
@@ -588,12 +576,10 @@ func TestWhiteList_ErrorSubmit(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -691,12 +677,10 @@ func TestWhiteList_ErrorRemove(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -781,12 +765,10 @@ func TestCheckInServices(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	state := CheckInServices(account, admin1)
@@ -801,12 +783,10 @@ func TestCheckInServices(t *testing.T) {
 func TestInitProvidersAndWhiteList(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -879,12 +859,10 @@ func TestWhiteList_Reset(t *testing.T) {
 
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	accountCache, err := ledger.NewAccountCache()
-	assert.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
 	assert.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	account.SetState([]byte(WhiteListProviderKey), []byte{1, 2, 3})

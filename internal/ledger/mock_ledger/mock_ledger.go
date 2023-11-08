@@ -1038,17 +1038,18 @@ func (c *StateLedgerCloseCall) DoAndReturn(f func()) *StateLedgerCloseCall {
 }
 
 // Commit mocks base method.
-func (m *MockStateLedger) Commit(height uint64, accounts map[string]ledger.IAccount, stateRoot *types.Hash) error {
+func (m *MockStateLedger) Commit() (*types.Hash, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit", height, accounts, stateRoot)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "Commit")
+	ret0, _ := ret[0].(*types.Hash)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Commit indicates an expected call of Commit.
-func (mr *MockStateLedgerMockRecorder) Commit(height, accounts, stateRoot any) *StateLedgerCommitCall {
+func (mr *MockStateLedgerMockRecorder) Commit() *StateLedgerCommitCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockStateLedger)(nil).Commit), height, accounts, stateRoot)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockStateLedger)(nil).Commit))
 	return &StateLedgerCommitCall{Call: call}
 }
 
@@ -1058,19 +1059,19 @@ type StateLedgerCommitCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *StateLedgerCommitCall) Return(arg0 error) *StateLedgerCommitCall {
-	c.Call = c.Call.Return(arg0)
+func (c *StateLedgerCommitCall) Return(arg0 *types.Hash, arg1 error) *StateLedgerCommitCall {
+	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *StateLedgerCommitCall) Do(f func(uint64, map[string]ledger.IAccount, *types.Hash) error) *StateLedgerCommitCall {
+func (c *StateLedgerCommitCall) Do(f func() (*types.Hash, error)) *StateLedgerCommitCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateLedgerCommitCall) DoAndReturn(f func(uint64, map[string]ledger.IAccount, *types.Hash) error) *StateLedgerCommitCall {
+func (c *StateLedgerCommitCall) DoAndReturn(f func() (*types.Hash, error)) *StateLedgerCommitCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -1219,45 +1220,6 @@ func (c *StateLedgerFinaliseCall) Do(f func()) *StateLedgerFinaliseCall {
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *StateLedgerFinaliseCall) DoAndReturn(f func()) *StateLedgerFinaliseCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// FlushDirtyData mocks base method.
-func (m *MockStateLedger) FlushDirtyData() (map[string]ledger.IAccount, *types.Hash) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushDirtyData")
-	ret0, _ := ret[0].(map[string]ledger.IAccount)
-	ret1, _ := ret[1].(*types.Hash)
-	return ret0, ret1
-}
-
-// FlushDirtyData indicates an expected call of FlushDirtyData.
-func (mr *MockStateLedgerMockRecorder) FlushDirtyData() *StateLedgerFlushDirtyDataCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushDirtyData", reflect.TypeOf((*MockStateLedger)(nil).FlushDirtyData))
-	return &StateLedgerFlushDirtyDataCall{Call: call}
-}
-
-// StateLedgerFlushDirtyDataCall wrap *gomock.Call
-type StateLedgerFlushDirtyDataCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *StateLedgerFlushDirtyDataCall) Return(arg0 map[string]ledger.IAccount, arg1 *types.Hash) *StateLedgerFlushDirtyDataCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *StateLedgerFlushDirtyDataCall) Do(f func() (map[string]ledger.IAccount, *types.Hash)) *StateLedgerFlushDirtyDataCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateLedgerFlushDirtyDataCall) DoAndReturn(f func() (map[string]ledger.IAccount, *types.Hash)) *StateLedgerFlushDirtyDataCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -1910,17 +1872,17 @@ func (c *StateLedgerHasSuicideEVMCall) DoAndReturn(f func(common.Address) bool) 
 }
 
 // NewView mocks base method.
-func (m *MockStateLedger) NewView() ledger.StateLedger {
+func (m *MockStateLedger) NewView(block *types.Block) ledger.StateLedger {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewView")
+	ret := m.ctrl.Call(m, "NewView", block)
 	ret0, _ := ret[0].(ledger.StateLedger)
 	return ret0
 }
 
 // NewView indicates an expected call of NewView.
-func (mr *MockStateLedgerMockRecorder) NewView() *StateLedgerNewViewCall {
+func (mr *MockStateLedgerMockRecorder) NewView(block any) *StateLedgerNewViewCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewView", reflect.TypeOf((*MockStateLedger)(nil).NewView))
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewView", reflect.TypeOf((*MockStateLedger)(nil).NewView), block)
 	return &StateLedgerNewViewCall{Call: call}
 }
 
@@ -1936,27 +1898,27 @@ func (c *StateLedgerNewViewCall) Return(arg0 ledger.StateLedger) *StateLedgerNew
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *StateLedgerNewViewCall) Do(f func() ledger.StateLedger) *StateLedgerNewViewCall {
+func (c *StateLedgerNewViewCall) Do(f func(*types.Block) ledger.StateLedger) *StateLedgerNewViewCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateLedgerNewViewCall) DoAndReturn(f func() ledger.StateLedger) *StateLedgerNewViewCall {
+func (c *StateLedgerNewViewCall) DoAndReturn(f func(*types.Block) ledger.StateLedger) *StateLedgerNewViewCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // PrepareBlock mocks base method.
-func (m *MockStateLedger) PrepareBlock(arg0 *types.Hash, arg1 uint64) {
+func (m *MockStateLedger) PrepareBlock(arg0, arg1 *types.Hash, arg2 uint64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PrepareBlock", arg0, arg1)
+	m.ctrl.Call(m, "PrepareBlock", arg0, arg1, arg2)
 }
 
 // PrepareBlock indicates an expected call of PrepareBlock.
-func (mr *MockStateLedgerMockRecorder) PrepareBlock(arg0, arg1 any) *StateLedgerPrepareBlockCall {
+func (mr *MockStateLedgerMockRecorder) PrepareBlock(arg0, arg1, arg2 any) *StateLedgerPrepareBlockCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareBlock", reflect.TypeOf((*MockStateLedger)(nil).PrepareBlock), arg0, arg1)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareBlock", reflect.TypeOf((*MockStateLedger)(nil).PrepareBlock), arg0, arg1, arg2)
 	return &StateLedgerPrepareBlockCall{Call: call}
 }
 
@@ -1972,13 +1934,13 @@ func (c *StateLedgerPrepareBlockCall) Return() *StateLedgerPrepareBlockCall {
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *StateLedgerPrepareBlockCall) Do(f func(*types.Hash, uint64)) *StateLedgerPrepareBlockCall {
+func (c *StateLedgerPrepareBlockCall) Do(f func(*types.Hash, *types.Hash, uint64)) *StateLedgerPrepareBlockCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateLedgerPrepareBlockCall) DoAndReturn(f func(*types.Hash, uint64)) *StateLedgerPrepareBlockCall {
+func (c *StateLedgerPrepareBlockCall) DoAndReturn(f func(*types.Hash, *types.Hash, uint64)) *StateLedgerPrepareBlockCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -2056,17 +2018,17 @@ func (c *StateLedgerRevertToSnapshotCall) DoAndReturn(f func(int)) *StateLedgerR
 }
 
 // RollbackState mocks base method.
-func (m *MockStateLedger) RollbackState(height uint64) error {
+func (m *MockStateLedger) RollbackState(height uint64, lastStateRoot *types.Hash) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RollbackState", height)
+	ret := m.ctrl.Call(m, "RollbackState", height, lastStateRoot)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RollbackState indicates an expected call of RollbackState.
-func (mr *MockStateLedgerMockRecorder) RollbackState(height any) *StateLedgerRollbackStateCall {
+func (mr *MockStateLedgerMockRecorder) RollbackState(height, lastStateRoot any) *StateLedgerRollbackStateCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackState", reflect.TypeOf((*MockStateLedger)(nil).RollbackState), height)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackState", reflect.TypeOf((*MockStateLedger)(nil).RollbackState), height, lastStateRoot)
 	return &StateLedgerRollbackStateCall{Call: call}
 }
 
@@ -2082,13 +2044,13 @@ func (c *StateLedgerRollbackStateCall) Return(arg0 error) *StateLedgerRollbackSt
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *StateLedgerRollbackStateCall) Do(f func(uint64) error) *StateLedgerRollbackStateCall {
+func (c *StateLedgerRollbackStateCall) Do(f func(uint64, *types.Hash) error) *StateLedgerRollbackStateCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateLedgerRollbackStateCall) DoAndReturn(f func(uint64) error) *StateLedgerRollbackStateCall {
+func (c *StateLedgerRollbackStateCall) DoAndReturn(f func(uint64, *types.Hash) error) *StateLedgerRollbackStateCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -2702,17 +2664,18 @@ func (c *StateAccessorClearCall) DoAndReturn(f func()) *StateAccessorClearCall {
 }
 
 // Commit mocks base method.
-func (m *MockStateAccessor) Commit(height uint64, accounts map[string]ledger.IAccount, stateRoot *types.Hash) error {
+func (m *MockStateAccessor) Commit() (*types.Hash, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit", height, accounts, stateRoot)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "Commit")
+	ret0, _ := ret[0].(*types.Hash)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Commit indicates an expected call of Commit.
-func (mr *MockStateAccessorMockRecorder) Commit(height, accounts, stateRoot any) *StateAccessorCommitCall {
+func (mr *MockStateAccessorMockRecorder) Commit() *StateAccessorCommitCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockStateAccessor)(nil).Commit), height, accounts, stateRoot)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockStateAccessor)(nil).Commit))
 	return &StateAccessorCommitCall{Call: call}
 }
 
@@ -2722,58 +2685,19 @@ type StateAccessorCommitCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *StateAccessorCommitCall) Return(arg0 error) *StateAccessorCommitCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *StateAccessorCommitCall) Do(f func(uint64, map[string]ledger.IAccount, *types.Hash) error) *StateAccessorCommitCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateAccessorCommitCall) DoAndReturn(f func(uint64, map[string]ledger.IAccount, *types.Hash) error) *StateAccessorCommitCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// FlushDirtyData mocks base method.
-func (m *MockStateAccessor) FlushDirtyData() (map[string]ledger.IAccount, *types.Hash) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushDirtyData")
-	ret0, _ := ret[0].(map[string]ledger.IAccount)
-	ret1, _ := ret[1].(*types.Hash)
-	return ret0, ret1
-}
-
-// FlushDirtyData indicates an expected call of FlushDirtyData.
-func (mr *MockStateAccessorMockRecorder) FlushDirtyData() *StateAccessorFlushDirtyDataCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushDirtyData", reflect.TypeOf((*MockStateAccessor)(nil).FlushDirtyData))
-	return &StateAccessorFlushDirtyDataCall{Call: call}
-}
-
-// StateAccessorFlushDirtyDataCall wrap *gomock.Call
-type StateAccessorFlushDirtyDataCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *StateAccessorFlushDirtyDataCall) Return(arg0 map[string]ledger.IAccount, arg1 *types.Hash) *StateAccessorFlushDirtyDataCall {
+func (c *StateAccessorCommitCall) Return(arg0 *types.Hash, arg1 error) *StateAccessorCommitCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *StateAccessorFlushDirtyDataCall) Do(f func() (map[string]ledger.IAccount, *types.Hash)) *StateAccessorFlushDirtyDataCall {
+func (c *StateAccessorCommitCall) Do(f func() (*types.Hash, error)) *StateAccessorCommitCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *StateAccessorFlushDirtyDataCall) DoAndReturn(f func() (map[string]ledger.IAccount, *types.Hash)) *StateAccessorFlushDirtyDataCall {
+func (c *StateAccessorCommitCall) DoAndReturn(f func() (*types.Hash, error)) *StateAccessorCommitCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

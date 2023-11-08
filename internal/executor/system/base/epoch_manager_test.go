@@ -7,7 +7,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	rbft "github.com/axiomesh/axiom-bft"
@@ -22,12 +21,10 @@ import (
 func prepareLedger(t *testing.T) ledger.StateLedger {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	accountCache, err := ledger.NewAccountCache()
-	require.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "epoch_manager"), nil)
-	require.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
+	assert.Nil(t, err)
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	return stateLedger
 }

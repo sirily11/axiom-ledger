@@ -135,7 +135,7 @@ func (exec *BlockExecutor) ApplyReadonlyTransactions(txs []*types.Transaction) [
 		return nil
 	}
 
-	exec.ledger.StateLedger.PrepareBlock(meta.BlockHash, meta.Height)
+	exec.ledger.StateLedger.PrepareBlock(block.BlockHeader.StateRoot, meta.BlockHash, meta.Height)
 	exec.evm = newEvm(exec.rep.Config.Executor.EVM, meta.Height, uint64(block.BlockHeader.Timestamp), exec.evmChainCfg, exec.ledger.StateLedger, exec.ledger.ChainLedger, "")
 	for i, tx := range txs {
 		exec.ledger.StateLedger.SetTxContext(tx.GetHash(), i)

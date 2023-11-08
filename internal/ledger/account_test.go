@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/axiomesh/axiom-kit/log"
@@ -14,42 +15,6 @@ import (
 	"github.com/axiomesh/axiom-kit/storage/pebble"
 	"github.com/axiomesh/axiom-kit/types"
 )
-
-func TestAccountCache_clear(t *testing.T) {
-	accountCache, err := NewAccountCache()
-	assert.Nil(t, err)
-
-	code := []byte{1}
-	addr := &types.Address{}
-	err = accountCache.add(map[string]IAccount{
-		addr.String(): &SimpleAccount{
-			Addr:             &types.Address{},
-			originAccount:    &InnerAccount{},
-			dirtyAccount:     &InnerAccount{},
-			originState:      make(map[string][]byte),
-			pendingState:     make(map[string][]byte),
-			dirtyState:       make(map[string][]byte),
-			originCode:       nil,
-			dirtyCode:        code,
-			pendingStateHash: &types.Hash{},
-			ldb:              nil,
-			cache:            nil,
-			changer:          &stateChanger{},
-			suicided:         false,
-		},
-	})
-	assert.Nil(t, err)
-
-	c, ok := accountCache.getCode(addr)
-	assert.True(t, ok)
-	assert.EqualValues(t, code, c)
-
-	accountCache.rmAccount(addr)
-
-	accountCache.clear()
-	_, ok = accountCache.getCode(addr)
-	assert.False(t, ok)
-}
 
 func TestAccount_GetState(t *testing.T) {
 	repoRoot := t.TempDir()
@@ -81,7 +46,7 @@ func TestAccount_GetState(t *testing.T) {
 
 			addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
-			account := NewAccount(stateLedger.ldb, stateLedger.accountCache, addr, NewChanger())
+			account := NewAccount(1, stateLedger.ldb, addr, NewChanger())
 
 			addr1 := account.GetAddress()
 			assert.Equal(t, addr, addr1)
@@ -139,7 +104,7 @@ func TestAccount_AccountBalance(t *testing.T) {
 
 			addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
-			account := NewAccount(stateLedger.ldb, stateLedger.accountCache, addr, NewChanger())
+			account := NewAccount(1, stateLedger.ldb, addr, NewChanger())
 
 			account.AddBalance(big.NewInt(1))
 			account.SubBalance(big.NewInt(1))
@@ -190,11 +155,34 @@ func TestAccount_setNonce(t *testing.T) {
 
 			addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 			stateLedger := ledger.StateLedger.(*StateLedgerImpl)
-			account := NewAccount(stateLedger.ldb, stateLedger.accountCache, addr, NewChanger())
+			account := NewAccount(1, stateLedger.ldb, addr, NewChanger())
 
 			account.setNonce(1)
 
 			ledger.Close()
 		})
 	}
+}
+
+func TestAccount_InitJMTError(t *testing.T) {
+	repoRoot := t.TempDir()
+
+	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
+	assert.Nil(t, err)
+
+	addr := types.NewAddressByStr("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	account := NewAccount(1, lStateStorage, addr, NewChanger())
+
+	defer func() {
+		if r := recover(); r != nil {
+			assert.NotNil(t, r)
+		}
+	}()
+	account.storageTrie = nil
+	account.originAccount = &InnerAccount{
+		StorageRoot: common.Hash{1},
+	}
+	_ = account.originAccount.String()
+
+	account.initStorageTrie()
 }
