@@ -84,7 +84,7 @@ func (api *BlockChainAPI) GetBalance(address common.Address, blockNrOrHash *rpct
 
 	api.logger.Debugf("eth_getBalance, address: %s, block number : %d", address.String())
 
-	stateLedger, err := getStateLedgerAt(api.api)
+	stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (api *BlockChainAPI) GetCode(address common.Address, blockNrOrHash *rpctype
 
 	api.logger.Debugf("eth_getCode, address: %s", address.String())
 
-	stateLedger, err := getStateLedgerAt(api.api)
+	stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func (api *BlockChainAPI) GetStorageAt(address common.Address, key string, block
 
 	api.logger.Debugf("eth_getStorageAt, address: %s, key: %s", address, key)
 
-	stateLedger, err := getStateLedgerAt(api.api)
+	stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (api *BlockChainAPI) Call(args types.CallArgs, blockNrOrHash *rpctypes.Bloc
 
 	api.logger.Debugf("eth_call, args: %v", args)
 
-	receipt, err := DoCall(api.ctx, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
+	receipt, err := DoCall(api.ctx, blockNrOrHash, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,8 @@ func (api *BlockChainAPI) Call(args types.CallArgs, blockNrOrHash *rpctypes.Bloc
 	return receipt.Return(), receipt.Err
 }
 
-func DoCall(ctx context.Context, evmCfg repo.EVM, api api.CoreAPI, args types.CallArgs, timeout time.Duration, globalGasCap uint64, logger logrus.FieldLogger) (*vm.ExecutionResult, error) {
+// DoCall todo call with historical ledger
+func DoCall(ctx context.Context, blockNrOrHash *rpctypes.BlockNumberOrHash, evmCfg repo.EVM, api api.CoreAPI, args types.CallArgs, timeout time.Duration, globalGasCap uint64, logger logrus.FieldLogger) (*vm.ExecutionResult, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	var cancel context.CancelFunc
@@ -266,7 +267,10 @@ func DoCall(ctx context.Context, evmCfg repo.EVM, api api.CoreAPI, args types.Ca
 	}
 
 	// use copy state ledger to call
-	stateLedger := api.Broker().GetViewStateLedger().NewView()
+	stateLedger, err := getStateLedgerAt(api, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
 	stateLedger.SetTxContext(types.NewHash([]byte("mockTx")), 0)
 
 	// check if call system contract
@@ -357,7 +361,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 		feeCap = common.Big0
 	}
 	if feeCap.BitLen() != 0 {
-		stateLedger, err := getStateLedgerAt(api.api)
+		stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 		if err != nil {
 			return 0, err
 		}
@@ -394,7 +398,7 @@ func (api *BlockChainAPI) EstimateGas(args types.CallArgs, blockNrOrHash *rpctyp
 	executable := func(gas uint64) (bool, *vm.ExecutionResult, error) {
 		args.Gas = (*ethhexutil.Uint64)(&gas)
 
-		result, err := DoCall(api.ctx, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
+		result, err := DoCall(api.ctx, blockNrOrHash, api.rep.Config.Executor.EVM, api.api, args, api.rep.Config.JsonRPC.EVMTimeout.ToDuration(), api.rep.Config.JsonRPC.GasCap, api.logger)
 		if err != nil {
 			if errors.Is(err, core.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit

@@ -1,6 +1,7 @@
 package finance
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func GasPriceBySize(t *testing.T, size int, parentGasPrice int64, expectErr erro
 		Transactions: []*types.Transaction{},
 	}
 	prepareTxs := func(size int) []*types.Transaction {
-		txs := []*types.Transaction{}
+		var txs []*types.Transaction
 		for i := 0; i < size; i++ {
 			txs = append(txs, &types.Transaction{})
 		}
@@ -54,20 +55,20 @@ func GasPriceBySize(t *testing.T, size int, parentGasPrice int64, expectErr erro
 }
 
 func generateMockConfig(t *testing.T) *repo.Repo {
-	repo, err := repo.Default(t.TempDir())
+	rep, err := repo.Default(t.TempDir())
 	assert.Nil(t, err)
-	return repo
+	return rep
 }
 
 func checkResult(t *testing.T, block *types.Block, config *repo.Repo, parentGasPrice int64, gas uint64) uint64 {
 	percentage := 2 * (float64(len(block.Transactions)) - float64(config.EpochInfo.ConsensusParams.BlockMaxTxNum)/2) / float64(config.EpochInfo.ConsensusParams.BlockMaxTxNum)
-	actualGas := uint64(float64(parentGasPrice) * (1 + percentage*config.Config.Genesis.EpochInfo.FinanceParams.GasChangeRate))
+	actualGas := uint64(float64(parentGasPrice) * (1 + percentage*float64(config.Config.Genesis.EpochInfo.FinanceParams.GasChangeRateValue)/math.Pow10(int(config.Config.Genesis.EpochInfo.FinanceParams.GasChangeRateDecimals))))
 	if actualGas > config.Config.Genesis.EpochInfo.FinanceParams.MaxGasPrice {
 		actualGas = config.Config.Genesis.EpochInfo.FinanceParams.MaxGasPrice
 	}
 	if actualGas < config.Config.Genesis.EpochInfo.FinanceParams.MinGasPrice {
 		actualGas = config.Config.Genesis.EpochInfo.FinanceParams.MinGasPrice
 	}
-	assert.Equal(t, uint64(actualGas), gas, "Gas price is not correct")
+	assert.Equal(t, actualGas, gas, "Gas price is not correct")
 	return gas
 }

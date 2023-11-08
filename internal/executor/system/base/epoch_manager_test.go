@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	rbft "github.com/axiomesh/axiom-bft"
@@ -17,17 +17,16 @@ import (
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/internal/ledger/mock_ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 func prepareLedger(t *testing.T) ledger.StateLedger {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	accountCache, err := ledger.NewAccountCache()
-	require.Nil(t, err)
 	repoRoot := t.TempDir()
 	ld, err := leveldb.New(filepath.Join(repoRoot, "epoch_manager"), nil)
-	require.Nil(t, err)
-	account := ledger.NewAccount(ld, accountCache, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
+	assert.Nil(t, err)
+	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	return stateLedger
 }
@@ -35,19 +34,10 @@ func prepareLedger(t *testing.T) ledger.StateLedger {
 func TestEpochManager(t *testing.T) {
 	stateLedger := prepareLedger(t)
 
-	epochMgr := NewEpochManager(&common.SystemContractConfig{
-		Logger: logrus.New(),
-	})
-	epochMgr.Reset(1, stateLedger)
-	_, err := epochMgr.EstimateGas(nil)
-	assert.Error(t, err)
-	_, err = epochMgr.Run(nil)
-	assert.Error(t, err)
-
 	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
-	err = InitEpochInfo(stateLedger, g)
+	err := InitEpochInfo(stateLedger, g)
 	assert.Nil(t, err)
 
 	currentEpoch, err := GetCurrentEpochInfo(stateLedger)
@@ -88,6 +78,93 @@ func TestEpochManager(t *testing.T) {
 
 	_, err = GetEpochInfo(stateLedger, 3)
 	assert.Error(t, err)
+
+	epochMgr := NewEpochManager(&common.SystemContractConfig{
+		Logger: logrus.New(),
+	})
+	epochMgr.Reset(1, stateLedger)
+	_, err = epochMgr.EstimateGas(&types.CallArgs{
+		Data: &hexutil.Bytes{},
+	})
+	assert.Error(t, err)
+
+	t.Run("query currentEpoch", func(t *testing.T) {
+		method := epochManagerABI.Methods["currentEpoch"]
+
+		inputs, err := method.Inputs.Pack()
+		assert.Nil(t, err)
+		inputs = append(method.ID, inputs...)
+
+		_, err = epochMgr.EstimateGas(&types.CallArgs{
+			Data: (*hexutil.Bytes)(&inputs),
+		})
+		assert.Nil(t, err)
+		res, err := epochMgr.Run(&vm.Message{
+			Data: inputs,
+		})
+		assert.Nil(t, err)
+		assert.Nil(t, res.Err, string(res.ReturnData))
+
+		unpacked, err := method.Outputs.Unpack(res.ReturnData)
+		assert.Nil(t, err)
+		decodedEpoch := &rbft.EpochInfo{}
+		err = method.Outputs.Copy(&decodedEpoch, unpacked)
+		assert.Nil(t, err)
+
+		assert.EqualValues(t, currentEpoch, decodedEpoch)
+	})
+
+	t.Run("query nextEpoch", func(t *testing.T) {
+		method := epochManagerABI.Methods["nextEpoch"]
+
+		inputs, err := method.Inputs.Pack()
+		assert.Nil(t, err)
+		inputs = append(method.ID, inputs...)
+
+		_, err = epochMgr.EstimateGas(&types.CallArgs{
+			Data: (*hexutil.Bytes)(&inputs),
+		})
+		assert.Nil(t, err)
+		res, err := epochMgr.Run(&vm.Message{
+			Data: inputs,
+		})
+		assert.Nil(t, err)
+		assert.Nil(t, res.Err, string(res.ReturnData))
+
+		unpacked, err := method.Outputs.Unpack(res.ReturnData)
+		assert.Nil(t, err)
+		decodedEpoch := &rbft.EpochInfo{}
+		err = method.Outputs.Copy(&decodedEpoch, unpacked)
+		assert.Nil(t, err)
+
+		assert.EqualValues(t, nextEpoch, decodedEpoch)
+	})
+
+	t.Run("query historyEpoch", func(t *testing.T) {
+		method := epochManagerABI.Methods["historyEpoch"]
+
+		inputs, err := method.Inputs.Pack(uint64(2))
+		assert.Nil(t, err)
+		inputs = append(method.ID, inputs...)
+
+		_, err = epochMgr.EstimateGas(&types.CallArgs{
+			Data: (*hexutil.Bytes)(&inputs),
+		})
+		assert.Nil(t, err)
+		res, err := epochMgr.Run(&vm.Message{
+			Data: inputs,
+		})
+		assert.Nil(t, err)
+		assert.Nil(t, res.Err, string(res.ReturnData))
+
+		unpacked, err := method.Outputs.Unpack(res.ReturnData)
+		assert.Nil(t, err)
+		decodedEpoch := &rbft.EpochInfo{}
+		err = method.Outputs.Copy(&decodedEpoch, unpacked)
+		assert.Nil(t, err)
+
+		assert.EqualValues(t, epoch2, decodedEpoch)
+	})
 }
 
 func TestInitEpochInfo_InvalidNodeInfo(t *testing.T) {
@@ -137,7 +214,7 @@ func TestInitEpochInfo_InvalidNodeInfo(t *testing.T) {
 			name: "duplicate p2p node id",
 			epochInfo: func() *rbft.EpochInfo {
 				e := g.Clone()
-				e.DataSyncerSet = append(e.DataSyncerSet, &rbft.NodeInfo{
+				e.DataSyncerSet = append(e.DataSyncerSet, rbft.NodeInfo{
 					ID:             100,
 					AccountAddress: "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 					P2PNodeID:      e.ValidatorSet[0].P2PNodeID,
@@ -157,7 +234,7 @@ func TestAddNode(t *testing.T) {
 	stateLedger := prepareLedger(t)
 	var newNodeID uint64
 	t.Run("next epoch info is not initialized", func(t *testing.T) {
-		newNodeID, err := AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err := AddNode(stateLedger, rbft.NodeInfo{
 			AccountAddress:       "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 			P2PNodeID:            "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
 			ConsensusVotingPower: 100,
@@ -172,7 +249,7 @@ func TestAddNode(t *testing.T) {
 	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
-	g.DataSyncerSet = append(g.DataSyncerSet, &rbft.NodeInfo{
+	g.DataSyncerSet = append(g.DataSyncerSet, rbft.NodeInfo{
 		ID:                   9,
 		AccountAddress:       "0x88E9A1cE92b4D6e4d860CFBB5bB7aC44d9b548f8",
 		P2PNodeID:            "16Uiu2HAkwmNbfH8ZBdnYhygUHyG5mSWrWTEra3gwHWt9dGTUSRVV",
@@ -182,7 +259,7 @@ func TestAddNode(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("add correct node info", func(t *testing.T) {
-		newNodeID, err = AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err = AddNode(stateLedger, rbft.NodeInfo{
 			AccountAddress:       "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 			P2PNodeID:            "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
 			ConsensusVotingPower: 100,
@@ -196,7 +273,7 @@ func TestAddNode(t *testing.T) {
 	})
 
 	t.Run("add next correct node info", func(t *testing.T) {
-		newNodeID, err = AddNode(stateLedger, &rbft.NodeInfo{
+		newNodeID, err = AddNode(stateLedger, rbft.NodeInfo{
 			AccountAddress:       "0x7D9428f0cE5c89dA907Ae6860F93861BD99Fbf0d",
 			P2PNodeID:            "16Uiu2HAmTYQW5Tp2cXxyENCAy8cTNRyVrmxshUvS8fXWGakbUJep",
 			ConsensusVotingPower: 100,
@@ -211,11 +288,11 @@ func TestAddNode(t *testing.T) {
 
 	exceptionTests := []struct {
 		name    string
-		newNode *rbft.NodeInfo
+		newNode rbft.NodeInfo
 	}{
 		{
 			name: "invalid node account address",
-			newNode: &rbft.NodeInfo{
+			newNode: rbft.NodeInfo{
 				AccountAddress:       "invalid",
 				P2PNodeID:            "16Uiu2HAmLDLMYKSAP67UazgNfxg2neKg3crbihuS4TEZ87F5ePGg",
 				ConsensusVotingPower: 100,
@@ -223,7 +300,7 @@ func TestAddNode(t *testing.T) {
 		},
 		{
 			name: "invalid node p2p id",
-			newNode: &rbft.NodeInfo{
+			newNode: rbft.NodeInfo{
 				AccountAddress:       "0xA681B4E0CFA5bf0a068d5512b5E130bff2Ce6593",
 				P2PNodeID:            "invalid",
 				ConsensusVotingPower: 100,
@@ -231,7 +308,7 @@ func TestAddNode(t *testing.T) {
 		},
 		{
 			name: "duplicate node account addr",
-			newNode: &rbft.NodeInfo{
+			newNode: rbft.NodeInfo{
 				AccountAddress:       g.ValidatorSet[0].AccountAddress,
 				P2PNodeID:            "16Uiu2HAmLDLMYKSAP67UazgNfxg2neKg3crbihuS4TEZ87F5ePGg",
 				ConsensusVotingPower: 100,
@@ -239,7 +316,7 @@ func TestAddNode(t *testing.T) {
 		},
 		{
 			name: "duplicate p2p node id",
-			newNode: &rbft.NodeInfo{
+			newNode: rbft.NodeInfo{
 				AccountAddress:       "0xA681B4E0CFA5bf0a068d5512b5E130bff2Ce6593",
 				P2PNodeID:            g.CandidateSet[0].P2PNodeID,
 				ConsensusVotingPower: 100,
@@ -247,7 +324,7 @@ func TestAddNode(t *testing.T) {
 		},
 		{
 			name: "duplicate p2p node id with DataSyncer node",
-			newNode: &rbft.NodeInfo{
+			newNode: rbft.NodeInfo{
 				AccountAddress:       "0xA681B4E0CFA5bf0a068d5512b5E130bff2Ce6593",
 				P2PNodeID:            g.DataSyncerSet[0].P2PNodeID,
 				ConsensusVotingPower: 100,
@@ -274,7 +351,7 @@ func TestRemoveNode(t *testing.T) {
 	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
-	g.DataSyncerSet = append(g.DataSyncerSet, &rbft.NodeInfo{
+	g.DataSyncerSet = append(g.DataSyncerSet, rbft.NodeInfo{
 		ID:                   9,
 		AccountAddress:       "0x88E9A1cE92b4D6e4d860CFBB5bB7aC44d9b548f8",
 		P2PNodeID:            "16Uiu2HAkwmNbfH8ZBdnYhygUHyG5mSWrWTEra3gwHWt9dGTUSRVV",
@@ -294,7 +371,7 @@ func TestRemoveNode(t *testing.T) {
 		ne, err := GetNextEpochInfo(stateLedger)
 		assert.Nil(t, err)
 		assert.EqualValues(t, len(g.ValidatorSet)-1, len(ne.ValidatorSet))
-		assert.False(t, lo.ContainsBy(ne.ValidatorSet, func(v *rbft.NodeInfo) bool {
+		assert.False(t, lo.ContainsBy(ne.ValidatorSet, func(v rbft.NodeInfo) bool {
 			return v.ID == 1
 		}))
 	})
@@ -305,7 +382,7 @@ func TestRemoveNode(t *testing.T) {
 		ne, err := GetNextEpochInfo(stateLedger)
 		assert.Nil(t, err)
 		assert.EqualValues(t, len(g.CandidateSet)-1, len(ne.CandidateSet))
-		assert.False(t, lo.ContainsBy(ne.CandidateSet, func(v *rbft.NodeInfo) bool {
+		assert.False(t, lo.ContainsBy(ne.CandidateSet, func(v rbft.NodeInfo) bool {
 			return v.ID == 5
 		}))
 	})
@@ -316,7 +393,7 @@ func TestRemoveNode(t *testing.T) {
 		ne, err := GetNextEpochInfo(stateLedger)
 		assert.Nil(t, err)
 		assert.EqualValues(t, len(g.DataSyncerSet)-1, len(ne.DataSyncerSet))
-		assert.False(t, lo.ContainsBy(ne.DataSyncerSet, func(v *rbft.NodeInfo) bool {
+		assert.False(t, lo.ContainsBy(ne.DataSyncerSet, func(v rbft.NodeInfo) bool {
 			return v.ID == 9
 		}))
 	})

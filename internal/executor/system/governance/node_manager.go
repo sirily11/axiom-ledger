@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/samber/lo"
+
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	vm "github.com/axiomesh/eth-kit/evm"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/samber/lo"
 )
 
 const (
@@ -372,7 +373,7 @@ func (nm *NodeManager) voteNodeAddRemove(user ethcommon.Address, proposal *NodeP
 
 		if proposal.Type == NodeAdd {
 			for _, node := range proposal.Nodes {
-				newNodeID, err := base.AddNode(nm.stateLedger, &rbft.NodeInfo{
+				newNodeID, err := base.AddNode(nm.stateLedger, rbft.NodeInfo{
 					AccountAddress:       node.Address,
 					P2PNodeID:            node.NodeId,
 					ConsensusVotingPower: 100,

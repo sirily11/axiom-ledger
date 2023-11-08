@@ -20,6 +20,7 @@ import (
 	vm "github.com/axiomesh/eth-kit/evm"
 	common0 "github.com/ethereum/go-ethereum/common"
 	event "github.com/ethereum/go-ethereum/event"
+	params "github.com/ethereum/go-ethereum/params"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -257,6 +258,44 @@ func NewMockBrokerAPI(ctrl *gomock.Controller) *MockBrokerAPI {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBrokerAPI) EXPECT() *MockBrokerAPIMockRecorder {
 	return m.recorder
+}
+
+// ChainConfig mocks base method.
+func (m *MockBrokerAPI) ChainConfig() *params.ChainConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChainConfig")
+	ret0, _ := ret[0].(*params.ChainConfig)
+	return ret0
+}
+
+// ChainConfig indicates an expected call of ChainConfig.
+func (mr *MockBrokerAPIMockRecorder) ChainConfig() *BrokerAPIChainConfigCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainConfig", reflect.TypeOf((*MockBrokerAPI)(nil).ChainConfig))
+	return &BrokerAPIChainConfigCall{Call: call}
+}
+
+// BrokerAPIChainConfigCall wrap *gomock.Call
+type BrokerAPIChainConfigCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *BrokerAPIChainConfigCall) Return(arg0 *params.ChainConfig) *BrokerAPIChainConfigCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *BrokerAPIChainConfigCall) Do(f func() *params.ChainConfig) *BrokerAPIChainConfigCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *BrokerAPIChainConfigCall) DoAndReturn(f func() *params.ChainConfig) *BrokerAPIChainConfigCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
 }
 
 // ConsensusReady mocks base method.
@@ -681,6 +720,47 @@ func (c *BrokerAPIHandleTransactionCall) Do(f func(*types.Transaction) error) *B
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *BrokerAPIHandleTransactionCall) DoAndReturn(f func(*types.Transaction) error) *BrokerAPIHandleTransactionCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// StateAtTransaction mocks base method.
+func (m *MockBrokerAPI) StateAtTransaction(block *types.Block, txIndex int, reexec uint64) (*vm.Message, vm.BlockContext, *ledger.StateLedger, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateAtTransaction", block, txIndex, reexec)
+	ret0, _ := ret[0].(*vm.Message)
+	ret1, _ := ret[1].(vm.BlockContext)
+	ret2, _ := ret[2].(*ledger.StateLedger)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// StateAtTransaction indicates an expected call of StateAtTransaction.
+func (mr *MockBrokerAPIMockRecorder) StateAtTransaction(block, txIndex, reexec any) *BrokerAPIStateAtTransactionCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtTransaction", reflect.TypeOf((*MockBrokerAPI)(nil).StateAtTransaction), block, txIndex, reexec)
+	return &BrokerAPIStateAtTransactionCall{Call: call}
+}
+
+// BrokerAPIStateAtTransactionCall wrap *gomock.Call
+type BrokerAPIStateAtTransactionCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *BrokerAPIStateAtTransactionCall) Return(arg0 *vm.Message, arg1 vm.BlockContext, arg2 *ledger.StateLedger, arg3 error) *BrokerAPIStateAtTransactionCall {
+	c.Call = c.Call.Return(arg0, arg1, arg2, arg3)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *BrokerAPIStateAtTransactionCall) Do(f func(*types.Block, int, uint64) (*vm.Message, vm.BlockContext, *ledger.StateLedger, error)) *BrokerAPIStateAtTransactionCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *BrokerAPIStateAtTransactionCall) DoAndReturn(f func(*types.Block, int, uint64) (*vm.Message, vm.BlockContext, *ledger.StateLedger, error)) *BrokerAPIStateAtTransactionCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -121,7 +121,7 @@ func TestStateUpdate(t *testing.T) {
 
 	peerSet := make([]string, 0)
 	vSet := adaptor.config.GenesisEpochInfo.ValidatorSet
-	lo.ForEach(vSet, func(item *rbft.NodeInfo, index int) {
+	lo.ForEach(vSet, func(item rbft.NodeInfo, index int) {
 		if item.P2PNodeID != adaptor.config.SelfAccountAddress {
 			peerSet = append(peerSet, item.P2PNodeID)
 		}
@@ -165,7 +165,7 @@ func TestStateUpdateWithEpochChange(t *testing.T) {
 
 	peerSet := make([]string, 0)
 	vSet := adaptor.config.GenesisEpochInfo.ValidatorSet
-	lo.ForEach(vSet, func(item *rbft.NodeInfo, index int) {
+	lo.ForEach(vSet, func(item rbft.NodeInfo, index int) {
 		if item.P2PNodeID != adaptor.config.SelfAccountAddress {
 			peerSet = append(peerSet, item.P2PNodeID)
 		}
@@ -215,7 +215,7 @@ func TestStateUpdateWithRollback(t *testing.T) {
 
 	peerSet := make([]string, 0)
 	vSet := adaptor.config.GenesisEpochInfo.ValidatorSet
-	lo.ForEach(vSet, func(item *rbft.NodeInfo, index int) {
+	lo.ForEach(vSet, func(item rbft.NodeInfo, index int) {
 		if item.P2PNodeID != adaptor.config.SelfAccountAddress {
 			peerSet = append(peerSet, item.P2PNodeID)
 		}

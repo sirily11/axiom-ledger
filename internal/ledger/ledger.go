@@ -63,10 +63,9 @@ type StateLedger interface {
 
 	GetLogs(types.Hash, uint64, *types.Hash) []*types.EvmLog
 
-	// Rollback
-	RollbackState(height uint64) error
+	RollbackState(height uint64, lastStateRoot *types.Hash) error
 
-	PrepareBlock(*types.Hash, uint64)
+	PrepareBlock(*types.Hash, *types.Hash, uint64)
 
 	ClearChangerAndRefund()
 
@@ -75,10 +74,9 @@ type StateLedger interface {
 
 	Finalise()
 
-	// Version
 	Version() uint64
 
-	NewView() StateLedger
+	NewView(block *types.Block) StateLedger
 }
 
 // StateAccessor manipulates the state data
@@ -114,10 +112,7 @@ type StateAccessor interface {
 	GetNonce(*types.Address) uint64
 
 	// Commit commits the state data
-	Commit(height uint64, accounts map[string]IAccount, stateRoot *types.Hash) error
-
-	// FlushDirtyData flushes the dirty data
-	FlushDirtyData() (map[string]IAccount, *types.Hash)
+	Commit() (*types.Hash, error)
 
 	// Set tx context for state db
 	SetTxContext(thash *types.Hash, txIndex int)

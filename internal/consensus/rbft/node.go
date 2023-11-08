@@ -316,7 +316,7 @@ func (n *Node) listenBatchMemTxsToBroadcast() {
 					return err
 				}
 
-				return n.txsBroadcastMsgPipe.Broadcast(context.TODO(), lo.Map(lo.Flatten([][]*rbft.NodeInfo{n.stack.EpochInfo.ValidatorSet, n.stack.EpochInfo.CandidateSet}), func(item *rbft.NodeInfo, index int) string {
+				return n.txsBroadcastMsgPipe.Broadcast(context.TODO(), lo.Map(lo.Flatten([][]rbft.NodeInfo{n.stack.EpochInfo.ValidatorSet, n.stack.EpochInfo.CandidateSet}), func(item rbft.NodeInfo, index int) string {
 					return item.P2PNodeID
 				}), data)
 			}()

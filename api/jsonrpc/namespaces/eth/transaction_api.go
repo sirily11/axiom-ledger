@@ -134,14 +134,15 @@ func (api *TransactionAPI) GetTransactionCount(address common.Address, blockNrOr
 		}
 	}(time.Now())
 
-	api.logger.Debugf("eth_getTransactionCount, address: %s", address)
+	api.logger.Debugf("eth_getTransactionCount, address: %s, blockNrOrHash: %v", address, blockNrOrHash)
 	if blockNrOrHash != nil {
 		if blockNumber, ok := blockNrOrHash.Number(); ok && blockNumber == rpctypes.PendingBlockNumber {
 			nonce := api.api.TxPool().GetPendingTxCountByAccount(address.String())
 			return (*hexutil.Uint64)(&nonce), nil
 		}
 	}
-	stateLedger, err := getStateLedgerAt(api.api)
+	api.logger.Debugf("eth_getTransactionCount from ledger")
+	stateLedger, err := getStateLedgerAt(api.api, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +299,11 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (ret common.Ha
 		if from == nil {
 			return [32]byte{}, errors.New("verify tx err")
 		}
-		if err := access.Verify(api.api.Broker().GetViewStateLedger().NewView(), from.String()); err != nil {
+		stateLedger, err := getStateLedgerAt(api.api, nil) // use the latest block
+		if err != nil {
+			return [32]byte{}, err
+		}
+		if err := access.Verify(stateLedger, from.String()); err != nil {
 			return [32]byte{}, err
 		}
 	}
@@ -311,7 +316,6 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (ret common.Ha
 		if api.rep.Config.JsonRPC.RejectTxsIfConsensusAbnormal {
 			return [32]byte{}, fmt.Errorf("the system is temporarily unavailable %s, tx: %s", err.Error(), tx.GetHash().String())
 		}
-		api.logger.Warnf("Receive new eth tx: %s, but system maybe be temporarily unavailable %s", tx.GetHash().String(), err.Error())
 	} else {
 		api.logger.Debugf("Receive new eth tx: %s", tx.GetHash().String())
 	}

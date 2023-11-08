@@ -456,7 +456,7 @@ func TestTxPreCheckMgr_UpdateEpochInfo(t *testing.T) {
 	tp, _, _ := newMockPreCheckMgr()
 	oldTxMaxSize := tp.txMaxSize.Load()
 	tp.UpdateEpochInfo(&rbft.EpochInfo{
-		ConfigParams: &rbft.ConfigParams{
+		ConfigParams: rbft.ConfigParams{
 			TxMaxSize: oldTxMaxSize + 1,
 		},
 	})
