@@ -31,6 +31,7 @@ type ChainLedgerImpl struct {
 
 	txCache      *lru.Cache[uint64, []*types.Transaction]
 	receiptCache *lru.Cache[uint64, []*types.Receipt]
+	blockCache   *lru.Cache[uint64, *types.Block]
 }
 
 func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.BlockFile) (*ChainLedgerImpl, error) {
@@ -62,8 +63,14 @@ func newChainLedger(rep *repo.Repo, bcStorage storage.Storage, bf *blockfile.Blo
 		return nil, fmt.Errorf("new receipt cache: %w", err)
 	}
 
+	blockCache, err := lru.New[uint64, *types.Block](rep.Config.Ledger.ChainLedgerCacheSize)
+	if err != nil {
+		return nil, fmt.Errorf("new block cache: %w", err)
+	}
+
 	c.txCache = txCache
 	c.receiptCache = receiptCache
+	c.blockCache = blockCache
 
 	return c, nil
 }
@@ -92,6 +99,9 @@ func NewChainLedger(rep *repo.Repo, storageDir string) (*ChainLedgerImpl, error)
 
 // GetBlock get block with height
 func (l *ChainLedgerImpl) GetBlock(height uint64) (*types.Block, error) {
+	if block, ok := l.blockCache.Get(height); ok {
+		return block, nil
+	}
 	data, err := l.bf.Get(blockfile.BlockFileBodiesTable, height)
 	if err != nil {
 		return nil, fmt.Errorf("get bodies with height %d from blockfile failed: %w", height, err)
@@ -126,6 +136,7 @@ func (l *ChainLedgerImpl) GetBlock(height uint64) (*types.Block, error) {
 	}
 
 	block.Transactions = txs
+	l.blockCache.Add(height, block)
 
 	return block, nil
 }
@@ -295,6 +306,8 @@ func (l *ChainLedgerImpl) PersistExecutionResult(block *types.Block, receipts []
 		l.receiptCache.Add(meta.Height, receipts)
 	}
 
+	l.blockCache.Add(meta.Height, block)
+
 	l.UpdateChainMeta(meta)
 
 	l.logger.WithField("time", time.Since(current)).Debug("persist execution result elapsed")
@@ -434,6 +447,7 @@ func (l *ChainLedgerImpl) removeChainDataOnBlock(batch storage.Batch, height uin
 
 	l.txCache.Remove(height)
 	l.receiptCache.Remove(height)
+	l.blockCache.Remove(height)
 
 	return nil
 }
