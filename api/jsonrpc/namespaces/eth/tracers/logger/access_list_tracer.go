@@ -19,9 +19,10 @@ package logger
 import (
 	"math/big"
 
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 // accessList is an accumulator for the set of accounts and storage slots an EVM

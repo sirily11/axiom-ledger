@@ -25,13 +25,14 @@ import (
 	"strings"
 	"sync/atomic"
 
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
+
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 // Storage represents a contract's storage.
@@ -54,6 +55,7 @@ type Config struct {
 	EnableReturnData bool // enable return data capture
 	Debug            bool // print output during capture end
 	Limit            int  // maximum length of output, but zero means unlimited
+
 	// Chain overrides, can be used to execute a trace using future fork rules
 	Overrides *params.ChainConfig `json:"overrides,omitempty"`
 }
@@ -206,7 +208,7 @@ func (l *StructLogger) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, s
 		copy(rdata, rData)
 	}
 	// create a new snapshot of the EVM.
-	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, rdata, storage, depth, l.env.StateDB.GetEVMRefund(), err}
+	log := StructLog{Pc: pc, Op: op, Gas: gas, GasCost: cost, Memory: mem, MemorySize: memory.Len(), Stack: stck, ReturnData: rdata, Storage: storage, Depth: depth, RefundCounter: l.env.StateDB.GetEVMRefund(), Err: err}
 	l.logs = append(l.logs, log)
 }
 
@@ -230,8 +232,7 @@ func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {
 func (l *StructLogger) CaptureEnter(typ vm.OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
 }
 
-func (l *StructLogger) CaptureExit(output []byte, gasUsed uint64, err error) {
-}
+func (l *StructLogger) CaptureExit(output []byte, gasUsed uint64, err error) {}
 
 func (l *StructLogger) GetResult() (json.RawMessage, error) {
 	// Tracing aborted
@@ -351,7 +352,7 @@ func (t *mdLogger) CaptureStart(env *vm.EVM, from common.Address, to common.Addr
 			input, gas, value)
 	}
 
-	fmt.Fprintf(t.out, `
+	fmt.Fprint(t.out, `
 |  Pc   |      Op     | Cost |   Stack   |   RStack  |  Refund |
 |-------|-------------|------|-----------|-----------|---------|
 `)
@@ -442,7 +443,7 @@ func formatLogs(logs []StructLog) []StructLogRes {
 			}
 			formatted[index].Stack = &stack
 		}
-		if trace.ReturnData != nil && len(trace.ReturnData) > 0 {
+		if len(trace.ReturnData) > 0 {
 			formatted[index].ReturnData = hexutil.Bytes(trace.ReturnData).String()
 		}
 		if trace.Memory != nil {

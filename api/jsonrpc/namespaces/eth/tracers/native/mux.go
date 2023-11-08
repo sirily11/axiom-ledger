@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
 	vm "github.com/axiomesh/eth-kit/evm"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func init() {

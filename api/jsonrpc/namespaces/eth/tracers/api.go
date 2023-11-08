@@ -8,14 +8,15 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/sirupsen/logrus"
+
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers/logger"
 	"github.com/axiomesh/axiom-ledger/internal/coreapi/api"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
 	"github.com/axiomesh/axiom-ledger/pkg/repo"
 	vm "github.com/axiomesh/eth-kit/evm"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -50,6 +51,7 @@ type TraceConfig struct {
 	Tracer  *string
 	Timeout *string
 	Reexec  *uint64
+
 	// Config specific to given tracer. Note struct logger
 	// config are historically embedded in main object.
 	TracerConfig json.RawMessage
@@ -57,7 +59,7 @@ type TraceConfig struct {
 
 var errTxNotFound = errors.New("transaction not found")
 
-func (api *TracerAPI) TraceTransaction(hash common.Hash, config *TraceConfig) (interface{}, error) {
+func (api *TracerAPI) TraceTransaction(hash common.Hash, config *TraceConfig) (any, error) {
 	txHash := types.NewHash(hash.Bytes())
 	tx, err := api.api.Broker().GetTransaction(txHash)
 	if err != nil {
@@ -96,10 +98,9 @@ func (api *TracerAPI) TraceTransaction(hash common.Hash, config *TraceConfig) (i
 	}
 
 	return api.traceTx(msg, txctx, vmctx, *statedb, config)
-
 }
 
-func (api *TracerAPI) traceTx(message *vm.Message, txctx *Context, vmctx vm.BlockContext, statedb ledger.StateLedger, config *TraceConfig) (interface{}, error) {
+func (api *TracerAPI) traceTx(message *vm.Message, txctx *Context, vmctx vm.BlockContext, statedb ledger.StateLedger, config *TraceConfig) (any, error) {
 	var (
 		tracer    Tracer
 		err       error
@@ -141,5 +142,4 @@ func (api *TracerAPI) traceTx(message *vm.Message, txctx *Context, vmctx vm.Bloc
 		return nil, fmt.Errorf("tracing failed: %w", err)
 	}
 	return tracer.GetResult()
-
 }

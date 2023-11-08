@@ -102,7 +102,7 @@ func (a *RBFTAdaptor) UpdateEpoch() error {
 		return err
 	}
 	a.EpochInfo = e
-	a.broadcastNodes = lo.Map(lo.Flatten([][]*rbft.NodeInfo{a.EpochInfo.ValidatorSet, a.EpochInfo.CandidateSet}), func(item *rbft.NodeInfo, index int) string {
+	a.broadcastNodes = lo.Map(lo.Flatten([][]rbft.NodeInfo{a.EpochInfo.ValidatorSet, a.EpochInfo.CandidateSet}), func(item rbft.NodeInfo, index int) string {
 		return item.P2PNodeID
 	})
 	return nil

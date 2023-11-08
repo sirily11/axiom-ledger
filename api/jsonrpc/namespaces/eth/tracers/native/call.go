@@ -22,12 +22,13 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
+
+	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 func init() {
@@ -52,6 +53,7 @@ type callFrame struct {
 	RevertReason string          `json:"revertReason,omitempty"`
 	Calls        []callFrame     `json:"calls,omitempty" rlp:"optional"`
 	Logs         []callLog       `json:"logs,omitempty" rlp:"optional"`
+
 	// Placed at end on purpose. The RLP will be decoded to 0 instead of
 	// nil if there are non-empty elements after in the struct.
 	Value *big.Int `json:"value,omitempty" rlp:"optional"`
@@ -226,7 +228,7 @@ func (t *callTracer) CaptureExit(output []byte, gasUsed uint64, err error) {
 	// pop call
 	call := t.callstack[size-1]
 	t.callstack = t.callstack[:size-1]
-	size -= 1
+	size--
 
 	call.GasUsed = gasUsed
 	call.processOutput(output, err)

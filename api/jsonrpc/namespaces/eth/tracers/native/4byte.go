@@ -22,9 +22,10 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
 	vm "github.com/axiomesh/eth-kit/evm"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func init() {
@@ -75,7 +76,7 @@ func (t *fourByteTracer) isPrecompiled(addr common.Address) bool {
 // store saves the given identifier and datasize.
 func (t *fourByteTracer) store(id []byte, size int) {
 	key := bytesToHex(id) + "-" + strconv.Itoa(size)
-	t.ids[key] += 1
+	t.ids[key]++
 }
 
 // CaptureStart implements the EVMLogger interface to initialize the tracing operation.

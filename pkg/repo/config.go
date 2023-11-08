@@ -250,29 +250,19 @@ func (c *Config) Bytes() ([]byte, error) {
 }
 
 func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
-	var epochPeriod uint64 = 10000000
-	var checkpointPeriod uint64 = 1
-	var highWatermarkCheckpointPeriod uint64 = 10
-	var proposerElectionType = rbft.ProposerElectionTypeRotating
-	var validatorSet, candidateSet []*rbft.NodeInfo
-
+	var candidateSet, validatorSet []rbft.NodeInfo
 	if epochEnable {
-		epochPeriod = 100
-		checkpointPeriod = 1
-		highWatermarkCheckpointPeriod = 10
-		proposerElectionType = rbft.ProposerElectionTypeWRF
-
-		candidateSet = lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) *rbft.NodeInfo {
+		candidateSet = lo.Map(DefaultNodeAddrs[4:], func(item string, idx int) rbft.NodeInfo {
 			idx += 4
-			return &rbft.NodeInfo{
+			return rbft.NodeInfo{
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
 				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 100,
 			}
 		})
-		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
-			return &rbft.NodeInfo{
+		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) rbft.NodeInfo {
+			return rbft.NodeInfo{
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
@@ -280,8 +270,8 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			}
 		})
 	} else {
-		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) *rbft.NodeInfo {
-			return &rbft.NodeInfo{
+		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) rbft.NodeInfo {
+			return rbft.NodeInfo{
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
@@ -290,36 +280,35 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 		})
 	}
 
-	financeInfo := &rbft.Finance{
-		GasLimit:      0x5f5e100,
-		MaxGasPrice:   10000000000000,
-		MinGasPrice:   1000000000000,
-		GasChangeRate: 0.125,
-	}
-
 	return &rbft.EpochInfo{
 		Version:     1,
 		Epoch:       1,
-		EpochPeriod: epochPeriod,
+		EpochPeriod: 100,
 		StartBlock:  1,
 		P2PBootstrapNodeAddresses: lo.Map(defaultNodeIDs[0:4], func(item string, idx int) string {
 			return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", 4001+idx, item)
 		}),
-		ConsensusParams: &rbft.ConsensusParams{
+		ConsensusParams: rbft.ConsensusParams{
+			ProposerElectionType:          rbft.ProposerElectionTypeWRF,
 			ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
-			CheckpointPeriod:              checkpointPeriod,
-			HighWatermarkCheckpointPeriod: highWatermarkCheckpointPeriod,
-			MaxValidatorNum:               20,
+			CheckpointPeriod:              1,
+			HighWatermarkCheckpointPeriod: 10,
+			MaxValidatorNum:               4,
 			BlockMaxTxNum:                 500,
 			EnableTimedGenEmptyBlock:      false,
 			NotActiveWeight:               1,
 			ExcludeView:                   100,
-			ProposerElectionType:          proposerElectionType,
 		},
-		CandidateSet:  candidateSet,
-		ValidatorSet:  validatorSet,
-		FinanceParams: financeInfo,
-		ConfigParams: &rbft.ConfigParams{
+		CandidateSet: candidateSet,
+		ValidatorSet: validatorSet,
+		FinanceParams: rbft.Finance{
+			GasLimit:              0x5f5e100,
+			MaxGasPrice:           10000000000000,
+			MinGasPrice:           1000000000000,
+			GasChangeRateValue:    1250,
+			GasChangeRateDecimals: 4,
+		},
+		ConfigParams: rbft.ConfigParams{
 			TxMaxSize: DefaultTxMaxSize,
 		},
 	}
@@ -390,7 +379,7 @@ func DefaultConfig(epochEnable bool) *Config {
 			Type: ConsensusTypeRbft,
 		},
 		Storage: Storage{
-			KvType:      KVStorageTypeLeveldb,
+			KvType:      KVStorageTypePebble,
 			KvCacheSize: 128,
 		},
 		Ledger: Ledger{
@@ -447,7 +436,7 @@ func DefaultConfig(epochEnable bool) *Config {
 		},
 		Monitor: Monitor{
 			Enable:          true,
-			EnableExpensive: false,
+			EnableExpensive: true,
 		},
 		Log: Log{
 			Level:            "info",
@@ -461,14 +450,14 @@ func DefaultConfig(epochEnable bool) *Config {
 			RotationTime:     Duration(24 * time.Hour),
 			Module: LogModule{
 				P2P:        "info",
-				Consensus:  "info",
+				Consensus:  "debug",
 				Executor:   "info",
 				Governance: "info",
 				API:        "info",
 				CoreAPI:    "info",
 				Storage:    "info",
 				Profile:    "info",
-				Finance:    "info",
+				Finance:    "error",
 				BlockSync:  "info",
 				APP:        "info",
 				Access:     "info",

@@ -34,9 +34,9 @@ func (g *connectionGater) InterceptPeerDial(p peer.ID) (allow bool) {
 		g.logger.Errorf("InterceptSecured, auth node %s failed, get node members error: %v", peerID, err)
 		return false
 	}
-	if !lo.ContainsBy(epoch.ValidatorSet, func(item *rbft.NodeInfo) bool {
+	if !lo.ContainsBy(epoch.ValidatorSet, func(item rbft.NodeInfo) bool {
 		return item.P2PNodeID == peerID
-	}) && !lo.ContainsBy(epoch.CandidateSet, func(item *rbft.NodeInfo) bool {
+	}) && !lo.ContainsBy(epoch.CandidateSet, func(item rbft.NodeInfo) bool {
 		return item.P2PNodeID == peerID
 	}) {
 		g.logger.Warnf("InterceptSecured, auth node %s failed, unavailable node", peerID)

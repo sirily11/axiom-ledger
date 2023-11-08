@@ -43,7 +43,7 @@ func newMockPreCheckMgr() (*TxPreCheckMgr, *logrus.Entry, context.CancelFunc) {
 		EVMConfig: repo.EVM{},
 		Logger:    logger,
 		GenesisEpochInfo: &rbft.EpochInfo{
-			ConfigParams: &rbft.ConfigParams{
+			ConfigParams: rbft.ConfigParams{
 				TxMaxSize: repo.DefaultTxMaxSize,
 			},
 		},

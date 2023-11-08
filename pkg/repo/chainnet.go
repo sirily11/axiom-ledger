@@ -135,7 +135,7 @@ func AriesConfig() *Config {
 					"/ip4/127.0.0.1/tcp/4003/p2p/16Uiu2HAkwWBiECscWVK3mp3xTUpGdx5qkBs91RbhT2psQAZHkx5i",
 					"/ip4/127.0.0.1/tcp/4004/p2p/16Uiu2HAm3ikUE3LjJeatMMgDuV2cAG9da8ZJJFLA8nBy6qcN1MMg",
 				},
-				ConsensusParams: &rbft.ConsensusParams{
+				ConsensusParams: rbft.ConsensusParams{
 					ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
 					CheckpointPeriod:              10,
 					HighWatermarkCheckpointPeriod: 4,
@@ -144,10 +144,10 @@ func AriesConfig() *Config {
 					EnableTimedGenEmptyBlock:      false,
 					NotActiveWeight:               1,
 					ExcludeView:                   100,
-					ProposerElectionType:          rbft.ProposerElectionTypeRotating,
+					ProposerElectionType:          rbft.ProposerElectionTypeAbnormalRotation,
 				},
-				CandidateSet: []*rbft.NodeInfo{},
-				ValidatorSet: []*rbft.NodeInfo{
+				CandidateSet: []rbft.NodeInfo{},
+				ValidatorSet: []rbft.NodeInfo{
 					{
 						ID:                   1,
 						AccountAddress:       "0xecFE18Dc453CCdF96f1b9b58ccb4db3c6115A1D0",
@@ -173,13 +173,14 @@ func AriesConfig() *Config {
 						ConsensusVotingPower: 1000,
 					},
 				},
-				FinanceParams: &rbft.Finance{
-					GasLimit:      0x5f5e100,
-					MaxGasPrice:   10000000000000,
-					MinGasPrice:   1000000000000,
-					GasChangeRate: 0.125,
+				FinanceParams: rbft.Finance{
+					GasLimit:              0x5f5e100,
+					MaxGasPrice:           10000000000000,
+					MinGasPrice:           1000000000000,
+					GasChangeRateValue:    1250,
+					GasChangeRateDecimals: 4,
 				},
-				ConfigParams: &rbft.ConfigParams{
+				ConfigParams: rbft.ConfigParams{
 					TxMaxSize: DefaultTxMaxSize,
 				},
 			},

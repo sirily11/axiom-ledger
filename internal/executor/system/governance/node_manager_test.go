@@ -679,7 +679,7 @@ func TestNodeManager_RunForRemoveVote_Approved(t *testing.T) {
 	g := repo.GenesisEpochInfo(true)
 	g.EpochPeriod = 100
 	g.StartBlock = 1
-	g.DataSyncerSet = append(g.DataSyncerSet, &rbft.NodeInfo{
+	g.DataSyncerSet = append(g.DataSyncerSet, rbft.NodeInfo{
 		ID:                   9,
 		AccountAddress:       admin1,
 		P2PNodeID:            "16Uiu2HAkwmNbfH8ZBdnYhygUHyG5mSWrWTEra3gwHWt9dGTUSRVV",
@@ -1104,7 +1104,6 @@ func TestNodeManager_GetProposal(t *testing.T) {
 }
 
 func TestNodeManager_CheckAndUpdateState(t *testing.T) {
-
 	nm := NewNodeManager(&common.SystemContractConfig{
 		Logger: logrus.New(),
 	})

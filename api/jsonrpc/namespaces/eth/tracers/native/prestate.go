@@ -22,12 +22,13 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+
+	"github.com/axiomesh/axiom-ledger/api/jsonrpc/namespaces/eth/tracers"
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 func init() {
@@ -253,7 +254,7 @@ func (t *prestateTracer) GetResult() (json.RawMessage, error) {
 		res, err = json.Marshal(struct {
 			Post state `json:"post"`
 			Pre  state `json:"pre"`
-		}{t.post, t.pre})
+		}{Post: t.post, Pre: t.pre})
 	} else {
 		res, err = json.Marshal(t.pre)
 	}

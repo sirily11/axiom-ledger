@@ -175,7 +175,6 @@ func (b *BrokerAPI) StateAtTransaction(block *types.Block, txIndex int, reexec u
 		statedb.Finalise()
 	}
 	return nil, vm.BlockContext{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
-
 }
 
 func (b *BrokerAPI) ChainConfig() *params.ChainConfig {

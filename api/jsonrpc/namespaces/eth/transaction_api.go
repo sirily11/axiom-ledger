@@ -316,7 +316,6 @@ func (api *TransactionAPI) SendRawTransaction(data hexutil.Bytes) (ret common.Ha
 		if api.rep.Config.JsonRPC.RejectTxsIfConsensusAbnormal {
 			return [32]byte{}, fmt.Errorf("the system is temporarily unavailable %s, tx: %s", err.Error(), tx.GetHash().String())
 		}
-		api.logger.Warnf("Receive new eth tx: %s, but system maybe be temporarily unavailable %s", tx.GetHash().String(), err.Error())
 	} else {
 		api.logger.Debugf("Receive new eth tx: %s", tx.GetHash().String())
 	}

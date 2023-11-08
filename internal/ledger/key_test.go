@@ -1,10 +1,11 @@
 package ledger
 
 import (
-	"github.com/axiomesh/axiom-kit/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/axiomesh/axiom-kit/types"
 )
 
 func TestCompositeKey(t *testing.T) {

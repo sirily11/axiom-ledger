@@ -23,8 +23,9 @@ import (
 	"fmt"
 	"math/big"
 
-	vm "github.com/axiomesh/eth-kit/evm"
 	"github.com/ethereum/go-ethereum/common"
+
+	vm "github.com/axiomesh/eth-kit/evm"
 )
 
 // Context contains some contextual infos for a transaction execution that is not
@@ -41,11 +42,13 @@ type Context struct {
 type Tracer interface {
 	vm.EVMLogger
 	GetResult() (json.RawMessage, error)
+
 	// Stop terminates execution of the tracer at the first opportune moment.
 	Stop(err error)
 }
 
 type ctorFn func(*Context, json.RawMessage) (Tracer, error)
+
 type jsCtorFn func(string, *Context, json.RawMessage) (Tracer, error)
 
 type elem struct {

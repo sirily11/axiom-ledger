@@ -43,7 +43,7 @@ var configCMD = &cli.Command{
 				},
 				&cli.BoolFlag{
 					Name:        "epoch-enable",
-					Usage:       "generate epoch and wrf enabled config if specified",
+					Usage:       "generate epoch wrf enabled config if specified",
 					Destination: &configGenerateArgs.EpochEnable,
 					Required:    false,
 				},

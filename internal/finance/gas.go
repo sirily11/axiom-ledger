@@ -2,6 +2,7 @@ package finance
 
 import (
 	"errors"
+	"math"
 
 	"github.com/sirupsen/logrus"
 
@@ -35,7 +36,7 @@ func NewGas(repo *repo.Repo) *Gas {
 func (gas *Gas) CalNextGasPrice(parentGasPrice uint64, txs int) (uint64, error) {
 	max := gas.repo.Config.Genesis.EpochInfo.FinanceParams.MaxGasPrice
 	min := gas.repo.Config.Genesis.EpochInfo.FinanceParams.MinGasPrice
-	if uint64(parentGasPrice) < min || uint64(parentGasPrice) > max {
+	if parentGasPrice < min || parentGasPrice > max {
 		gas.logger.Errorf("gas price is out of range, parent gas price is %d, min is %d, max is %d", parentGasPrice, min, max)
 		return 0, ErrGasOutOfRange
 	}
@@ -43,7 +44,7 @@ func (gas *Gas) CalNextGasPrice(parentGasPrice uint64, txs int) (uint64, error) 
 	if txs > total {
 		return 0, ErrTxsOutOfRange
 	}
-	percentage := 2 * float64(txs-total/2) / float64(total) * gas.repo.Config.Genesis.EpochInfo.FinanceParams.GasChangeRate
+	percentage := 2 * float64(txs-total/2) / float64(total) * float64(gas.repo.Config.Genesis.EpochInfo.FinanceParams.GasChangeRateValue) / math.Pow10(int(gas.repo.Config.Genesis.EpochInfo.FinanceParams.GasChangeRateDecimals))
 	currentPrice := uint64(float64(parentGasPrice) * (1 + percentage))
 	if currentPrice > max {
 		gas.logger.Warningf("gas price is touching ceiling, current price is %d, max is %d", currentPrice, max)
