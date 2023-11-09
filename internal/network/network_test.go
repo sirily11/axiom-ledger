@@ -3,7 +3,6 @@ package network
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +18,6 @@ import (
 
 	rbft "github.com/axiomesh/axiom-bft"
 	"github.com/axiomesh/axiom-kit/log"
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-kit/types/pb"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
@@ -169,10 +167,7 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 		return false, nil
 	}).AnyTimes()
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "network"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.EpochManagerContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	epochInfo := repo.GenesisEpochInfo(true)
@@ -181,7 +176,7 @@ func newMockSwarms(t *testing.T, peerCnt int, versionChange bool) []*networkImpl
 		P2PNodeID:      "16Uiu2HAmSBJ7tARZkRT3KS41KPuEbGYZvDXdSzTj8b31gQYYGs9a",
 		AccountAddress: "0xD1AEFdf2195f2457A6a675068Cad98B67Eb54e68",
 	})
-	err = base.InitEpochInfo(mockLedger.StateLedger, epochInfo)
+	err := base.InitEpochInfo(mockLedger.StateLedger, epochInfo)
 	assert.Nil(t, err)
 
 	var addrs []peer.AddrInfo

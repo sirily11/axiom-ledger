@@ -1,13 +1,11 @@
 package governance
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
@@ -18,10 +16,7 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "proposal"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -79,11 +74,12 @@ func TestProposal_CheckAndUpdateState(t *testing.T) {
 		_, err := saveCouncilProposal(stateLedger, baseProposal)
 		assert.Nil(t, err)
 
-		notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+		err = notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
 			ID:                  baseProposal.ID,
 			DeadlineBlockNumber: baseProposal.BlockNumber,
 			ContractAddr:        common.CouncilManagerContractAddr,
 		})
+		assert.Nil(t, err)
 
 		err = CheckAndUpdateState(testcase.DeadlineBlockNumber, stateLedger)
 		assert.Equal(t, testcase.ExpectedErr, err)
@@ -101,10 +97,7 @@ func TestProposal_CheckAndUpdateState_AllProposals(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "proposal"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -114,14 +107,15 @@ func TestProposal_CheckAndUpdateState_AllProposals(t *testing.T) {
 
 	// test council
 	baseProposal := &BaseProposal{ID: 1, BlockNumber: 10, Status: Voting}
-	_, err = saveCouncilProposal(stateLedger, baseProposal)
+	_, err := saveCouncilProposal(stateLedger, baseProposal)
 	assert.Nil(t, err)
 
-	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+	err = notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
 		ID:                  baseProposal.ID,
 		DeadlineBlockNumber: baseProposal.BlockNumber,
 		ContractAddr:        common.CouncilManagerContractAddr,
 	})
+	assert.Nil(t, err)
 
 	err = CheckAndUpdateState(20, stateLedger)
 	assert.Nil(t, err)
@@ -135,11 +129,12 @@ func TestProposal_CheckAndUpdateState_AllProposals(t *testing.T) {
 	_, err = saveNodeProposal(stateLedger, baseProposal)
 	assert.Nil(t, err)
 
-	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+	err = notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
 		ID:                  baseProposal.ID,
 		DeadlineBlockNumber: baseProposal.BlockNumber,
 		ContractAddr:        common.NodeManagerContractAddr,
 	})
+	assert.Nil(t, err)
 
 	err = CheckAndUpdateState(20, stateLedger)
 	assert.Nil(t, err)
@@ -153,11 +148,12 @@ func TestProposal_CheckAndUpdateState_AllProposals(t *testing.T) {
 	_, err = saveProviderProposal(stateLedger, baseProposal)
 	assert.Nil(t, err)
 
-	notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+	err = notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
 		ID:                  baseProposal.ID,
 		DeadlineBlockNumber: baseProposal.BlockNumber,
 		ContractAddr:        common.WhiteListProviderManagerContractAddr,
 	})
+	assert.Nil(t, err)
 
 	err = CheckAndUpdateState(20, stateLedger)
 	assert.Nil(t, err)

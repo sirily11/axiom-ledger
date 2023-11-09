@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -14,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/access"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
@@ -48,16 +46,13 @@ func TestWhiteListProviderManager_RunForPropose(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -193,16 +188,13 @@ func TestWhiteListProviderManager_RunForVoteAdd(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -349,16 +341,13 @@ func TestWhiteListProviderManager_RunForVoteRemove(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -595,14 +584,11 @@ func TestWhiteListProviderManager_loadProviderProposal(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	wlpm.Reset(1, stateLedger)
-	_, err = wlpm.loadProviderProposal(1)
+	_, err := wlpm.loadProviderProposal(1)
 	assert.Equal(t, errors.New("provider proposal not found for the id"), err)
 
 	proposalID := uint64(1)
@@ -620,16 +606,13 @@ func TestWhiteListProviderManager_checkFinishedProposal_providerProposal(t *test
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -701,15 +684,12 @@ func TestWhiteListProviderManager_checkFinishedProposal_councilProposal(t *testi
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	notFinishedProposalMgr := NewNotFinishedProposalMgr(stateLedger)
-	err = notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
+	err := notFinishedProposalMgr.SetProposal(&NotFinishedProposal{
 		ID:                  1,
 		DeadlineBlockNumber: 10,
 		ContractAddr:        common.CouncilManagerContractAddr,
@@ -729,17 +709,14 @@ func TestWhiteListProviderManager_propose(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "provider_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListProviderManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 	wlpm.Reset(1, stateLedger)
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,

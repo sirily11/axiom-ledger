@@ -1,14 +1,12 @@
 package system
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
@@ -62,14 +60,12 @@ func TestContractInitGenesisData(t *testing.T) {
 		StateLedger: stateLedger,
 	}
 
-	repoRoot := t.TempDir()
 	genesis := repo.DefaultConfig(false)
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+
+	account := ledger.NewMockAccount(2, types.NewAddressByStr(common.NodeManagerContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitGenesisData(&genesis.Genesis, mockLedger.StateLedger)
+	err := InitGenesisData(&genesis.Genesis, mockLedger.StateLedger)
 	assert.Nil(t, err)
 }

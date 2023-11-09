@@ -1,7 +1,6 @@
 package base
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -11,7 +10,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	rbft "github.com/axiomesh/axiom-bft"
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
@@ -23,10 +21,7 @@ import (
 func prepareLedger(t *testing.T) ledger.StateLedger {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "epoch_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.EpochManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.EpochManagerContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	return stateLedger
 }

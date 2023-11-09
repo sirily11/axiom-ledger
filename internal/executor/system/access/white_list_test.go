@@ -3,7 +3,6 @@ package access
 import (
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
@@ -37,16 +35,13 @@ func TestWhiteList_RunForSubmit(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 	admins := []string{admin1, admin2}
-	err = InitProvidersAndWhiteList(stateLedger, admins, admins)
+	err := InitProvidersAndWhiteList(stateLedger, admins, admins)
 	assert.Nil(t, err)
 
 	testcases := []struct {
@@ -348,10 +343,7 @@ func TestAddAndRemoveProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -400,10 +392,7 @@ func TestGetProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -431,10 +420,8 @@ func TestGetProviders(t *testing.T) {
 func TestSetProviders(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	providers := []WhiteListProvider{
 		{
@@ -444,7 +431,7 @@ func TestSetProviders(t *testing.T) {
 			WhiteListProviderAddr: admin2,
 		},
 	}
-	err = SetProviders(stateLedger, providers)
+	err := SetProviders(stateLedger, providers)
 	assert.Nil(t, err)
 }
 
@@ -452,10 +439,7 @@ func TestWhiteList_SaveLog(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -481,10 +465,7 @@ func TestVerify(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
 	// test fail to get state
@@ -498,7 +479,7 @@ func TestVerify(t *testing.T) {
 		// Verify: fail by GetState
 		err: ErrVerify,
 	}
-	err = Verify(stateLedger, testcase.needApproveAddr)
+	err := Verify(stateLedger, testcase.needApproveAddr)
 	assert.Equal(t, testcase.err, err)
 
 	// test others
@@ -576,10 +557,7 @@ func TestWhiteList_ErrorSubmit(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -587,7 +565,7 @@ func TestWhiteList_ErrorSubmit(t *testing.T) {
 
 	cm.Reset(1, stateLedger)
 	admins := []string{admin1}
-	err = InitProvidersAndWhiteList(stateLedger, admins, admins)
+	err := InitProvidersAndWhiteList(stateLedger, admins, admins)
 	assert.Nil(t, err)
 
 	testcases := []struct {
@@ -677,10 +655,7 @@ func TestWhiteList_ErrorRemove(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
@@ -688,7 +663,7 @@ func TestWhiteList_ErrorRemove(t *testing.T) {
 
 	cm.Reset(1, stateLedger)
 	admins := []string{admin1}
-	err = InitProvidersAndWhiteList(stateLedger, admins, admins)
+	err := InitProvidersAndWhiteList(stateLedger, admins, admins)
 	assert.Nil(t, err)
 
 	// before case: auth info not exist
@@ -765,16 +740,13 @@ func TestCheckInServices(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	state := CheckInServices(account, admin1)
 	assert.Equal(t, ErrCheckWhiteListProvider, state)
 
-	err = InitProvidersAndWhiteList(stateLedger, nil, []string{admin1})
+	err := InitProvidersAndWhiteList(stateLedger, nil, []string{admin1})
 	assert.Nil(t, err)
 	state = CheckInServices(account, admin1)
 	assert.Equal(t, true, true)
@@ -783,10 +755,7 @@ func TestCheckInServices(t *testing.T) {
 func TestInitProvidersAndWhiteList(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 
@@ -801,7 +770,7 @@ func TestInitProvidersAndWhiteList(t *testing.T) {
 	services := []string{
 		admin4,
 	}
-	err = InitProvidersAndWhiteList(stateLedger, append(richAccounts, append(adminAccounts, services...)...), services)
+	err := InitProvidersAndWhiteList(stateLedger, append(richAccounts, append(adminAccounts, services...)...), services)
 	assert.Nil(t, err)
 }
 
@@ -859,10 +828,7 @@ func TestWhiteList_Reset(t *testing.T) {
 
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "white_list"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.WhiteListContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.WhiteListContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	account.SetState([]byte(WhiteListProviderKey), []byte{1, 2, 3})
