@@ -90,6 +90,7 @@ func AriesConfig() *Config {
 		Ledger: Ledger{
 			ChainLedgerCacheSize:           100,
 			StateLedgerCacheMegabytesLimit: 128,
+			StateLedgerAccountCacheSize:    1024,
 		},
 		Executor: Executor{
 			Type:            ExecTypeNative,

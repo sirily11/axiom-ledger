@@ -55,7 +55,7 @@ func getStateLedgerAt(api api.CoreAPI, blockNrOrHash *rpctypes.BlockNumberOrHash
 		}
 	}
 
-	lg := api.Broker().GetViewStateLedger().NewView(block)
+	lg := api.Broker().GetViewStateLedger().NewViewWithoutCache(block)
 	if lg == nil {
 		return nil, errors.New("GetViewStateLedger error")
 	}

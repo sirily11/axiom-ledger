@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 
 	"github.com/axiomesh/axiom-kit/hexutil"
 	"github.com/axiomesh/axiom-kit/storage"
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	consensuscommon "github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/base"
@@ -249,10 +247,7 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 			return true, []byte("10")
 		}).AnyTimes()
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(2, types.NewAddressByStr(common.NodeManagerContractAddr))
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	err = base.InitEpochInfo(stateLedger, r.Config.Genesis.EpochInfo)
 	assert.Nil(t, err)
@@ -382,7 +377,6 @@ func TestBlockExecutor_ExecuteBlock(t *testing.T) {
 func TestBlockExecutor_ApplyReadonlyTransactions(t *testing.T) {
 	r, err := repo.Default(t.TempDir())
 	assert.Nil(t, err)
-	repoRoot := r.RepoRoot
 	mockCtl := gomock.NewController(t)
 	chainLedger := mock_ledger.NewMockChainLedger(mockCtl)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
@@ -404,9 +398,7 @@ func TestBlockExecutor_ApplyReadonlyTransactions(t *testing.T) {
 	val, err := json.Marshal(hash)
 	assert.Nil(t, err)
 
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(2, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateRoot := &types.Hash{}
 
@@ -508,7 +500,6 @@ func TestBlockExecutor_ApplyReadonlyTransactions(t *testing.T) {
 func TestBlockExecutor_ApplyReadonlyTransactionsWithError(t *testing.T) {
 	r, err := repo.Default(t.TempDir())
 	assert.Nil(t, err)
-	repoRoot := r.RepoRoot
 	mockCtl := gomock.NewController(t)
 	chainLedger := mock_ledger.NewMockChainLedger(mockCtl)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
@@ -530,9 +521,7 @@ func TestBlockExecutor_ApplyReadonlyTransactionsWithError(t *testing.T) {
 	val, err := json.Marshal(hash)
 	assert.Nil(t, err)
 
-	ld, err := leveldb.New(filepath.Join(repoRoot, "executor"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	contractAddr := types.NewAddressByStr("0xdac17f958d2ee523a2206206994597c13d831ec7")
 	chainLedger.EXPECT().GetChainMeta().Return(chainMeta).AnyTimes()

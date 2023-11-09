@@ -30,7 +30,9 @@ type revision struct {
 
 type StateLedgerImpl struct {
 	logger        logrus.FieldLogger
-	ldb           storage.Storage
+	db            storage.Storage
+	cachedDB      storage.Storage
+	accountCache  *AccountCache
 	accountTrie   *jmt.JMT // keep track of the latest world state (dirty or committed)
 	minJnlHeight  uint64
 	maxJnlHeight  uint64
@@ -64,7 +66,33 @@ func (l *StateLedgerImpl) NewView(block *types.Block) StateLedger {
 	lg := &StateLedgerImpl{
 		repo:          l.repo,
 		logger:        l.logger,
-		ldb:           l.ldb,
+		db:            l.db,
+		cachedDB:      l.cachedDB,
+		accountCache:  l.accountCache,
+		minJnlHeight:  l.minJnlHeight,
+		maxJnlHeight:  l.maxJnlHeight,
+		accounts:      make(map[string]IAccount),
+		prevJnlHash:   l.prevJnlHash,
+		preimages:     make(map[types.Hash][]byte),
+		changer:       NewChanger(),
+		accessList:    NewAccessList(),
+		logs:          NewEvmLogs(),
+		blockJournals: make(map[string]*BlockJournal),
+	}
+	lg.refreshAccountTrie(block.BlockHeader.StateRoot)
+	return lg
+}
+
+// NewView get a view
+func (l *StateLedgerImpl) NewViewWithoutCache(block *types.Block) StateLedger {
+	l.logger.Debugf("[NewViewWithoutCache] height: %v, stateRoot: %v", block.BlockHeader.Number, block.BlockHeader.StateRoot)
+	ac, _ := NewAccountCache(0, true)
+	lg := &StateLedgerImpl{
+		repo:          l.repo,
+		logger:        l.logger,
+		db:            l.db,
+		cachedDB:      l.db,
+		accountCache:  ac,
 		minJnlHeight:  l.minJnlHeight,
 		maxJnlHeight:  l.maxJnlHeight,
 		accounts:      make(map[string]IAccount),
@@ -101,10 +129,19 @@ func newStateLedger(rep *repo.Repo, stateStorage storage.Storage) (StateLedger, 
 	if err != nil {
 		return nil, err
 	}
+
+	accountCache, err := NewAccountCache(rep.Config.Ledger.StateLedgerAccountCacheSize, false)
+	if err != nil {
+		return nil, err
+	}
+	accountCache.SetEnableExpensiveMetric(rep.Config.Monitor.EnableExpensive)
+
 	ledger := &StateLedgerImpl{
 		repo:                  rep,
 		logger:                loggers.Logger(loggers.Storage),
-		ldb:                   cachedStateStorage,
+		db:                    stateStorage,
+		cachedDB:              cachedStateStorage,
+		accountCache:          accountCache,
 		minJnlHeight:          minJnlHeight,
 		maxJnlHeight:          maxJnlHeight,
 		accounts:              make(map[string]IAccount),
@@ -150,7 +187,7 @@ func (l *StateLedgerImpl) removeJournalsBeforeBlock(height uint64) error {
 		return nil
 	}
 
-	batch := l.ldb.NewBatch()
+	batch := l.cachedDB.NewBatch()
 	for i := l.minJnlHeight; i < height; i++ {
 		batch.Delete(compositeKey(journalKey, i))
 	}
@@ -164,5 +201,5 @@ func (l *StateLedgerImpl) removeJournalsBeforeBlock(height uint64) error {
 
 // Close close the ledger instance
 func (l *StateLedgerImpl) Close() {
-	_ = l.ldb.Close()
+	_ = l.cachedDB.Close()
 }

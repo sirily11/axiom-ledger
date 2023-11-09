@@ -24,7 +24,7 @@ const MinJournalHeight = 10
 func (l *StateLedgerImpl) GetOrCreateAccount(addr *types.Address) IAccount {
 	account := l.GetAccount(addr)
 	if account == nil {
-		account = NewAccount(l.blockHeight, l.ldb, addr, l.changer)
+		account = NewAccount(l.blockHeight, l.cachedDB, l.accountCache, addr, l.changer)
 		l.changer.append(createObjectChange{account: addr})
 		l.accounts[addr.String()] = account
 		l.logger.Debugf("[GetOrCreateAccount] create account, addr: %v", addr)
@@ -49,8 +49,23 @@ func (l *StateLedgerImpl) GetAccount(address *types.Address) IAccount {
 		return value
 	}
 
-	account := NewAccount(l.blockHeight, l.ldb, address, l.changer)
+	account := NewAccount(l.blockHeight, l.cachedDB, l.accountCache, address, l.changer)
 	account.SetEnableExpensiveMetric(l.enableExpensiveMetric)
+
+	if innerAccount, ok := l.accountCache.getInnerAccount(address); ok {
+		account.originAccount = innerAccount
+		if !bytes.Equal(innerAccount.CodeHash, nil) {
+			code, okCode := l.accountCache.getCode(address)
+			if !okCode {
+				code = l.cachedDB.Get(compositeCodeKey(account.Addr, account.originAccount.CodeHash))
+			}
+			account.originCode = code
+			account.dirtyCode = code
+		}
+		l.accounts[addr] = account
+		l.logger.Debugf("[GetAccount] cache hit from accountCache，addr: %v, account: %v", addr, account)
+		return account
+	}
 
 	var rawAccount []byte
 	start := time.Now()
@@ -68,7 +83,7 @@ func (l *StateLedgerImpl) GetAccount(address *types.Address) IAccount {
 			panic(err)
 		}
 		if !bytes.Equal(account.originAccount.CodeHash, nil) {
-			code := l.ldb.Get(compositeCodeKey(account.Addr, account.originAccount.CodeHash))
+			code := l.cachedDB.Get(compositeCodeKey(account.Addr, account.originAccount.CodeHash))
 			account.originCode = code
 			account.dirtyCode = code
 		}
@@ -230,7 +245,7 @@ func (l *StateLedgerImpl) flushDirtyData() (map[string]IAccount, *types.Hash) {
 	l.blockJournals[blockJournal.ChangedHash.String()] = blockJournal
 	l.prevJnlHash = blockJournal.ChangedHash
 	l.Clear() // remove accounts that cached during executing current block
-
+	l.accountCache.add(dirtyAccounts)
 	return dirtyAccounts, blockJournal.ChangedHash
 }
 
@@ -242,7 +257,7 @@ func (l *StateLedgerImpl) Commit() (*types.Hash, error) {
 	accounts, journalHash := l.flushDirtyData()
 	height := l.blockHeight
 
-	ldbBatch := l.ldb.NewBatch()
+	ldbBatch := l.cachedDB.NewBatch()
 
 	accSize := 0
 	for _, acc := range accounts {
@@ -375,16 +390,17 @@ func (l *StateLedgerImpl) RollbackState(height uint64, stateRoot *types.Hash) er
 
 	// clean cache account
 	l.Clear()
+	l.accountCache.clear()
 
 	for i := l.maxJnlHeight; i > height; i-- {
-		batch := l.ldb.NewBatch()
+		batch := l.cachedDB.NewBatch()
 		batch.Delete(compositeKey(journalKey, i))
 		batch.Put(compositeKey(journalKey, maxHeightStr), marshalHeight(i-1))
 		batch.Commit()
 	}
 
 	if height != 0 {
-		journal := getBlockJournal(height, l.ldb)
+		journal := getBlockJournal(height, l.cachedDB)
 		l.prevJnlHash = journal.ChangedHash
 		l.refreshAccountTrie(stateRoot)
 	} else {
@@ -534,14 +550,14 @@ func (l *StateLedgerImpl) refreshAccountTrie(lastStateRoot *types.Hash) {
 			Prefix:  []byte{},
 		}
 		nk := rootNodeKey.Encode()
-		l.ldb.Put(nk, nil)
-		l.ldb.Put(rootHash[:], nk)
-		trie, _ := jmt.New(rootHash, l.ldb)
+		l.cachedDB.Put(nk, nil)
+		l.cachedDB.Put(rootHash[:], nk)
+		trie, _ := jmt.New(rootHash, l.cachedDB)
 		l.accountTrie = trie
 		return
 	}
 
-	trie, err := jmt.New(lastStateRoot.ETHHash(), l.ldb)
+	trie, err := jmt.New(lastStateRoot.ETHHash(), l.cachedDB)
 	if err != nil {
 		l.logger.WithFields(logrus.Fields{
 			"lastStateRoot": lastStateRoot,

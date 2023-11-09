@@ -113,3 +113,15 @@ func (l *Ledger) NewView() *Ledger {
 		StateLedger: l.StateLedger.NewView(block),
 	}
 }
+
+func (l *Ledger) NewViewWithoutCache() *Ledger {
+	meta := l.ChainLedger.GetChainMeta()
+	block, err := l.ChainLedger.GetBlock(meta.Height)
+	if err != nil {
+		panic(err)
+	}
+	return &Ledger{
+		ChainLedger: l.ChainLedger,
+		StateLedger: l.StateLedger.NewViewWithoutCache(block),
+	}
+}

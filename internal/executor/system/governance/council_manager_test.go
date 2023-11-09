@@ -2,7 +2,6 @@ package governance
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -10,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/executor/system/common"
 	"github.com/axiomesh/axiom-ledger/internal/ledger"
@@ -34,16 +32,13 @@ func TestRunForPropose(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(2, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -238,16 +233,13 @@ func TestRunForPropose_checkFinishedAllProposal(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -352,16 +344,13 @@ func TestRunForVote(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "node_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(2, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(2, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,
@@ -475,16 +464,13 @@ func TestRunForGetProposal(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	stateLedger := mock_ledger.NewMockStateLedger(mockCtl)
 
-	repoRoot := t.TempDir()
-	ld, err := leveldb.New(filepath.Join(repoRoot, "council_manager"), nil)
-	assert.Nil(t, err)
-	account := ledger.NewAccount(1, ld, types.NewAddressByStr(common.NodeManagerContractAddr), ledger.NewChanger())
+	account := ledger.NewMockAccount(1, types.NewAddressByStr(common.NodeManagerContractAddr))
 
 	stateLedger.EXPECT().GetOrCreateAccount(gomock.Any()).Return(account).AnyTimes()
 	stateLedger.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	stateLedger.EXPECT().SetBalance(gomock.Any(), gomock.Any()).AnyTimes()
 
-	err = InitCouncilMembers(stateLedger, []*repo.Admin{
+	err := InitCouncilMembers(stateLedger, []*repo.Admin{
 		{
 			Address: admin1,
 			Weight:  1,

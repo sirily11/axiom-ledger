@@ -15,6 +15,7 @@ import (
 	"github.com/axiomesh/axiom-kit/hexutil"
 	"github.com/axiomesh/axiom-kit/jmt"
 	"github.com/axiomesh/axiom-kit/storage"
+	"github.com/axiomesh/axiom-kit/storage/leveldb"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/pkg/loggers"
 )
@@ -49,6 +50,7 @@ type SimpleAccount struct {
 	dirtyCode        []byte
 	pendingStateHash *types.Hash
 	ldb              storage.Storage
+	cache            *AccountCache
 
 	blockHeight uint64
 	storageTrie *jmt.JMT
@@ -59,7 +61,16 @@ type SimpleAccount struct {
 	enableExpensiveMetric bool
 }
 
-func NewAccount(blockHeight uint64, ldb storage.Storage, addr *types.Address, changer *stateChanger) *SimpleAccount {
+func NewMockAccount(blockHeight uint64, addr *types.Address) *SimpleAccount {
+	ldb, err := leveldb.NewMemory()
+	if err != nil {
+		panic(err)
+	}
+
+	ac, err := NewAccountCache(0, true)
+	if err != nil {
+		panic(err)
+	}
 	return &SimpleAccount{
 		logger:       loggers.Logger(loggers.Storage),
 		Addr:         addr,
@@ -68,6 +79,22 @@ func NewAccount(blockHeight uint64, ldb storage.Storage, addr *types.Address, ch
 		dirtyState:   make(map[string][]byte),
 		blockHeight:  blockHeight,
 		ldb:          ldb,
+		cache:        ac,
+		changer:      NewChanger(),
+		suicided:     false,
+	}
+}
+
+func NewAccount(blockHeight uint64, ldb storage.Storage, accountCache *AccountCache, addr *types.Address, changer *stateChanger) *SimpleAccount {
+	return &SimpleAccount{
+		logger:       loggers.Logger(loggers.Storage),
+		Addr:         addr,
+		originState:  make(map[string][]byte),
+		pendingState: make(map[string][]byte),
+		dirtyState:   make(map[string][]byte),
+		blockHeight:  blockHeight,
+		ldb:          ldb,
+		cache:        accountCache,
 		changer:      changer,
 		suicided:     false,
 	}
@@ -245,10 +272,13 @@ func (o *SimpleAccount) Code() []byte {
 		return nil
 	}
 
-	start := time.Now()
-	code := o.ldb.Get(compositeCodeKey(o.Addr, o.CodeHash()))
-	if o.enableExpensiveMetric {
-		codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+	code, ok := o.cache.getCode(o.Addr)
+	if !ok {
+		start := time.Now()
+		code = o.ldb.Get(compositeKey(codeKey, o.Addr))
+		if o.enableExpensiveMetric {
+			codeReadDuration.Observe(float64(time.Since(start)) / float64(time.Second))
+		}
 	}
 
 	o.originCode = code

@@ -77,6 +77,8 @@ type StateLedger interface {
 	Version() uint64
 
 	NewView(block *types.Block) StateLedger
+
+	NewViewWithoutCache(block *types.Block) StateLedger
 }
 
 // StateAccessor manipulates the state data

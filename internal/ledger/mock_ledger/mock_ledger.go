@@ -1909,6 +1909,44 @@ func (c *StateLedgerNewViewCall) DoAndReturn(f func(*types.Block) ledger.StateLe
 	return c
 }
 
+// NewViewWithoutCache mocks base method.
+func (m *MockStateLedger) NewViewWithoutCache(block *types.Block) ledger.StateLedger {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewViewWithoutCache", block)
+	ret0, _ := ret[0].(ledger.StateLedger)
+	return ret0
+}
+
+// NewViewWithoutCache indicates an expected call of NewViewWithoutCache.
+func (mr *MockStateLedgerMockRecorder) NewViewWithoutCache(block any) *StateLedgerNewViewWithoutCacheCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewViewWithoutCache", reflect.TypeOf((*MockStateLedger)(nil).NewViewWithoutCache), block)
+	return &StateLedgerNewViewWithoutCacheCall{Call: call}
+}
+
+// StateLedgerNewViewWithoutCacheCall wrap *gomock.Call
+type StateLedgerNewViewWithoutCacheCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *StateLedgerNewViewWithoutCacheCall) Return(arg0 ledger.StateLedger) *StateLedgerNewViewWithoutCacheCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *StateLedgerNewViewWithoutCacheCall) Do(f func(*types.Block) ledger.StateLedger) *StateLedgerNewViewWithoutCacheCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *StateLedgerNewViewWithoutCacheCall) DoAndReturn(f func(*types.Block) ledger.StateLedger) *StateLedgerNewViewWithoutCacheCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // PrepareBlock mocks base method.
 func (m *MockStateLedger) PrepareBlock(arg0, arg1 *types.Hash, arg2 uint64) {
 	m.ctrl.T.Helper()
