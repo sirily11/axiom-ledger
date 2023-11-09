@@ -65,14 +65,14 @@ func (m *storageMgr) Open(typ string, p string) (storage.Storage, error) {
 	return builder(p)
 }
 
-func Initialize(defaultKVType string, defaultKvCacheSize int) error {
+func Initialize(defaultKVType string, defaultKvCacheSize int, sync bool) error {
 	globalStorageMgr.storageBuilderMap[repo.KVStorageTypeLeveldb] = func(p string) (storage.Storage, error) {
 		return leveldb.New(p, nil)
 	}
 	globalStorageMgr.storageBuilderMap[repo.KVStorageTypePebble] = func(p string) (storage.Storage, error) {
 		defaultPebbleOptions.Cache = pebble2.NewCache(int64(defaultKvCacheSize * 1024 * 1024))
 		defaultPebbleOptions.MemTableSize = defaultKvCacheSize * 1024 * 1024 / 4 // The size of single memory table
-		return pebble.New(p, defaultPebbleOptions)
+		return pebble.New(p, defaultPebbleOptions, &pebble2.WriteOptions{Sync: sync})
 	}
 	_, ok := globalStorageMgr.storageBuilderMap[defaultKVType]
 	if !ok {

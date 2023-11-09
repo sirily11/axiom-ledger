@@ -31,7 +31,7 @@ import (
 var validTxsCh = make(chan *precheck.ValidTxs, 1024)
 
 func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
-	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb, repo.KVStorageCacheSize)
+	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb, repo.KVStorageCacheSize, repo.KVStorageSync)
 	assert.Nil(t, err)
 	mockRbft := rbft.NewMockMinimalNode[types.Transaction, *types.Transaction](ctrl)
 	mockRbft.EXPECT().Status().Return(rbft.NodeStatus{
@@ -84,7 +84,7 @@ func TestInit(t *testing.T) {
 func TestNewNode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb, repo.KVStorageCacheSize)
+	err := storagemgr.Initialize(repo.KVStorageTypeLeveldb, repo.KVStorageCacheSize, repo.KVStorageSync)
 	assert.Nil(t, err)
 
 	r, err := repo.Load(t.TempDir())

@@ -36,9 +36,9 @@ func TestNew001(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -89,9 +89,9 @@ func TestNew002(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -122,9 +122,9 @@ func TestNew003(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -155,9 +155,9 @@ func TestNew004(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -196,9 +196,9 @@ func TestNew005(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -1607,7 +1607,7 @@ func initLedger(t *testing.T, repoRoot string, kv string) (*Ledger, string) {
 		rep.RepoRoot = repoRoot
 	}
 
-	err := storagemgr.Initialize(kv, repo.KVStorageCacheSize)
+	err := storagemgr.Initialize(kv, repo.KVStorageCacheSize, repo.KVStorageSync)
 	require.Nil(t, err)
 	rep.Config.Monitor.EnableExpensive = true
 	l, err := NewLedger(rep)
@@ -1658,7 +1658,7 @@ func BenchmarkStateLedgerWrite(b *testing.B) {
 	for name, tc := range testcase {
 		b.Run(name, func(b *testing.B) {
 			r, _ := repo.Default(b.TempDir())
-			storagemgr.Initialize(tc.kvType, 256)
+			storagemgr.Initialize(tc.kvType, 256, repo.KVStorageSync)
 			l, _ := NewLedger(r)
 			benchStateLedgerWrite(b, l.StateLedger)
 		})
@@ -1676,7 +1676,7 @@ func BenchmarkStateLedgerRead(b *testing.B) {
 	for name, tc := range testcase {
 		b.Run(name, func(b *testing.B) {
 			r, _ := repo.Default(b.TempDir())
-			storagemgr.Initialize(tc.kvType, 256)
+			storagemgr.Initialize(tc.kvType, 256, repo.KVStorageSync)
 			l, _ := NewLedger(r)
 			benchStateLedgerRead(b, l.StateLedger)
 		})
