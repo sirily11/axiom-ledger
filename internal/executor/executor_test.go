@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	common2 "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -656,7 +657,6 @@ func mockCommitEvent(blockNumber uint64, txs []*types.Transaction) *consensuscom
 
 func mockBlock(blockNumber uint64, txs []*types.Transaction) *types.Block {
 	header := &types.BlockHeader{
-		StateRoot: types.NewHash([]byte{}),
 		Number:    blockNumber,
 		Timestamp: time.Now().Unix(),
 	}
@@ -699,11 +699,17 @@ func TestBlockExecutor_ExecuteBlock_Transfer(t *testing.T) {
 			require.Nil(t, err)
 			to := types.NewAddressByStr("0xdAC17F958D2ee523a2206206994597C13D831ec7")
 
+			dummyRootHash := common2.Hash{}
+			ldg.StateLedger.PrepareBlock(types.NewHash(dummyRootHash[:]), nil, 1)
 			ldg.StateLedger.SetBalance(signer.Addr, new(big.Int).Mul(big.NewInt(5000000000000), big.NewInt(21000*10000)))
 			rootHash, err := ldg.StateLedger.Commit()
 			require.Nil(t, err)
 			require.NotNil(t, rootHash)
-			err = ldg.ChainLedger.PersistExecutionResult(mockBlock(1, nil), nil)
+			block1 := mockBlock(1, nil)
+			// refresh block
+			block1.BlockHeader.StateRoot = rootHash
+			block1.BlockHash = block1.Hash()
+			err = ldg.ChainLedger.PersistExecutionResult(block1, nil)
 			require.Nil(t, err)
 
 			// mock data for ledger
