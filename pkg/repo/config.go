@@ -215,6 +215,7 @@ type Consensus struct {
 type Storage struct {
 	KvType      string `mapstructure:"kv_type" toml:"kv_type"`
 	KvCacheSize int    `mapstructure:"kv_cache_size" toml:"kv_cache_size"`
+	Sync        bool   `mapstructure:"sync" toml:"sync"`
 }
 
 type Ledger struct {
@@ -382,6 +383,7 @@ func DefaultConfig(epochEnable bool) *Config {
 		Storage: Storage{
 			KvType:      KVStorageTypePebble,
 			KvCacheSize: 128,
+			Sync:        true,
 		},
 		Ledger: Ledger{
 			ChainLedgerCacheSize:           100,

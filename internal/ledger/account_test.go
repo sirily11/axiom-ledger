@@ -23,9 +23,9 @@ func TestAccount_GetState(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -81,9 +81,9 @@ func TestAccount_AccountBalance(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {
@@ -132,9 +132,9 @@ func TestAccount_setNonce(t *testing.T) {
 	assert.Nil(t, err)
 	lStateStorage, err := leveldb.New(filepath.Join(repoRoot, "lLedger"), nil)
 	assert.Nil(t, err)
-	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil)
+	pBlockStorage, err := pebble.New(filepath.Join(repoRoot, "pStorage"), nil, nil)
 	assert.Nil(t, err)
-	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil)
+	pStateStorage, err := pebble.New(filepath.Join(repoRoot, "pLedger"), nil, nil)
 	assert.Nil(t, err)
 
 	testcase := map[string]struct {

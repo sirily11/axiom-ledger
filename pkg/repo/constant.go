@@ -31,6 +31,7 @@ const (
 	KVStorageTypeLeveldb = "leveldb"
 	KVStorageTypePebble  = "pebble"
 	KVStorageCacheSize   = 16
+	KVStorageSync        = true
 
 	P2PSecurityTLS   = "tls"
 	P2PSecurityNoise = "noise"
