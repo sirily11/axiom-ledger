@@ -97,10 +97,14 @@ func newStateLedger(rep *repo.Repo, stateStorage storage.Storage) (StateLedger, 
 		prevJnlHash = blockJournal.ChangedHash
 	}
 
+	cachedStateStorage, err := storagemgr.NewCachedStorage(stateStorage, rep.Config.Ledger.StateLedgerCacheMegabytesLimit)
+	if err != nil {
+		return nil, err
+	}
 	ledger := &StateLedgerImpl{
 		repo:                  rep,
 		logger:                loggers.Logger(loggers.Storage),
-		ldb:                   stateStorage,
+		ldb:                   cachedStateStorage,
 		minJnlHeight:          minJnlHeight,
 		maxJnlHeight:          maxJnlHeight,
 		accounts:              make(map[string]IAccount),

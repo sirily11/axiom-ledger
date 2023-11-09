@@ -218,7 +218,8 @@ type Storage struct {
 }
 
 type Ledger struct {
-	ChainLedgerCacheSize int `mapstructure:"chain_ledger_cache_size" toml:"chain_ledger_cache_size"`
+	ChainLedgerCacheSize           int `mapstructure:"chain_ledger_cache_size" toml:"chain_ledger_cache_size"`
+	StateLedgerCacheMegabytesLimit int `mapstructure:"state_ledger_cache_megabytes_limit" toml:"state_ledger_cache_megabytes_limit"`
 }
 
 type EVM struct {
@@ -383,7 +384,8 @@ func DefaultConfig(epochEnable bool) *Config {
 			KvCacheSize: 128,
 		},
 		Ledger: Ledger{
-			ChainLedgerCacheSize: 100,
+			ChainLedgerCacheSize:           100,
+			StateLedgerCacheMegabytesLimit: 128,
 		},
 		Executor: Executor{
 			Type:            ExecTypeNative,
