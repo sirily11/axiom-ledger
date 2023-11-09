@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"runtime"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -43,6 +44,7 @@ type ValidTxs struct {
 
 type TxPreCheckMgr struct {
 	basicCheckCh chan *common.UncheckedTxEvent
+	verifySignCh chan *common.UncheckedTxEvent
 	verifyDataCh chan *common.UncheckedTxEvent
 	validTxsCh   chan *ValidTxs
 	logger       logrus.FieldLogger
@@ -75,6 +77,7 @@ func (tp *TxPreCheckMgr) CommitValidTxs() chan *ValidTxs {
 func NewTxPreCheckMgr(ctx context.Context, conf *common.Config) *TxPreCheckMgr {
 	tp := &TxPreCheckMgr{
 		basicCheckCh:   make(chan *common.UncheckedTxEvent, defaultTxPreCheckSize),
+		verifySignCh:   make(chan *common.UncheckedTxEvent, defaultTxPreCheckSize),
 		verifyDataCh:   make(chan *common.UncheckedTxEvent, defaultTxPreCheckSize),
 		validTxsCh:     make(chan *ValidTxs, defaultTxPreCheckSize),
 		logger:         conf.Logger,
@@ -96,6 +99,7 @@ func NewTxPreCheckMgr(ctx context.Context, conf *common.Config) *TxPreCheckMgr {
 
 func (tp *TxPreCheckMgr) Start() {
 	go tp.dispatchTxEvent()
+	go tp.dispatchVerifySignEvent()
 	go tp.dispatchVerifyDataEvent()
 	tp.logger.Info("tx precheck manager started")
 }
@@ -107,12 +111,12 @@ func (tp *TxPreCheckMgr) dispatchTxEvent() {
 		select {
 		case <-tp.ctx.Done():
 			wp.StopWait()
-			close(tp.verifyDataCh)
 			return
 		case ev := <-tp.basicCheckCh:
 			wp.Submit(func() {
 				switch ev.EventType {
 				case common.LocalTxEvent:
+					now := time.Now()
 					txWithResp, ok := ev.Event.(*common.TxWithResp)
 					if !ok {
 						tp.logger.Errorf("%s:%s", ErrParseTxEventType, "receive invalid local TxEvent")
@@ -126,9 +130,12 @@ func (tp *TxPreCheckMgr) dispatchTxEvent() {
 						tp.logger.Warningf("basic check local tx err:%s", err)
 						return
 					}
-					tp.verifyDataCh <- ev
+					basicCheckDuration.WithLabelValues("local").Observe(time.Since(now).Seconds())
+					tp.verifySignCh <- ev
 
 				case common.RemoteTxEvent:
+					now := time.Now()
+
 					txSet, ok := ev.Event.([]*types.Transaction)
 					if !ok {
 						tp.logger.Errorf("%s:%s", ErrParseTxEventType, "receive invalid remote TxEvent")
@@ -143,6 +150,61 @@ func (tp *TxPreCheckMgr) dispatchTxEvent() {
 						validSignTxs = append(validSignTxs, tx)
 					}
 					ev.Event = validSignTxs
+					basicCheckDuration.WithLabelValues("remote").Observe(time.Since(now).Seconds())
+					tp.verifySignCh <- ev
+				default:
+					tp.logger.Errorf(ErrTxEventType)
+					return
+				}
+			})
+		}
+	}
+}
+
+func (tp *TxPreCheckMgr) dispatchVerifySignEvent() {
+	wp := workerpool.New(concurrencyLimit)
+	for {
+		select {
+		case <-tp.ctx.Done():
+			wp.StopWait()
+			return
+		case ev := <-tp.verifySignCh:
+			wp.Submit(func() {
+				now := time.Now()
+				switch ev.EventType {
+				case common.LocalTxEvent:
+					txWithResp, ok := ev.Event.(*common.TxWithResp)
+					if !ok {
+						tp.logger.Errorf("%s:%s", ErrParseTxEventType, "receive invalid local TxEvent")
+						return
+					}
+					if err := tp.verifySignature(txWithResp.Tx); err != nil {
+						txWithResp.RespCh <- &common.TxResp{
+							Status:   false,
+							ErrorMsg: fmt.Errorf("%s:%w", PrecheckError, err).Error(),
+						}
+						tp.logger.Warningf("verify signature of local tx [txHash:%s] err: %s", txWithResp.Tx.GetHash().String(), err)
+						return
+					}
+					verifySignatureDuration.WithLabelValues("local").Observe(time.Since(now).Seconds())
+					tp.verifyDataCh <- ev
+
+				case common.RemoteTxEvent:
+					txSet, ok := ev.Event.([]*types.Transaction)
+					if !ok {
+						tp.logger.Errorf("%s:%s", ErrParseTxEventType, "receive invalid remote TxEvent")
+						return
+					}
+					validSignTxs := make([]*types.Transaction, 0)
+					for _, tx := range txSet {
+						if err := tp.verifySignature(tx); err != nil {
+							tp.logger.Warningf("verify signature remote tx err:%s", err)
+							continue
+						}
+						validSignTxs = append(validSignTxs, tx)
+					}
+					ev.Event = validSignTxs
+					verifySignatureDuration.WithLabelValues("remote").Observe(time.Since(now).Seconds())
 					tp.verifyDataCh <- ev
 				default:
 					tp.logger.Errorf(ErrTxEventType)
@@ -159,7 +221,6 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 		select {
 		case <-tp.ctx.Done():
 			wp.StopWait()
-			close(tp.validTxsCh)
 			return
 		case ev := <-tp.verifyDataCh:
 			wp.Submit(func() {
@@ -169,21 +230,13 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 					localRespCh  chan *common.TxResp
 				)
 
+				now := time.Now()
 				switch ev.EventType {
 				case common.LocalTxEvent:
 					local = true
 					txWithResp := ev.Event.(*common.TxWithResp)
 					localRespCh = txWithResp.RespCh
-					// 1. check signature
-					if err := tp.verifySignature(txWithResp.Tx); err != nil {
-						txWithResp.RespCh <- &common.TxResp{
-							Status:   false,
-							ErrorMsg: fmt.Errorf("%s:%w", PrecheckError, err).Error(),
-						}
-						return
-					}
-
-					// 2. check balance
+					// check balance
 					if err := tp.verifyInsufficientBalance(txWithResp.Tx); err != nil {
 						txWithResp.RespCh <- &common.TxResp{
 							Status:   false,
@@ -191,8 +244,8 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 						}
 						return
 					}
-
 					validDataTxs = append(validDataTxs, txWithResp.Tx)
+					verifyBlanceDuration.WithLabelValues("local").Observe(time.Since(now).Seconds())
 
 				case common.RemoteTxEvent:
 					txSet, ok := ev.Event.([]*types.Transaction)
@@ -201,11 +254,6 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 						return
 					}
 					for _, tx := range txSet {
-						if err := tp.verifySignature(tx); err != nil {
-							tp.logger.Warningf("verify remote tx signature failed: %v", err)
-							continue
-						}
-
 						if err := tp.verifyInsufficientBalance(tx); err != nil {
 							tp.logger.Warningf("verify remote tx balance failed: %v", err)
 							continue
@@ -213,6 +261,7 @@ func (tp *TxPreCheckMgr) dispatchVerifyDataEvent() {
 
 						validDataTxs = append(validDataTxs, tx)
 					}
+					verifyBlanceDuration.WithLabelValues("remote").Observe(time.Since(now).Seconds())
 				}
 
 				validTxs := &ValidTxs{

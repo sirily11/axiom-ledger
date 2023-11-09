@@ -20,14 +20,16 @@ const (
 	to       = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 )
 
-var mockDb = make(map[string]*big.Int)
+type mockDb struct {
+	db map[string]*big.Int
+}
 
-func newMockPreCheckMgr() (*TxPreCheckMgr, *logrus.Entry, context.CancelFunc) {
+func newMockPreCheckMgr(ledger *mockDb) (*TxPreCheckMgr, *logrus.Entry, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := log.NewWithModule("precheck")
 
 	getAccountBalance := func(address *types.Address) *big.Int {
-		val, ok := mockDb[address.String()]
+		val, ok := ledger.db[address.String()]
 		if !ok {
 			return big.NewInt(0)
 		}
@@ -54,16 +56,12 @@ func newMockPreCheckMgr() (*TxPreCheckMgr, *logrus.Entry, context.CancelFunc) {
 	return NewTxPreCheckMgr(ctx, cnf), logger, cancel
 }
 
-func cleanDb() {
-	mockDb = make(map[string]*big.Int)
+func (db *mockDb) setBalance(address string, balance *big.Int) {
+	db.db[address] = balance
 }
 
-func setBalance(address string, balance *big.Int) {
-	mockDb[address] = balance
-}
-
-func getBalance(address string) *big.Int {
-	val, ok := mockDb[address]
+func (db *mockDb) getBalance(address string) *big.Int {
+	val, ok := db.db[address]
 	if !ok {
 		return big.NewInt(0)
 	}
