@@ -88,7 +88,8 @@ func AriesConfig() *Config {
 			KvType: KVStorageTypeLeveldb,
 		},
 		Ledger: Ledger{
-			ChainLedgerCacheSize: 100,
+			ChainLedgerCacheSize:           100,
+			StateLedgerCacheMegabytesLimit: 128,
 		},
 		Executor: Executor{
 			Type:            ExecTypeNative,
