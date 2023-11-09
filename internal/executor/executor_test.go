@@ -656,6 +656,7 @@ func mockCommitEvent(blockNumber uint64, txs []*types.Transaction) *consensuscom
 
 func mockBlock(blockNumber uint64, txs []*types.Transaction) *types.Block {
 	header := &types.BlockHeader{
+		StateRoot: types.NewHash([]byte{}),
 		Number:    blockNumber,
 		Timestamp: time.Now().Unix(),
 	}
