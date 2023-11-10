@@ -51,7 +51,8 @@ func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
 
 	mockPrecheckMgr := mock_precheck.NewMockMinPreCheck(ctrl, validTxsCh)
 
-	rbftConfig, _ := generateRbftConfig(consensusConf)
+	rbftConfig, _, err := generateRbftConfig(consensusConf)
+	assert.Nil(t, err)
 	node := &Node{
 		config:     consensusConf,
 		n:          mockRbft,
@@ -278,7 +279,9 @@ func TestReadConfig(t *testing.T) {
 	ast := assert.New(t)
 	ctrl := gomock.NewController(t)
 	logger := log.NewWithModule("consensus")
-	rbftConf, txpoolConfig := generateRbftConfig(testutil.MockConsensusConfig(logger, ctrl, t))
+	rbftConf, txpoolConfig, err := generateRbftConfig(testutil.MockConsensusConfig(logger, ctrl, t))
+	assert.Nil(t, err)
+
 	rbftConf.Logger.Notice()
 	rbftConf.Logger.Noticef("test notice")
 	ast.Equal(50, rbftConf.SetSize)

@@ -9,6 +9,7 @@ import (
 	"github.com/axiomesh/axiom-bft/common/metrics/disabled"
 	"github.com/axiomesh/axiom-bft/common/metrics/prometheus"
 	"github.com/axiomesh/axiom-bft/txpool"
+	rbfttypes "github.com/axiomesh/axiom-bft/types"
 	"github.com/axiomesh/axiom-kit/types"
 	"github.com/axiomesh/axiom-ledger/internal/consensus/common"
 	"github.com/axiomesh/axiom-ledger/pkg/loggers"
@@ -16,7 +17,13 @@ import (
 
 func defaultRbftConfig() rbft.Config {
 	return rbft.Config{
-		Applied:                   0,
+		LastServiceState: &rbfttypes.ServiceState{
+			MetaState: &rbfttypes.MetaState{
+				Height: 0,
+				Digest: "",
+			},
+			Epoch: 0,
+		},
 		SetSize:                   1000,
 		SetTimeout:                100 * time.Millisecond,
 		BatchTimeout:              200 * time.Millisecond,
@@ -42,13 +49,23 @@ func defaultRbftConfig() rbft.Config {
 	}
 }
 
-func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
+func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config, error) {
 	readConfig := config.Config
 
+	currentEpoch, err := config.GetCurrentEpochInfoFromEpochMgrContractFunc()
+	if err != nil {
+		return rbft.Config{}, txpool.Config{}, err
+	}
 	defaultConfig := defaultRbftConfig()
 	defaultConfig.GenesisEpochInfo = config.GenesisEpochInfo
 	defaultConfig.SelfAccountAddress = config.SelfAccountAddress
-	defaultConfig.Applied = config.Applied
+	defaultConfig.LastServiceState = &rbfttypes.ServiceState{
+		MetaState: &rbfttypes.MetaState{
+			Height: config.Applied,
+			Digest: config.Digest,
+		},
+		Epoch: currentEpoch.Epoch,
+	}
 	defaultConfig.GenesisBlockDigest = config.GenesisDigest
 	defaultConfig.Logger = &common.Logger{FieldLogger: config.Logger}
 
@@ -115,5 +132,5 @@ func generateRbftConfig(config *common.Config) (rbft.Config, txpool.Config) {
 		GetAccountNonce:     fn,
 		IsTimed:             defaultConfig.GenesisEpochInfo.ConsensusParams.EnableTimedGenEmptyBlock,
 	}
-	return defaultConfig, txpoolConf
+	return defaultConfig, txpoolConf, nil
 }

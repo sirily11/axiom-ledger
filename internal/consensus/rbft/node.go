@@ -58,9 +58,11 @@ type Node struct {
 }
 
 func NewNode(config *common.Config) (*Node, error) {
-	rbftConfig, txpoolConfig := generateRbftConfig(config)
-
-	lastCheckpointBlockNumber := rbftConfig.Applied / rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod * rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod
+	rbftConfig, txpoolConfig, err := generateRbftConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	lastCheckpointBlockNumber := rbftConfig.LastServiceState.MetaState.Height / rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod * rbftConfig.GenesisEpochInfo.ConsensusParams.CheckpointPeriod
 	if lastCheckpointBlockNumber != 0 {
 		lastCheckpointBlock, err := config.GetBlockFunc(lastCheckpointBlockNumber)
 		if err != nil {
