@@ -59,7 +59,7 @@ type TxPreCheckMgr struct {
 }
 
 func (tp *TxPreCheckMgr) UpdateEpochInfo(epoch *rbft.EpochInfo) {
-	tp.txMaxSize.Store(epoch.ConfigParams.TxMaxSize)
+	tp.txMaxSize.Store(epoch.MiscParams.TxMaxSize)
 }
 
 func (tp *TxPreCheckMgr) PostUncheckedTxEvent(ev *common.UncheckedTxEvent) {
@@ -88,10 +88,10 @@ func NewTxPreCheckMgr(ctx context.Context, conf *common.Config) *TxPreCheckMgr {
 		evmConfig:      conf.EVMConfig,
 	}
 
-	if conf.GenesisEpochInfo.ConfigParams.TxMaxSize == 0 {
+	if conf.GenesisEpochInfo.MiscParams.TxMaxSize == 0 {
 		tp.txMaxSize.Store(repo.DefaultTxMaxSize)
 	} else {
-		tp.txMaxSize.Store(conf.GenesisEpochInfo.ConfigParams.TxMaxSize)
+		tp.txMaxSize.Store(conf.GenesisEpochInfo.MiscParams.TxMaxSize)
 	}
 
 	return tp

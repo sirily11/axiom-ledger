@@ -30,7 +30,7 @@ const (
 	NotFinishedProposalContractAddr      = "0x0000000000000000000000000000000000001006"
 
 	// EpochManagerContractAddr is the contract to used to manager chain epoch info
-	EpochManagerContractAddr = "0x0000000000000000000000000000000000000007"
+	EpochManagerContractAddr = "0x0000000000000000000000000000000000001007"
 )
 
 type SystemContractConfig struct {

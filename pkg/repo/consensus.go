@@ -44,22 +44,20 @@ type TxCache struct {
 type RBFT struct {
 	EnableMultiPipes          bool        `mapstructure:"enable_multi_pipes" toml:"enable_multi_pipes"`
 	EnableMetrics             bool        `mapstructure:"enable_metrics" toml:"enable_metrics"`
-	CheckInterval             Duration    `mapstructure:"check_interval" toml:"check_interval"`
 	CommittedBlockCacheNumber uint64      `mapstructure:"committed_block_cache_number" toml:"committed_block_cache_number"`
 	Timeout                   RBFTTimeout `mapstructure:"timeout" toml:"timeout"`
 }
 
 type RBFTTimeout struct {
-	SyncState        Duration `mapstructure:"sync_state" toml:"sync_state"`
-	SyncInterval     Duration `mapstructure:"sync_interval" toml:"sync_interval"`
-	Recovery         Duration `mapstructure:"recovery" toml:"recovery"`
-	FirstRequest     Duration `mapstructure:"first_request" toml:"first_request"`
-	Request          Duration `mapstructure:"request" toml:"request"`
 	NullRequest      Duration `mapstructure:"null_request" toml:"null_request"`
-	ViewChange       Duration `mapstructure:"viewchange" toml:"viewchange"`
+	Request          Duration `mapstructure:"request" toml:"request"`
 	ResendViewChange Duration `mapstructure:"resend_viewchange" toml:"resend_viewchange"`
 	CleanViewChange  Duration `mapstructure:"clean_viewchange" toml:"clean_viewchange"`
-	Update           Duration `mapstructure:"update" toml:"update"`
+	NewView          Duration `mapstructure:"new_view" toml:"new_view"`
+	SyncState        Duration `mapstructure:"sync_state" toml:"sync_state"`
+	SyncStateRestart Duration `mapstructure:"sync_state_restart" toml:"sync_state_restart"`
+	FetchCheckpoint  Duration `mapstructure:"fetch_checkpoint" toml:"fetch_checkpoint"`
+	FetchView        Duration `mapstructure:"fetch_view" toml:"fetch_view"`
 }
 
 type Solo struct {
@@ -95,19 +93,17 @@ func DefaultConsensusConfig() *ConsensusConfig {
 		Rbft: RBFT{
 			EnableMultiPipes:          false,
 			EnableMetrics:             true,
-			CheckInterval:             Duration(3 * time.Minute),
 			CommittedBlockCacheNumber: 10,
 			Timeout: RBFTTimeout{
-				SyncState:        Duration(3 * time.Second),
-				SyncInterval:     Duration(1 * time.Minute),
-				Recovery:         Duration(15 * time.Second),
-				FirstRequest:     Duration(30 * time.Second),
-				Request:          Duration(6 * time.Second),
-				NullRequest:      Duration(9 * time.Second),
-				ViewChange:       Duration(8 * time.Second),
+				NullRequest:      Duration(3 * time.Second),
+				Request:          Duration(2 * time.Second),
 				ResendViewChange: Duration(10 * time.Second),
 				CleanViewChange:  Duration(60 * time.Second),
-				Update:           Duration(4 * time.Second),
+				NewView:          Duration(8 * time.Second),
+				SyncState:        Duration(1 * time.Second),
+				SyncStateRestart: Duration(10 * time.Minute),
+				FetchCheckpoint:  Duration(5 * time.Second),
+				FetchView:        Duration(1 * time.Second),
 			},
 		},
 		Solo: Solo{

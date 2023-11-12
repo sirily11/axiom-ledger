@@ -13,12 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/axiomesh/axiom-kit/log"
-	"github.com/axiomesh/axiom-ledger/pkg/repo"
-
 	rbft "github.com/axiomesh/axiom-bft"
+	"github.com/axiomesh/axiom-kit/log"
 	"github.com/axiomesh/axiom-kit/types"
 	common2 "github.com/axiomesh/axiom-ledger/internal/consensus/common"
+	"github.com/axiomesh/axiom-ledger/pkg/repo"
 )
 
 var toAddr = common.HexToAddress(to)
@@ -96,7 +95,7 @@ func TestTxPreCheckMgr_Start(t *testing.T) {
 			EVMConfig: repo.EVM{},
 			Logger:    lg,
 			GenesisEpochInfo: &rbft.EpochInfo{
-				ConfigParams: rbft.ConfigParams{
+				MiscParams: rbft.MiscParams{
 					TxMaxSize: 0,
 				},
 			},
@@ -504,7 +503,7 @@ func TestTxPreCheckMgr_UpdateEpochInfo(t *testing.T) {
 	tp, _, _ := newMockPreCheckMgr(nil)
 	oldTxMaxSize := tp.txMaxSize.Load()
 	tp.UpdateEpochInfo(&rbft.EpochInfo{
-		ConfigParams: rbft.ConfigParams{
+		MiscParams: rbft.MiscParams{
 			TxMaxSize: oldTxMaxSize + 1,
 		},
 	})

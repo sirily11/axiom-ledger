@@ -261,7 +261,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 100,
+				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 1000,
 			}
 		})
 		validatorSet = lo.Map(DefaultNodeAddrs[0:4], func(item string, idx int) rbft.NodeInfo {
@@ -269,7 +269,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 100,
+				ConsensusVotingPower: int64(len(DefaultNodeAddrs)-idx) * 1000,
 			}
 		})
 	} else {
@@ -278,7 +278,7 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 				ID:                   uint64(idx + 1),
 				AccountAddress:       DefaultNodeAddrs[idx],
 				P2PNodeID:            defaultNodeIDs[idx],
-				ConsensusVotingPower: 100,
+				ConsensusVotingPower: 1000,
 			}
 		})
 	}
@@ -292,26 +292,28 @@ func GenesisEpochInfo(epochEnable bool) *rbft.EpochInfo {
 			return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", 4001+idx, item)
 		}),
 		ConsensusParams: rbft.ConsensusParams{
-			ProposerElectionType:          rbft.ProposerElectionTypeWRF,
-			ValidatorElectionType:         rbft.ValidatorElectionTypeWRF,
-			CheckpointPeriod:              1,
-			HighWatermarkCheckpointPeriod: 10,
-			MaxValidatorNum:               4,
-			BlockMaxTxNum:                 500,
-			EnableTimedGenEmptyBlock:      false,
-			NotActiveWeight:               1,
-			ExcludeView:                   100,
+			ProposerElectionType:                 rbft.ProposerElectionTypeWRF,
+			ValidatorElectionType:                rbft.ValidatorElectionTypeWRF,
+			CheckpointPeriod:                     1,
+			HighWatermarkCheckpointPeriod:        10,
+			MaxValidatorNum:                      4,
+			BlockMaxTxNum:                        500,
+			EnableTimedGenEmptyBlock:             false,
+			NotActiveWeight:                      1,
+			AbnormalNodeExcludeView:              10,
+			AgainProposeIntervalBlock:            0,
+			ContinuousNullRequestToleranceNumber: 3,
 		},
 		CandidateSet: candidateSet,
 		ValidatorSet: validatorSet,
-		FinanceParams: rbft.Finance{
+		FinanceParams: rbft.FinanceParams{
 			GasLimit:              0x5f5e100,
 			MaxGasPrice:           10000000000000,
 			MinGasPrice:           1000000000000,
 			GasChangeRateValue:    1250,
 			GasChangeRateDecimals: 4,
 		},
-		ConfigParams: rbft.ConfigParams{
+		MiscParams: rbft.MiscParams{
 			TxMaxSize: DefaultTxMaxSize,
 		},
 	}

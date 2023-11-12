@@ -98,7 +98,7 @@ func NewNode(config *common.Config) (*Node, error) {
 		receiveMsgLimiter: receiveMsgLimiter,
 		ctx:               ctx,
 		cancel:            cancel,
-		txCache:           txcache.NewTxCache(rbftConfig.SetTimeout, uint64(rbftConfig.SetSize), config.Logger),
+		txCache:           txcache.NewTxCache(config.Config.TxCache.SetTimeout.ToDuration(), uint64(config.Config.TxCache.SetSize), config.Logger),
 		network:           config.Network,
 		txPreCheck:        precheck.NewTxPreCheckMgr(ctx, config),
 	}, nil

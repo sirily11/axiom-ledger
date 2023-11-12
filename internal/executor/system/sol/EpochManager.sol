@@ -11,7 +11,21 @@ pragma solidity >=0.7.0 <0.9.0;
         uint64 BlockMaxTxNum;
         bool EnableTimedGenEmptyBlock;
         int64 NotActiveWeight;
-        uint64 ExcludeView;
+        uint64 AbnormalNodeExcludeView;
+        uint64 AgainProposeIntervalBlock;
+        uint64 ContinuousNullRequestToleranceNumber;
+    }
+
+    struct FinanceParams {
+        uint64 GasLimit;
+        uint64 MaxGasPrice;
+        uint64 MinGasPrice;
+        uint64 GasChangeRateValue;
+        uint64 GasChangeRateDecimals;
+    }
+
+    struct MiscParams {
+        uint64 TxMaxSize;
     }
 
     struct NodeInfo {
@@ -21,18 +35,6 @@ pragma solidity >=0.7.0 <0.9.0;
         int64 ConsensusVotingPower;
     }
 
-    struct Finance {
-        uint64 GasLimit;
-        uint64 MaxGasPrice;
-        uint64 MinGasPrice;
-        uint64 GasChangeRateValue;
-        uint64 GasChangeRateDecimals;
-    }
-
-    struct ConfigParams {
-        uint64 TxMaxSize;
-    }
-
     struct EpochInfo {
         uint64 Version;
         uint64 Epoch;
@@ -40,11 +42,11 @@ pragma solidity >=0.7.0 <0.9.0;
         uint64 StartBlock;
         string[] P2PBootstrapNodeAddresses;
         ConsensusParams ConsensusParams;
-        NodeInfo[] CandidateSet;
+        FinanceParams FinanceParams;
+        MiscParams MiscParams;
         NodeInfo[] ValidatorSet;
+        NodeInfo[] CandidateSet;
         NodeInfo[] DataSyncerSet;
-        Finance FinanceParams;
-        ConfigParams ConfigParams;
     }
 
 interface EpochManager {

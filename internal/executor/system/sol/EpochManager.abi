@@ -74,7 +74,17 @@
 							},
 							{
 								"internalType": "uint64",
-								"name": "ExcludeView",
+								"name": "AbnormalNodeExcludeView",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "AgainProposeIntervalBlock",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "ContinuousNullRequestToleranceNumber",
 								"type": "uint64"
 							}
 						],
@@ -86,28 +96,45 @@
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "ID",
+								"name": "GasLimit",
 								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "AccountAddress",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MaxGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "P2PNodeID",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MinGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "int64",
-								"name": "ConsensusVotingPower",
-								"type": "int64"
+								"internalType": "uint64",
+								"name": "GasChangeRateValue",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "GasChangeRateDecimals",
+								"type": "uint64"
 							}
 						],
-						"internalType": "struct NodeInfo[]",
-						"name": "CandidateSet",
-						"type": "tuple[]"
+						"internalType": "struct FinanceParams",
+						"name": "FinanceParams",
+						"type": "tuple"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint64",
+								"name": "TxMaxSize",
+								"type": "uint64"
+							}
+						],
+						"internalType": "struct MiscParams",
+						"name": "MiscParams",
+						"type": "tuple"
 					},
 					{
 						"components": [
@@ -160,52 +187,35 @@
 							}
 						],
 						"internalType": "struct NodeInfo[]",
-						"name": "DataSyncerSet",
+						"name": "CandidateSet",
 						"type": "tuple[]"
 					},
 					{
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "GasLimit",
+								"name": "ID",
 								"type": "uint64"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MaxGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "AccountAddress",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MinGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "P2PNodeID",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "GasChangeRateValue",
-								"type": "uint64"
-							},
-							{
-								"internalType": "uint64",
-								"name": "GasChangeRateDecimals",
-								"type": "uint64"
+								"internalType": "int64",
+								"name": "ConsensusVotingPower",
+								"type": "int64"
 							}
 						],
-						"internalType": "struct Finance",
-						"name": "FinanceParams",
-						"type": "tuple"
-					},
-					{
-						"components": [
-							{
-								"internalType": "uint64",
-								"name": "TxMaxSize",
-								"type": "uint64"
-							}
-						],
-						"internalType": "struct ConfigParams",
-						"name": "ConfigParams",
-						"type": "tuple"
+						"internalType": "struct NodeInfo[]",
+						"name": "DataSyncerSet",
+						"type": "tuple[]"
 					}
 				],
 				"internalType": "struct EpochInfo",
@@ -297,7 +307,17 @@
 							},
 							{
 								"internalType": "uint64",
-								"name": "ExcludeView",
+								"name": "AbnormalNodeExcludeView",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "AgainProposeIntervalBlock",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "ContinuousNullRequestToleranceNumber",
 								"type": "uint64"
 							}
 						],
@@ -309,28 +329,45 @@
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "ID",
+								"name": "GasLimit",
 								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "AccountAddress",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MaxGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "P2PNodeID",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MinGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "int64",
-								"name": "ConsensusVotingPower",
-								"type": "int64"
+								"internalType": "uint64",
+								"name": "GasChangeRateValue",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "GasChangeRateDecimals",
+								"type": "uint64"
 							}
 						],
-						"internalType": "struct NodeInfo[]",
-						"name": "CandidateSet",
-						"type": "tuple[]"
+						"internalType": "struct FinanceParams",
+						"name": "FinanceParams",
+						"type": "tuple"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint64",
+								"name": "TxMaxSize",
+								"type": "uint64"
+							}
+						],
+						"internalType": "struct MiscParams",
+						"name": "MiscParams",
+						"type": "tuple"
 					},
 					{
 						"components": [
@@ -383,52 +420,35 @@
 							}
 						],
 						"internalType": "struct NodeInfo[]",
-						"name": "DataSyncerSet",
+						"name": "CandidateSet",
 						"type": "tuple[]"
 					},
 					{
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "GasLimit",
+								"name": "ID",
 								"type": "uint64"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MaxGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "AccountAddress",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MinGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "P2PNodeID",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "GasChangeRateValue",
-								"type": "uint64"
-							},
-							{
-								"internalType": "uint64",
-								"name": "GasChangeRateDecimals",
-								"type": "uint64"
+								"internalType": "int64",
+								"name": "ConsensusVotingPower",
+								"type": "int64"
 							}
 						],
-						"internalType": "struct Finance",
-						"name": "FinanceParams",
-						"type": "tuple"
-					},
-					{
-						"components": [
-							{
-								"internalType": "uint64",
-								"name": "TxMaxSize",
-								"type": "uint64"
-							}
-						],
-						"internalType": "struct ConfigParams",
-						"name": "ConfigParams",
-						"type": "tuple"
+						"internalType": "struct NodeInfo[]",
+						"name": "DataSyncerSet",
+						"type": "tuple[]"
 					}
 				],
 				"internalType": "struct EpochInfo",
@@ -514,7 +534,17 @@
 							},
 							{
 								"internalType": "uint64",
-								"name": "ExcludeView",
+								"name": "AbnormalNodeExcludeView",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "AgainProposeIntervalBlock",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "ContinuousNullRequestToleranceNumber",
 								"type": "uint64"
 							}
 						],
@@ -526,28 +556,45 @@
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "ID",
+								"name": "GasLimit",
 								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "AccountAddress",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MaxGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "string",
-								"name": "P2PNodeID",
-								"type": "string"
+								"internalType": "uint64",
+								"name": "MinGasPrice",
+								"type": "uint64"
 							},
 							{
-								"internalType": "int64",
-								"name": "ConsensusVotingPower",
-								"type": "int64"
+								"internalType": "uint64",
+								"name": "GasChangeRateValue",
+								"type": "uint64"
+							},
+							{
+								"internalType": "uint64",
+								"name": "GasChangeRateDecimals",
+								"type": "uint64"
 							}
 						],
-						"internalType": "struct NodeInfo[]",
-						"name": "CandidateSet",
-						"type": "tuple[]"
+						"internalType": "struct FinanceParams",
+						"name": "FinanceParams",
+						"type": "tuple"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint64",
+								"name": "TxMaxSize",
+								"type": "uint64"
+							}
+						],
+						"internalType": "struct MiscParams",
+						"name": "MiscParams",
+						"type": "tuple"
 					},
 					{
 						"components": [
@@ -600,52 +647,35 @@
 							}
 						],
 						"internalType": "struct NodeInfo[]",
-						"name": "DataSyncerSet",
+						"name": "CandidateSet",
 						"type": "tuple[]"
 					},
 					{
 						"components": [
 							{
 								"internalType": "uint64",
-								"name": "GasLimit",
+								"name": "ID",
 								"type": "uint64"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MaxGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "AccountAddress",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "MinGasPrice",
-								"type": "uint64"
+								"internalType": "string",
+								"name": "P2PNodeID",
+								"type": "string"
 							},
 							{
-								"internalType": "uint64",
-								"name": "GasChangeRateValue",
-								"type": "uint64"
-							},
-							{
-								"internalType": "uint64",
-								"name": "GasChangeRateDecimals",
-								"type": "uint64"
+								"internalType": "int64",
+								"name": "ConsensusVotingPower",
+								"type": "int64"
 							}
 						],
-						"internalType": "struct Finance",
-						"name": "FinanceParams",
-						"type": "tuple"
-					},
-					{
-						"components": [
-							{
-								"internalType": "uint64",
-								"name": "TxMaxSize",
-								"type": "uint64"
-							}
-						],
-						"internalType": "struct ConfigParams",
-						"name": "ConfigParams",
-						"type": "tuple"
+						"internalType": "struct NodeInfo[]",
+						"name": "DataSyncerSet",
+						"type": "tuple[]"
 					}
 				],
 				"internalType": "struct EpochInfo",
