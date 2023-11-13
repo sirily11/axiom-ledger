@@ -51,7 +51,7 @@ func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
 
 	mockPrecheckMgr := mock_precheck.NewMockMinPreCheck(ctrl, validTxsCh)
 
-	rbftConfig, _, err := generateRbftConfig(consensusConf)
+	_, _, err = generateRbftConfig(consensusConf)
 	assert.Nil(t, err)
 	node := &Node{
 		config:     consensusConf,
@@ -61,7 +61,7 @@ func MockMinNode(ctrl *gomock.Controller, t *testing.T) *Node {
 		network:    consensusConf.Network,
 		ctx:        ctx,
 		cancel:     cancel,
-		txCache:    txcache.NewTxCache(rbftConfig.SetTimeout, uint64(rbftConfig.SetSize), consensusConf.Logger),
+		txCache:    txcache.NewTxCache(consensusConf.Config.TxCache.SetTimeout.ToDuration(), uint64(consensusConf.Config.TxCache.SetSize), consensusConf.Logger),
 		txFeed:     event.Feed{},
 		txPreCheck: mockPrecheckMgr,
 	}

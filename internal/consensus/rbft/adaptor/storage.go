@@ -51,8 +51,3 @@ func (a *RBFTAdaptor) ReadStateSet(prefix string) (map[string][]byte, error) {
 	}
 	return ret, nil
 }
-
-// Notice: not used
-func (a *RBFTAdaptor) Destroy(key string) error {
-	return nil
-}
