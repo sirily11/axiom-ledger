@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: axiom-ledger
+  namespace: axiom
+  labels:
+    app: axiom-ledger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: axiom-ledger
+  serviceName: axiom-ledger
+  volumeClaimTemplates:
+    - metadata:
+        name: axiom-ledger-storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+  template:
+    metadata:
+      labels:
+        app: axiom-ledger
+    spec:
+      containers:
+        - name: axiom
+          image: axiom
+          imagePullPolicy: Never
+          args:
+            - start
+          ports:
+            - containerPort: 8881
+            - containerPort: 9991
+            - containerPort: 4001
+            - containerPort: 53121
+            - containerPort: 40011
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8881
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              port: 8881
+              path: /
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: axiom-config
+              mountPath: /root/.axiom-ledger/config.toml
+              subPath: config.toml
+            - name: axiom-config
+              mountPath: /root/.axiom-ledger/consensus.toml
+              subPath: consensus.toml
+            - name: axiom-secrets
+              mountPath: /root/.axiom-ledger/p2p.key
+              subPath: p2p.key
+            - name: axiom-secrets
+              mountPath: /root/.axiom-ledger/account.key
+              subPath: account.key
+            - name: axiom-ledger-storage
+              mountPath: /root/.axiom-ledger/storage
+      volumes:
+        - name: axiom-config
+          configMap:
+            name: axiom-config
+            items:
+              - key: config.toml
+                path: config.toml
+              - key: consensus.toml
+                path: consensus.toml
+        - name: axiom-secrets
+          secret:
+            secretName: axiom-secrets
+            items:
+              - key: p2p.key
+                path: p2p.key
+              - key: account.key
+                path: account.key

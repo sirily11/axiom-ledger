@@ -1,0 +1,277 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: axiom-config
+  namespace: axiom
+data:
+  # file-like keys
+  consensus.toml: |
+    [timed_gen_block]
+      no_tx_batch_timeout = '2s'
+    [limit]
+      enable = false
+      limit = 10000
+      burst = 10000
+    [tx_pool]
+      pool_size = 50000
+      batch_timeout = '500ms'
+      tolerance_time = '5m0s'
+      tolerance_remove_time = '15m0s'
+      tolerance_nonce_gap = 1000
+
+    [tx_cache]
+      set_size = 50
+      set_timeout = '100ms'
+
+    [rbft]
+      enable_multi_pipes = false
+      enable_metrics = true
+      committed_block_cache_number = 10
+
+      [rbft.timeout]
+        null_request = '3s'
+        request = '2s'
+        resend_viewchange = '10s'
+        clean_viewchange = '1m0s'
+        new_view = '8s'
+        sync_state = '1s'
+        sync_state_restart = '10m0s'
+        fetch_checkpoint = '5s'
+        fetch_view = '1s'
+    [solo]
+      checkpoint_period = 10
+  config.toml: |
+    ulimit = 65535
+    [port]
+      jsonrpc = 8881
+      websocket = 9991
+      p2p = 4001
+      pprof = 53121
+      monitor = 40011
+    [jsonrpc]
+      gas_cap = 300000000
+      evm_timeout = '5s'
+      reject_txs_if_consensus_abnormal = false
+
+      [jsonrpc.read_limiter]
+        interval = '50ns'
+        quantum = 500
+        capacity = 10000
+        enable = false
+
+      [jsonrpc.write_limiter]
+        interval = '50ns'
+        quantum = 500
+        capacity = 10000
+        enable = false
+
+    [p2p]
+      bootstrap_node_addresses = []
+      security = 'tls'
+      send_timeout = '5s'
+      read_timeout = '5s'
+
+      [p2p.pipe]
+        receive_msg_cache_size = 10240
+        broadcast_type = 'gossip'
+        unicast_read_timeout = '5s'
+        unicast_send_retry_number = 5
+        unicast_send_retry_base_time = '100ms'
+        find_peer_timeout = '10s'
+        connect_timeout = '1s'
+
+        [p2p.pipe.simple_broadcast]
+          worker_cache_size = 1024
+          worker_concurrency_limit = 20
+
+        [p2p.pipe.gossipsub]
+          disable_custom_msg_id_fn = false
+          sub_buffer_size = 10240
+          peer_outbound_buffer_size = 10240
+          validate_buffer_size = 10240
+          seen_messages_ttl = '2m0s'
+          enable_metrics = true
+
+    [sync]
+      requester_retry_timeout = '5s'
+      wait_state_timeout = '2m0s'
+      timeout_count_limit = 10
+      concurrency_limit = 1000
+
+    [consensus]
+      type = 'rbft'
+
+    [storage]
+      kv_type = 'pebble'
+      kv_cache_size = 128
+      sync = true
+
+    [ledger]
+      chain_ledger_cache_size = 100
+      state_ledger_cache_megabytes_limit = 128
+      state_ledger_account_cache_size = 1024
+
+    [executor]
+      type = 'native'
+      disable_rollback = false
+
+      [executor.evm]
+        disable_max_code_size_limit = false
+
+    [genesis]
+      chainid = 1356
+      gas_price = 5000000000000
+      balance = '1000000000000000000000000000'
+      init_white_list_providers = [
+        '0xc7F999b83Af6DF9e67d0a37Ee7e900bF38b3D013',
+        '0x79a1215469FaB6f9c63c1816b45183AD3624bE34',
+        '0x97c8B516D19edBf575D72a172Af7F418BE498C37',
+        '0xc0Ff2e0b3189132D815b8eb325bE17285AC898f8',
+        '0xd0091F6D0b39B9E9D2E9051fA46d13B63b8C7B18',
+        '0xFd19030f51719D5601Bb079e5c5Be1eD07E01de2',
+        '0xE4b988C0BEa762B8809a0E4D14F3ac3f922B41B3',
+        '0x5FC85d64dE2125986b1581b4805a43Bfb3af5E52'
+      ]
+      accounts = [
+        '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+        '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+        '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+        '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+        '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+        '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+        '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
+        '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f',
+        '0xa0Ee7A142d267C1f36714E4a8F75612F20a79720',
+        '0xBcd4042DE499D14e55001CcbB24a551F3b954096',
+        '0x71bE63f3384f5fb98995898A86B02Fb2426c5788',
+        '0xFABB0ac9d68B0B445fB7357272Ff202C5651694a',
+        '0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec',
+        '0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097',
+        '0xcd3B766CCDd6AE721141F452C550Ca635964ce71',
+        '0x2546BcD3c84621e976D8185a91A922aE77ECEc30',
+        '0xbDA5747bFD65F08deb54cb465eB87D40e51B197E',
+        '0xdD2FD4581271e230360230F9337D5c0430Bf44C0',
+        '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199'
+      ]
+
+    [[genesis.admins]]
+      address = '0xc7F999b83Af6DF9e67d0a37Ee7e900bF38b3D013'
+      weight = 1
+      name = 'S2luZw=='
+
+    [[genesis.admins]]
+      address = '0x79a1215469FaB6f9c63c1816b45183AD3624bE34'
+      weight = 1
+      name = 'UmVk'
+
+    [[genesis.admins]]
+      address = '0x97c8B516D19edBf575D72a172Af7F418BE498C37'
+      weight = 1
+      name = 'QXBwbGU='
+
+    [[genesis.admins]]
+      address = '0xc0Ff2e0b3189132D815b8eb325bE17285AC898f8'
+      weight = 1
+      name = 'Q2F0'
+
+      [genesis.epoch_info]
+        version = 1
+        epoch = 1
+        epoch_period = 100
+        start_block = 1
+        p2p_bootstrap_node_addresses = [
+          '/ip4/127.0.0.1/tcp/4001/p2p/16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF',
+          '/ip4/127.0.0.1/tcp/4002/p2p/16Uiu2HAmRypzJbdbUNYsCV2VVgv9UryYS5d7wejTJXT73mNLJ8AK',
+          '/ip4/127.0.0.1/tcp/4003/p2p/16Uiu2HAmTwEET536QC9MZmYFp1NUshjRuaq5YSH1sLjW65WasvRk',
+          '/ip4/127.0.0.1/tcp/4004/p2p/16Uiu2HAmQBFTnRr84M3xNhi3EcWmgZnnBsDgewk4sNtpA3smBsHJ'
+        ]
+        candidate_set = []
+        data_syncer_set = []
+
+        [genesis.epoch_info.consensus_params]
+          validator_election_type = 'wrf'
+          proposer_election_type = 'wrf'
+          checkpoint_period = 1
+          high_watermark_checkpoint_period = 10
+          max_validator_num = 4
+          block_max_tx_num = 500
+          enable_timed_gen_empty_block = false
+          not_active_weight = 1
+          abnormal_node_exclude_view = 10
+          again_propose_interval_block = 0
+          continuous_null_request_tolerance_number = 3
+
+        [genesis.epoch_info.finance_params]
+          gas_limit = 100000000
+          max_gas_price = 10000000000000
+          min_gas_price = 1000000000000
+          gas_change_rate_value = 1250
+          gas_change_rate_decimals = 4
+
+        [genesis.epoch_info.misc_params]
+          tx_max_size = 131072
+
+    [[genesis.epoch_info.validator_set]]
+        id = 1
+        account_address = '0xc7F999b83Af6DF9e67d0a37Ee7e900bF38b3D013'
+        p2p_node_id = '16Uiu2HAmJ38LwfY6pfgDWNvk3ypjcpEMSePNTE6Ma2NCLqjbZJSF'
+        consensus_voting_power = 1000
+
+    [[genesis.epoch_info.validator_set]]
+        id = 2
+        account_address = '0x79a1215469FaB6f9c63c1816b45183AD3624bE34'
+        p2p_node_id = '16Uiu2HAmRypzJbdbUNYsCV2VVgv9UryYS5d7wejTJXT73mNLJ8AK'
+        consensus_voting_power = 1000
+
+    [[genesis.epoch_info.validator_set]]
+        id = 3
+        account_address = '0x97c8B516D19edBf575D72a172Af7F418BE498C37'
+        p2p_node_id = '16Uiu2HAmTwEET536QC9MZmYFp1NUshjRuaq5YSH1sLjW65WasvRk'
+        consensus_voting_power = 1000
+
+    [[genesis.epoch_info.validator_set]]
+        id = 4
+        account_address = '0xc0Ff2e0b3189132D815b8eb325bE17285AC898f8'
+        p2p_node_id = '16Uiu2HAmQBFTnRr84M3xNhi3EcWmgZnnBsDgewk4sNtpA3smBsHJ'
+        consensus_voting_power = 1000
+
+    [pprof]
+      enbale = true
+      ptype = 'http'
+      mode = 'mem'
+      duration = '30s'
+
+    [monitor]
+      enable = true
+      enable_expensive = true
+
+    [log]
+      level = 'info'
+      filename = 'axiom-ledger'
+      report_caller = false
+      enable_compress = false
+      enable_color = true
+      disable_timestamp = false
+      max_age = 30
+      max_size = 128
+      rotation_time = '24h0m0s'
+
+      [log.module]
+        p2p = 'info'
+        consensus = 'debug'
+        executor = 'info'
+        governance = 'info'
+        api = 'info'
+        app = 'info'
+        coreapi = 'info'
+        storage = 'info'
+        profile = 'info'
+        finance = 'error'
+        txpool = 'info'
+        access = 'info'
+        blocksync = 'info'
+        epoch = 'info'
+
+    [access]
+      enable_white_list = false

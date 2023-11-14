@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: axiom-ledger-service
+  labels:
+    app: axiom-ledger
+  namespace: axiom
+spec:
+  ports:
+    - name: jsonrpc
+      port: 8881
+      targetPort: 8881
+    - name: websocket
+      port: 9991
+      targetPort: 9991
+    - name: p2p
+      port: 4001
+      targetPort: 4001
+    - name: pprof
+      port: 53121
+      targetPort: 53121
+    - name: monitor
+      port: 40011
+      targetPort: 40011
+  type: ClusterIP
+  selector:
+    app: axiom-ledger

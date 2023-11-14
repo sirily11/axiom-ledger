@@ -36,3 +36,8 @@ go.work.sum
 account.key
 p2p.key
 consensus.toml
+k8s/secrets.yaml
+scripts/package/tools/bin/axiom-ledger
+axiom-ledger
+*.gz
+axiom-ledger-v0.0.1.tar.gz
